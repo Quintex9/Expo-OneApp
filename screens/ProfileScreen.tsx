@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import {person} from '../data.json'
 
 export default function ProfileScreen() {
   return (
