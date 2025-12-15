@@ -44,13 +44,12 @@ export default function ProfileScreen() {
             </Text>
           </View>
         </TouchableOpacity>
-
       </View>
 
       {/* MENU */}
       <View style={styles.menu}>
-        <MenuItem icon="heart-outline" label="Favorite branches" />
-        <MenuItem icon="settings-outline" label="Settings" />
+        <MenuItem icon="heart-outline" label="Favorite branches" onPress={() => navigation.navigate("FavoriteBranches")} />
+        <MenuItem icon="settings-outline" label="Settings" onPress={() => navigation.navigate("Settings")} />
         <MenuItem icon="help-circle-outline" label="FAQ" />
         <MenuItem
           icon="alert-circle-outline"
@@ -71,13 +70,16 @@ function MenuItem({
   icon,
   label,
   last,
+  onPress,
 }: {
   icon: any;
   label: string;
   last?: boolean;
+  onPress?: () => void;
 }) {
   return (
     <TouchableOpacity
+      onPress={onPress}
       style={[styles.menuItem, last && { borderBottomWidth: 0 }]}
     >
       <View style={styles.menuLeft}>
@@ -95,15 +97,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 20,
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 40,
     marginBottom: 30,
   },
-
-
   avatar: {
     width: 72,
     height: 72,
@@ -111,18 +110,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
     marginBottom: 12,
   },
-
   name: {
     fontSize: 18,
     fontWeight: "600",
   },
-
   cardsRow: {
     flexDirection: "row",
     gap: 12,
     marginBottom: 24,
   },
-
   card: {
     flex: 1,
     backgroundColor: "#fff",
@@ -131,18 +127,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
   },
-
   cardLabel: {
     fontSize: 12,
     color: "#888",
     marginBottom: 6,
   },
-
   cardValue: {
     fontSize: 18,
     fontWeight: "600",
   },
-
   menu: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -150,7 +143,6 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
     overflow: "hidden",
   },
-
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -160,13 +152,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-
   menuText: {
     fontSize: 15,
   },

@@ -5,6 +5,10 @@ import { ActivityIndicator, View } from "react-native";
 
 import Tabs from "./components/Tabs";
 import SubscriptionActivationScreen from "./screens/SubscriptionActivationScreen";
+import FavoriteBranchesScreen from "./screens/FavoriteBranchesScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import UserAccountScreen from "./screens/UserAccountScreen"
+import LanguageScreen from "./screens/LanguageScreen";
 
 import { TextEncoder, TextDecoder } from "text-encoding";
 import { useFonts } from "expo-font";
@@ -56,6 +60,22 @@ export default function App() {
           <Stack.Screen
             name="SubscriptionActivation"
             component={SubscriptionActivationScreen}
+          />
+          <Stack.Screen
+            name="FavoriteBranches"
+            component={FavoriteBranchesScreen}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+          />
+          <Stack.Screen
+            name="UserAccount"
+            component={UserAccountScreen}
+          />
+          <Stack.Screen
+            name="Language"
+            component={LanguageScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>
