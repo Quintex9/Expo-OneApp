@@ -8,13 +8,6 @@ export default function FavoriteBranchesScreen() {
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} />
-                </TouchableOpacity>
-                <Text style={styles.title}>Favorite Branches</Text>
-            </View>
-
             <BranchCard
                 title="365 GYM Nitra"
                 image={require("../assets/365.jpg")}

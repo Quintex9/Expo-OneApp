@@ -6,3 +6,10 @@ export interface User {
     image_url?: string;
 
 }
+
+export interface Coords {
+    id : string;
+    lng : number;
+    lat : number;
+
+}
