@@ -1,4 +1,4 @@
-import { StyleSheet, Platform, Image, Text, View, Pressable } from "react-native";
+import { StyleSheet, Platform, Image, Text, View, Pressable, useWindowDimensions } from "react-native";
 import { useEffect, useRef, useState,useMemo } from "react";
 import Mapbox, {
   MarkerView,
@@ -8,24 +8,19 @@ import Mapbox, {
   LocationPuck,
   UserLocation,
 } from "@rnmapbox/maps";
-import { NEXT_PUBLIC_MAPBOX_TOKEN } from "@env";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { coords } from "../lib/data/coords";
 import { ScrollView, TextInput, TouchableOpacity } from "react-native-gesture-handler";
-import BottomSheet from "@gorhom/bottom-sheet";
-import { SearchBar } from "react-native-screens";
-import BranchCard from "../components/BranchCard";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import FavoriteBranchesScreen from "./FavoriteBranchesScreen";
-
-
-Mapbox.setAccessToken(NEXT_PUBLIC_MAPBOX_TOKEN);
 
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
   const sheetRef = useRef<BottomSheet>(null);
   const filterRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => [200,650],[]);
+  const snapPoints = useMemo(() => ["25%", "85%"], []);
 
   const filter_options = ["Fitness","Gastro","Relax","Beauty"];
   const filter_icons:Record<string,any> = {
@@ -65,8 +60,10 @@ export default function DiscoverScreen() {
     }
   }, []);
 
+  const subcategoryChipWidth = Math.max(120, Math.floor((screenWidth - 16 * 2 - 12) / 2));
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <MapView style={styles.map} styleURL={Mapbox.StyleURL.Street} scaleBarEnabled={false}>
         <Camera
           centerCoordinate={[18.091, 48.3069]}
@@ -115,7 +112,9 @@ export default function DiscoverScreen() {
         
           {o && <TouchableOpacity style={styles.row} onPress={() => setOpen((prev) => !prev)} activeOpacity={0.85}>
             <Image source={require("../images/pin.png")} style={styles.rowIcon} resizeMode="contain" />
-            <Text style={styles.rowTextBold}>{option}</Text>
+            <Text style={styles.rowTextBold} numberOfLines={1}>
+              {option}
+            </Text>
 
             <Image
               source={require("../images/options.png")}
@@ -138,13 +137,17 @@ export default function DiscoverScreen() {
                   activeOpacity={0.85}
                 >
                   <Image source={opt.icon} style={styles.rowIcon} resizeMode="contain" />
-                  <Text style={styles.rowText}>{opt.label}</Text>
+                  <Text style={styles.rowText} numberOfLines={1}>
+                    {opt.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
 
               <TouchableOpacity style={styles.menuRow} onPress={() => setOpen(false)} activeOpacity={0.85}>
                 <Text style={styles.plus}>+</Text>
-                <Text style={styles.rowText}>Add Location</Text>
+                <Text style={styles.rowText} numberOfLines={1}>
+                  Add Location
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -194,21 +197,19 @@ export default function DiscoverScreen() {
         enablePanDownToClose={true}
         onChange={(index) =>setO(index===-1)}
       >
-              <View style={styles.searchField}>
-                <Image source={require("../images/search.png")} style={{marginRight:5}}></Image>
-                <TextInput
-                value={text}
-                onChangeText={setText}
-                placeholder="Search branches..."
-
-                >
-                  
-
-                </TextInput>
-              </View>
+          <View style={styles.searchField}>
+            <Image source={require("../images/search.png")} style={styles.searchIcon} />
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Search branches..."
+              style={styles.searchInput}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
 
           
-          <FavoriteBranchesScreen></FavoriteBranchesScreen>
+          <FavoriteBranchesScreen />
          
       </BottomSheet>
 
@@ -219,10 +220,15 @@ export default function DiscoverScreen() {
       enablePanDownToClose={true}
       onChange={(index) =>setO(index===-1)}>
       
-          <View style={styles.filter_main}>
+          <BottomSheetScrollView
+            contentContainerStyle={[
+              styles.filterScrollContent,
+              { paddingBottom: insets.bottom + 24 },
+            ]}
+          >
 
             <View style = {styles.filter_header}>
-              <Text style={{fontSize:20,fontWeight:"bold",marginLeft:10}}>Filters</Text>
+              <Text style={{fontSize:20,fontWeight:"bold"}}>Filters</Text>
               <Text style={{fontSize:14, color:"gray"}}>Reset</Text>
             </View>
 
@@ -270,9 +276,9 @@ export default function DiscoverScreen() {
                         borderWidth: 1,
                         borderColor: active ? "transparent" : "#eee",
                         backgroundColor: active ? "#EB8100" : "#FFFFFF",
-                        marginLeft: 9,
+                        marginLeft: 6,
                         marginTop: 10,
-                        width: 125,
+                        width: subcategoryChipWidth,
                         justifyContent: "center",
           
                       }}
@@ -292,9 +298,9 @@ export default function DiscoverScreen() {
                         padding: 15,
                         borderWidth: 1,
                         backgroundColor:"#EB8100",
-                        marginLeft: 10,
-                        marginTop: 130,
-                        width: "95%",
+                        marginHorizontal: 10,
+                        marginTop: 24,
+                        width: "auto",
                         justifyContent: "center",
                         borderColor:"#eee",
         
@@ -307,7 +313,7 @@ export default function DiscoverScreen() {
             </View>
 
 
-          </View>
+          </BottomSheetScrollView>
           
       </BottomSheet>
 
@@ -341,21 +347,30 @@ export const styles = StyleSheet.create({
 
   searchField:{
     flexDirection:"row",
-    alignContent:"center",
-    padding:15,
+    alignItems:"center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor:"white",
     borderRadius:25,
     elevation: 1,
     borderWidth: 1,
     borderColor: "#eee",
-    width:381,
-    height:48,
-    marginLeft:14,
+    marginHorizontal: 16,
+    marginTop: 12,
     gap:5,
     marginBottom:20
   },
+  searchIcon: { marginRight: 6 },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 0,
+    color: "#111827",
+    fontSize: 16,
+  },
   card: {
-    width: 210,
+    flex: 1,
+    maxWidth: 260,
+    marginRight: 12,
     backgroundColor: "white",
     borderRadius: 18,
     overflow: "hidden",
@@ -449,15 +464,19 @@ export const styles = StyleSheet.create({
       flex:1,
       flexDirection:"column",
     },
+    filterScrollContent: {
+      paddingBottom: 24,
+    },
     filter_header:{
       flexDirection:"row",
-      gap:295,
       height:50,
       width:"100%",
       alignItems:"center",
+      justifyContent:"space-between",
       borderBottomWidth:0.2,
       borderColor:"#E5E7EB",
       paddingBottom:10,
+      paddingHorizontal: 10,
 
     },
     filter_categories:{

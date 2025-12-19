@@ -1,9 +1,17 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { users } from '../lib/data/users';
 
 
 export default function HomeScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const qrPadding = 20;
+  const qrMaxSize = 325;
+  const qrSize = Math.max(
+    180,
+    Math.floor(Math.min(qrMaxSize, screenWidth - 32 - qrPadding * 2))
+  );
+
   return (
     <View style={styles.container}>
 
@@ -13,10 +21,10 @@ export default function HomeScreen() {
           <Text style={styles.container_text_bottom}>ID: {users[0].id} </Text>
         </View> 
       
-        <View style={styles.container_qr}>
+        <View style={[styles.container_qr, { padding: qrPadding }]}>
         <QRCode
           value="Skuska"
-          size={325}
+          size={qrSize}
           backgroundColor="white"
           color="black"
           logoBorderRadius={5}
@@ -64,7 +72,9 @@ const styles = StyleSheet.create({
   container_qr:{
     backgroundColor:'#FFFFFF',
     borderRadius:20,
-    padding:25,
+    maxWidth: 420,
+    width: "90%",
+    alignItems: "center",
     elevation:5,
   
   },

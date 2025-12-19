@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity,Modal,TouchableWithoutFeedback} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity,Modal,TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 
@@ -8,6 +8,9 @@ import QRCode from 'react-native-qrcode-svg';
 export default function BenefitsScreen() {
   const [ActualTab,setActualTab] = useState<"Activated"| "Claimed">("Activated");
   const [QRcode,setQRCode] = useState<boolean>(false);
+  const { width: screenWidth } = useWindowDimensions();
+  const qrPadding = 24;
+  const qrSize = Math.max(200, Math.floor(Math.min(320, screenWidth - 32 - qrPadding * 2)));
 
   return (
 
@@ -44,7 +47,7 @@ export default function BenefitsScreen() {
                         <View style={styles.container_qr}>
                           <QRCode
                                     value="Skuska"
-                                    size={300}
+                                    size={qrSize}
                                     backgroundColor="white"
                                     color="black"
                                     logoBorderRadius={5}
@@ -206,25 +209,26 @@ const styles = StyleSheet.create({
     fontFamily:"Inter_600SemiBold",
   },
   button_backdrop:{
-    width :"100%",
-    height:"92%",
+    flex: 1,
     backgroundColor:"#00000080",
-    justifyContent:"center"
+    justifyContent:"center",
+    alignItems:"center",
+    paddingHorizontal: 16,
   },
   container_qr:{
     backgroundColor:'#FFFFFF',
-    marginLeft:20,
-    marginTop:145,
-    width:"90%",
+    width:"100%",
+    maxWidth: 420,
     borderRadius:20,
-    padding:35,
+    padding:24,
     elevation:5,
     justifyContent:"center",
+    alignItems:"center",
   
   },
   text_hours:{
     textAlign:"center",
-    marginTop:7,
+    marginTop:16,
 
     fontSize:30,
     color:"white",
