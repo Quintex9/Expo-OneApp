@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -12,7 +13,7 @@ export default function LanguageScreen() {
   const navigation = useNavigation<any>();
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -34,7 +35,7 @@ export default function LanguageScreen() {
         <Divider />
         <LanguageItem flag="🇨🇿" label="Czech" />
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -65,13 +66,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
+    paddingVertical: 20,
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 10,
+    marginTop: 30,
     marginBottom: 16,
   },
 

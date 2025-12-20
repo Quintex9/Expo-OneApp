@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
 
@@ -11,7 +11,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
           last
         />
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 /* MENU ITEM */
@@ -93,6 +93,7 @@ function MenuItem({
 
 const styles = StyleSheet.create({
   container: {
+    paddingVertical: 10,
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 20,
@@ -111,6 +112,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   name: {
+    paddingLeft: 15,
     fontSize: 18,
     fontWeight: "600",
   },

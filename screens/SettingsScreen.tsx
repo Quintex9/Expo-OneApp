@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
@@ -6,7 +6,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<any>();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -46,7 +46,7 @@ export default function SettingsScreen() {
         <Ionicons name="log-out-outline" size={18} color="#666" />
         <Text style={styles.logoutText}>Log out</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -76,6 +76,7 @@ function Divider() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingVertical: 10,
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
@@ -84,6 +85,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginTop: 40,
     marginBottom: 24,
   },
   title: {

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -13,7 +14,7 @@ export default function UserAccountScreen() {
   const navigation = useNavigation<any>();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* CONTENT */}
       <ScrollView contentContainerStyle={styles.content}>
         {/* HEADER */}
@@ -47,12 +48,13 @@ export default function UserAccountScreen() {
           <Text style={styles.saveText}>Save</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    paddingVertical: 20,
     flex: 1,
     backgroundColor: "#fff",
   },
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 10,
+    marginTop: 30,
     marginBottom: 30,
   },
 

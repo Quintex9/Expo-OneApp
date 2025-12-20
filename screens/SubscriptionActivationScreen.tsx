@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
@@ -10,7 +10,7 @@ export default function SubscriptionActivationScreen() {
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -59,15 +59,16 @@ export default function SubscriptionActivationScreen() {
       >
         <Text style={styles.buttonText}>Continue</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 20, backgroundColor: "#fff", paddingVertical: 20, },
   header: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 30,
     marginBottom: 16,
     gap: 12,
   },
