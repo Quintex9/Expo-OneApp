@@ -1,5 +1,5 @@
 import { StyleSheet, Platform, Image, Text, View, Pressable, useWindowDimensions } from "react-native";
-import { useEffect, useRef, useState,useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Mapbox, {
   MarkerView,
   MapView,
@@ -13,6 +13,7 @@ import { coords } from "../lib/data/coords";
 import { ScrollView, TextInput, TouchableOpacity } from "react-native-gesture-handler";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import FavoriteBranchesScreen from "./FavoriteBranchesScreen";
+import { useTranslation } from "react-i18next";
 
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
@@ -22,8 +23,8 @@ export default function DiscoverScreen() {
   const filterRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["25%", "85%"], []);
 
-  const filter_options = ["Fitness","Gastro","Relax","Beauty"];
-  const filter_icons:Record<string,any> = {
+  const filter_options = ["Fitness", "Gastro", "Relax", "Beauty"];
+  const filter_icons: Record<string, any> = {
     Fitness: require("../images/icons/fitness/Fitness.png"),
     Gastro: require("../images/icons/gastro/Gastro.png"),
     Relax: require("../images/icons/relax/Relax.png"),
@@ -31,20 +32,22 @@ export default function DiscoverScreen() {
 
   }
 
-  const subcategories = ["Vegan","Coffee","Asian","Pizza","Sushi","Fast Food","Seafood","Beer"];
+  const subcategories = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
+
+  const { t } = useTranslation();
 
 
   const options = [
-    { icon: require("../images/home.png"), label: "Home" },
-    { icon: require("../images/business.png"), label: "Business" }, 
+    { icon: require("../images/home.png"), label: t("home") },
+    { icon: require("../images/business.png"), label: t("business") },
   ];
 
   const [open, setOpen] = useState(false);
-  const [option, setOption] = useState<string>("Your Location"); 
-  const [text,setText] = useState("");
-  const [o,setO] = useState<boolean>(true)
-  const [filter,setFilter] = useState("Gastro")
-  const [sub,setSub] = useState<Set<string>>(()=>new Set());
+  const [option, setOption] = useState<string>("Your Location");
+  const [text, setText] = useState("");
+  const [o, setO] = useState<boolean>(true)
+  const [filter, setFilter] = useState("Gastro")
+  const [sub, setSub] = useState<Set<string>>(() => new Set());
 
   const toggle = (name: string) => {
     setSub(prev => {
@@ -104,16 +107,16 @@ export default function DiscoverScreen() {
 
 
       <View style={[styles.dropdown_main, { top: insets.top + 8 }]} pointerEvents="box-none">
-      
+
         {open && <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />}
 
-    
+
         <View style={styles.card}>
-        
+
           {o && <TouchableOpacity style={styles.row} onPress={() => setOpen((prev) => !prev)} activeOpacity={0.85}>
             <Image source={require("../images/pin.png")} style={styles.rowIcon} resizeMode="contain" />
             <Text style={styles.rowTextBold} numberOfLines={1}>
-              {option}
+              {t(option)}
             </Text>
 
             <Image
@@ -123,7 +126,7 @@ export default function DiscoverScreen() {
             />
           </TouchableOpacity>}
 
-  
+
           {open && (
             <View style={styles.menu}>
               {options.map((opt) => (
@@ -146,7 +149,7 @@ export default function DiscoverScreen() {
               <TouchableOpacity style={styles.menuRow} onPress={() => setOpen(false)} activeOpacity={0.85}>
                 <Text style={styles.plus}>+</Text>
                 <Text style={styles.rowText} numberOfLines={1}>
-                  Add Location
+                  {t("addLocation")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -155,24 +158,26 @@ export default function DiscoverScreen() {
         </View>
 
         <View style={styles.actionsRow} pointerEvents="auto">
-          {o && <TouchableOpacity style={{    width: 44,
-                                              height: 44,
-                                              borderRadius: 15,
-                                              backgroundColor: "white",
-                                              alignItems: "center",
-                                              justifyContent: "center",
+          {o && <TouchableOpacity style={{
+            width: 44,
+            height: 44,
+            borderRadius: 15,
+            backgroundColor: "white",
+            alignItems: "center",
+            justifyContent: "center",
 
-                                              shadowColor: "#000",
-                                              shadowOpacity: 0.12,
-                                              shadowRadius: 10,
-                                              shadowOffset: { width: 0, height: 5 },
-                                              elevation: 8,
-                                              opacity: o ? 1: 0}} activeOpacity={0.85} onPress={() => {
-                                                
-                                                setO(false);
-                                                sheetRef.current?.snapToIndex(1);
+            shadowColor: "#000",
+            shadowOpacity: 0.12,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 8,
+            opacity: o ? 1 : 0
+          }} activeOpacity={0.85} onPress={() => {
 
-                                              }}>
+            setO(false);
+            sheetRef.current?.snapToIndex(1);
+
+          }}>
 
             <Image source={require("../images/search.png")} />
 
@@ -180,7 +185,7 @@ export default function DiscoverScreen() {
 
 
 
-          {o && <TouchableOpacity style={styles.roundBtn} activeOpacity={0.85} onPress={()=> filterRef.current?.snapToIndex(1)}>
+          {o && <TouchableOpacity style={styles.roundBtn} activeOpacity={0.85} onPress={() => filterRef.current?.snapToIndex(1)}>
             <Image source={require("../images/filter.png")} />
           </TouchableOpacity>}
 
@@ -195,126 +200,128 @@ export default function DiscoverScreen() {
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose={true}
-        onChange={(index) =>setO(index===-1)}
+        onChange={(index) => setO(index === -1)}
       >
-          <View style={styles.searchField}>
-            <Image source={require("../images/search.png")} style={styles.searchIcon} />
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Search branches..."
-              style={styles.searchInput}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+        <View style={styles.searchField}>
+          <Image source={require("../images/search.png")} style={styles.searchIcon} />
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={t("searchbranches")}
+            style={styles.searchInput}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
 
-          
-          <FavoriteBranchesScreen />
-         
+
+        <FavoriteBranchesScreen />
+
       </BottomSheet>
 
       <BottomSheet
-      ref={filterRef}
-      index={-1}
-      snapPoints={snapPoints}
-      enablePanDownToClose={true}
-      onChange={(index) =>setO(index===-1)}>
-      
-          <BottomSheetScrollView
-            contentContainerStyle={[
-              styles.filterScrollContent,
-              { paddingBottom: insets.bottom + 24 },
-            ]}
-          >
+        ref={filterRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        onChange={(index) => setO(index === -1)}>
 
-            <View style = {styles.filter_header}>
-              <Text style={{fontSize:20,fontWeight:"bold"}}>Filters</Text>
-              <Text style={{fontSize:14, color:"gray"}}>Reset</Text>
-            </View>
+        <BottomSheetScrollView
+          contentContainerStyle={[
+            styles.filterScrollContent,
+            { paddingBottom: insets.bottom + 24 },
+          ]}
+        >
 
-            <View style = {styles.filter_categories}>
+          <View style={styles.filter_header}>
+            <Text style={{ fontSize: 20, fontWeight: "bold" }}>{t("filters")}</Text>
+            <Text style={{ fontSize: 14, color: "gray" }}>{t("reset")}</Text>
+          </View>
 
-              
+          <View style={styles.filter_categories}>
 
-                <Text style={{fontSize:20,fontWeight:"bold",marginLeft:10,marginTop:22}}>Categories</Text>
 
-                <View style={{flexDirection:"row"}}>
 
-                <ScrollView
+            <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10, marginTop: 22 }}>{t("categories")}</Text>
+
+            <View style={{ flexDirection: "row" }}>
+
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                >
-                  {filter_options.map((option) =>(
-                    <TouchableOpacity style={{flexDirection:"row",backgroundColor: filter === option? "#EB8100":"#FFFFFF", borderRadius:20,padding:15,borderWidth: 1,
-    borderColor: "#eee", gap:10,marginRight:10,marginTop:10, width:125,marginLeft: 9,}} onPress={() =>setFilter(option)} key={option}>
-                      <Image source={(filter_icons[option])}></Image>
-                      <Text style={{fontWeight:"600", fontSize:16,marginLeft:5,color: filter === option?"white":"black"}}>{option}</Text>
-                    </TouchableOpacity>
-                  ))}
+              >
+                {filter_options.map((option) => (
+                  <TouchableOpacity style={{
+                    flexDirection: "row", backgroundColor: filter === option ? "#EB8100" : "#FFFFFF", borderRadius: 20, padding: 15, borderWidth: 1,
+                    borderColor: "#eee", gap: 10, marginRight: 10, marginTop: 10, width: 125, marginLeft: 9,
+                  }} onPress={() => setFilter(option)} key={option}>
+                    <Image source={(filter_icons[option])}></Image>
+                    <Text style={{ fontWeight: "600", fontSize: 16, marginLeft: 5, color: filter === option ? "white" : "black" }}>{t(option)}</Text>
+                  </TouchableOpacity>
+                ))}
 
-                </ScrollView>
+              </ScrollView>
 
-              </View>
+            </View>
+          </View>
+
+          <View>
+            <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10, marginTop: 25, marginBottom: 10 }}>{filter} {t("subcategories")}</Text>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+
+              {subcategories.map((subs) => {
+                const active = sub.has(subs);
+
+                return (
+                  <TouchableOpacity
+                    key={subs}
+                    onPress={() => toggle(subs)}
+                    activeOpacity={0.85}
+                    style={{
+                      borderRadius: 20,
+                      padding: 15,
+                      borderWidth: 1,
+                      borderColor: active ? "transparent" : "#eee",
+                      backgroundColor: active ? "#EB8100" : "#FFFFFF",
+                      marginLeft: 6,
+                      marginTop: 10,
+                      width: subcategoryChipWidth,
+                      justifyContent: "center",
+
+                    }}
+                  >
+                    <Text style={{ fontWeight: "600", fontSize: 16, color: active ? "white" : "black", textAlign: "center" }}>
+                      {t(subs)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+
             </View>
 
             <View>
-              <Text style={{fontSize:20,fontWeight:"bold",marginLeft:10,marginTop:25,marginBottom:10}}>{filter} subcategories</Text>
+              <TouchableOpacity style={{
+                borderRadius: 20,
+                padding: 15,
+                borderWidth: 1,
+                backgroundColor: "#EB8100",
+                marginHorizontal: 10,
+                marginTop: 24,
+                width: "auto",
+                justifyContent: "center",
+                borderColor: "#eee",
 
-                  <View style={{flexDirection:"row", flexWrap:"wrap"}}>
 
-                  {subcategories.map((subs) => {
-                  const active = sub.has(subs);
+              }}>
 
-                  return (
-                    <TouchableOpacity
-                      key={subs}
-                      onPress={() => toggle(subs)}
-                      activeOpacity={0.85}
-                      style={{
-                        borderRadius: 20,
-                        padding: 15,
-                        borderWidth: 1,
-                        borderColor: active ? "transparent" : "#eee",
-                        backgroundColor: active ? "#EB8100" : "#FFFFFF",
-                        marginLeft: 6,
-                        marginTop: 10,
-                        width: subcategoryChipWidth,
-                        justifyContent: "center",
-          
-                      }}
-                    >
-                      <Text style={{ fontWeight: "600", fontSize: 16, color: active ? "white" : "black", textAlign: "center" }}>
-                        {subs}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-
-                  </View>
-
-                <View>
-                  <TouchableOpacity style={{
-                        borderRadius: 20,
-                        padding: 15,
-                        borderWidth: 1,
-                        backgroundColor:"#EB8100",
-                        marginHorizontal: 10,
-                        marginTop: 24,
-                        width: "auto",
-                        justifyContent: "center",
-                        borderColor:"#eee",
-        
-                      
-                      }}>
-                        
-                        <Text style={{ fontWeight: "bold", fontSize: 18,color:"white",textAlign:"center"}}> Filter</Text></TouchableOpacity>
-                      </View>
-
+                <Text style={{ fontWeight: "bold", fontSize: 18, color: "white", textAlign: "center" }}> Filter</Text></TouchableOpacity>
             </View>
 
+          </View>
 
-          </BottomSheetScrollView>
-          
+
+        </BottomSheetScrollView>
+
       </BottomSheet>
 
 
@@ -345,20 +352,20 @@ export const styles = StyleSheet.create({
     zIndex: 1,
   },
 
-  searchField:{
-    flexDirection:"row",
-    alignItems:"center",
+  searchField: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor:"white",
-    borderRadius:25,
+    backgroundColor: "white",
+    borderRadius: 25,
     elevation: 1,
     borderWidth: 1,
     borderColor: "#eee",
     marginHorizontal: 16,
     marginTop: 12,
-    gap:5,
-    marginBottom:20
+    gap: 5,
+    marginBottom: 20
   },
   searchIcon: { marginRight: 6 },
   searchInput: {
@@ -376,17 +383,17 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     zIndex: 2,
 
-   
+
     shadowColor: "#000",
     shadowOpacity: 0.14,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
 
-   
+
     elevation: 10,
   },
 
-  
+
   row: {
     height: 44,
     paddingHorizontal: 12,
@@ -441,48 +448,48 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 8,
   },
-      container_2: {
-        flex: 1,
-        backgroundColor: "#fff",
-        paddingHorizontal: 20,
-    },
+  container_2: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+  },
 
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        marginTop: 10,
-        marginBottom: 20,
-    },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 20,
+  },
 
-    title: {
-        fontSize: 18,
-        fontWeight: "600",
-    },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
 
-    filter_main:{
-      flex:1,
-      flexDirection:"column",
-    },
-    filterScrollContent: {
-      paddingBottom: 24,
-    },
-    filter_header:{
-      flexDirection:"row",
-      height:50,
-      width:"100%",
-      alignItems:"center",
-      justifyContent:"space-between",
-      borderBottomWidth:0.2,
-      borderColor:"#E5E7EB",
-      paddingBottom:10,
-      paddingHorizontal: 10,
+  filter_main: {
+    flex: 1,
+    flexDirection: "column",
+  },
+  filterScrollContent: {
+    paddingBottom: 24,
+  },
+  filter_header: {
+    flexDirection: "row",
+    height: 50,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 0.2,
+    borderColor: "#E5E7EB",
+    paddingBottom: 10,
+    paddingHorizontal: 10,
 
-    },
-    filter_categories:{
-      flexDirection:"column",
-      width:"100%",
-      paddingBottom:10,
+  },
+  filter_categories: {
+    flexDirection: "column",
+    width: "100%",
+    paddingBottom: 10,
 
-    },
+  },
 });

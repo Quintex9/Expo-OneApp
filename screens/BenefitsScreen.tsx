@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TouchableOpacity,Modal,TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -12,30 +13,32 @@ export default function BenefitsScreen() {
   const qrPadding = 24;
   const qrSize = Math.max(200, Math.floor(Math.min(320, screenWidth - 32 - qrPadding * 2)));
 
+  const { t } = useTranslation();
+
   return (
 
     <View style={styles.container}>
     
-      <Text style={styles.text_benefits}>My Benefits</Text>
+      <Text style={styles.text_benefits}>{t("myBenefits")}</Text>
 
         <View style={styles.button_group}>
           
           <TouchableOpacity onPress={()=>setActualTab("Activated")} style={ActualTab === 'Activated'? styles.button1Active : styles.button1}>
-            <Text style={ActualTab === 'Activated'? styles.button_text : styles.button_text_inactive}>Activated</Text>
+            <Text style={ActualTab === 'Activated'? styles.button_text : styles.button_text_inactive}>{t("activated")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => setActualTab("Claimed")} style={ActualTab === 'Claimed' ? styles.button2Active : styles.button2}>
-            <Text style={ActualTab === 'Claimed' ? styles.button_text : styles.button_text_inactive}>Claimed</Text>
+            <Text style={ActualTab === 'Claimed' ? styles.button_text : styles.button_text_inactive}>{t("claimed")}</Text>
           </TouchableOpacity>
 
         </View>
 
         <View style={styles.text_container}>
 
-          <Text style={styles.text_benefits_lower}>20% discount on first entry</Text>
-          <Text style={styles.text_normal}>Get 20% off your first visit to the fitness center and save on your first workout.</Text>
+          <Text style={styles.text_benefits_lower}>{t("textBenefitsLower")}</Text>
+          <Text style={styles.text_normal}>{t("textNormal")}</Text>
 
-          <TouchableOpacity onPress={()=>setQRCode(true)} disabled={ActualTab==='Claimed'} style={ActualTab === 'Activated'? styles.button3: styles.button3_claimed}><Text style={ActualTab === 'Activated'? styles.button3_text:styles.button3_text_claimed}>{ActualTab === 'Activated'? "Show QR" :"Claimed"}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={()=>setQRCode(true)} disabled={ActualTab==='Claimed'} style={ActualTab === 'Activated'? styles.button3: styles.button3_claimed}><Text style={ActualTab === 'Activated'? styles.button3_text:styles.button3_text_claimed}>{ActualTab === 'Activated'? t("showQR") : t("claimed")}</Text></TouchableOpacity>
           
             
               <Modal visible={QRcode} transparent animationType='fade'>

@@ -26,7 +26,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
               color={isFocused ? "black" : "#999"}
             />
           );
-        } else if (route.name === "Benefits") {
+        } else if (route.name === "Benefits" || route.name === "Výhody") {
           icon = (
             <Ionicons
               name="ticket-outline"
@@ -34,7 +34,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
               color={isFocused ? "black" : "#999"}
             />
           );
-        } else if (route.name === "Discover") {
+        } else if (route.name === "Discover" || route.name === "Objavte" || route.name === "Objevit") {
           icon = (
             <Feather
               name="compass"
@@ -42,7 +42,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
               color={isFocused ? "black" : "#999"}
             />
           );
-        } else if (route.name === "Profile") {
+        } else if (route.name === "Profile" || route.name === "Profil") {
           icon = (
             <Ionicons
               name="person-outline"
