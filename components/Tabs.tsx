@@ -4,7 +4,7 @@ import CustomTabBar from "./CustomTabBar";
 import HomeScreen from "../screens/HomeScreen";
 import BenefitsScreen from "../screens/BenefitsScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
-import ProfileScreen from "../screens/ProfileScreen";
+import ProfileScreen from "../screens/profile/ProfileScreen";
 import { useTranslation } from "react-i18next";
 
 const Tab = createBottomTabNavigator();

@@ -4,11 +4,11 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ActivityIndicator, View } from "react-native";
 
 import Tabs from "./components/Tabs";
-import SubscriptionActivationScreen from "./screens/SubscriptionActivationScreen";
+import SubscriptionActivationScreen from "./screens/profile/SubscriptionActivationScreen";
 import FavoriteBranchesScreen from "./screens/FavoriteBranchesScreen";
-import SettingsScreen from "./screens/SettingsScreen";
-import UserAccountScreen from "./screens/UserAccountScreen"
-import LanguageScreen from "./screens/LanguageScreen";
+import SettingsScreen from "./screens/profile/SettingsScreen";
+import UserAccountScreen from "./screens/profile/UserAccountScreen"
+import LanguageScreen from "./screens/profile/LanguageScreen";
 
 
 import { TextEncoder, TextDecoder } from "text-encoding";
