@@ -23,7 +23,7 @@ export default function FavoriteBranchesScreen() {
                     image={require("../assets/365.jpg")}
                     rating={4.6}
                     distance="1.7 km"
-                    hours="9:00 – 21:00"
+                    hours="9:00 - 21:00"
                     discount="20% discount on first entry"
                     moreCount={2}
                     onPress={() => console.log("Open detail")}
@@ -34,7 +34,7 @@ export default function FavoriteBranchesScreen() {
                     image={require("../assets/royal.jpg")}
                     rating={4.6}
                     distance="1.7 km"
-                    hours="9:00 – 21:00"
+                    hours="9:00 - 21:00"
                     discount="20% discount on first entry"
                     moreCount={3}
                 />

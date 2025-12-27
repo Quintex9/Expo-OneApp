@@ -115,8 +115,8 @@ export const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    maxWidth: 260,
-    marginRight: 12,
+    maxWidth: 200,
+    marginRight: 24,
     backgroundColor: "white",
     borderRadius: 18,
     overflow: "hidden",
@@ -224,5 +224,48 @@ export const styles = StyleSheet.create({
     flexDirection: "column",
     width: "100%",
     paddingBottom: 10,
+  },
+  ratingSection: {
+    marginBottom: 8,
+  },
+  ratingTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginLeft: 10,
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  ratingRow: {
+    paddingRight: 10,
+  },
+  ratingChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 19,
+    borderWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#FFFFFF",
+    marginRight: 10,
+    marginTop: 10,
+    marginLeft: 9,
+  },
+  ratingChipActive: {
+    backgroundColor: "#EB8100",
+    borderColor: "#EB8100",
+  },
+  ratingStar: {
+    width: 16,
+    height: 16,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+    marginLeft: 5,
+  },
+  ratingTextActive: {
+    color: "#FFFFFF",
   },
 });

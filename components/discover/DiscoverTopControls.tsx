@@ -20,7 +20,7 @@ export default function DiscoverTopControls({
   t,
 }: DiscoverTopControlsProps) {
   return (
-    <View style={[styles.dropdown_main, { top: insetsTop + 8 }]} pointerEvents="box-none">
+    <View style={[styles.dropdown_main, { top: insetsTop + 16 }]} pointerEvents="box-none">
       {open && <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />}
 
       <View style={styles.card}>
@@ -82,33 +82,6 @@ export default function DiscoverTopControls({
       </View>
 
       <View style={styles.actionsRow} pointerEvents="auto">
-        {o && (
-          <TouchableOpacity
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 15,
-              backgroundColor: "white",
-              alignItems: "center",
-              justifyContent: "center",
-
-              shadowColor: "#000",
-              shadowOpacity: 0.12,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 5 },
-              elevation: 8,
-              opacity: o ? 1 : 0,
-            }}
-            activeOpacity={0.85}
-            onPress={() => {
-              setOpen(false);
-              sheetRef.current?.snapToIndex(1);
-            }}
-          >
-            <Image source={require("../../images/search.png")} />
-          </TouchableOpacity>
-        )}
-
         {o && (
           <TouchableOpacity
             style={styles.roundBtn}

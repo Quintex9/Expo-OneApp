@@ -2,8 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BranchCardProps } from "../lib/interfaces";
-import BusinessDetail from "../screens/BusinessDetail";
-import { Link, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 
 
 export default function BranchCard({
@@ -19,11 +18,12 @@ export default function BranchCard({
   const { width } = useWindowDimensions();
   const imageSize = Math.min(96, Math.max(64, Math.floor(width * 0.18)));
   const navigation = useNavigation<any>();
+  const handlePress = onPress ?? (() => navigation.navigate("BusinessDetailScreen"));
 
   return (
     <TouchableOpacity
       activeOpacity={0.9}
-      onPress={()=> {navigation.navigate("BusinessDetail")}}
+      onPress={handlePress}
       style={styles.branchCard}
     >
       {/* IMAGE */}

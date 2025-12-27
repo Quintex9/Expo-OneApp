@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Image, Text, View } from "react-native";
 import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -23,6 +23,9 @@ export default function DiscoverFilterSheet({
   subcategoryChipWidth,
   t,
 }: DiscoverFilterSheetProps) {
+  const [rating, setRating] = useState<Set<string>>(() => new Set());
+  const ratingOptions = ["4.7", "4.5", "4.0", "3.5"];
+
   return (
     <BottomSheet
       ref={filterRef}
@@ -44,10 +47,48 @@ export default function DiscoverFilterSheet({
               onPress={() => {
                 setAppliedFilter(null);
                 setSub(new Set());
+                setRating(new Set());
               }}
             >
               <Text style={{ fontSize: 14, color: "gray" }}>{t("reset")}</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingTitle}>Rating</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ratingRow}>
+              {ratingOptions.map((value) => {
+                const active = rating.has(value);
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={[styles.ratingChip, active && styles.ratingChipActive]}
+                    onPress={() =>
+                      setRating((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(value)) {
+                          next.delete(value);
+                        } else {
+                          next.add(value);
+                        }
+                        return next;
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Image
+                      source={
+                        active
+                          ? require("../../images/star_blank.png")
+                          : require("../../images/star_black.png")
+                      }
+                      style={styles.ratingStar}
+                    />
+                    <Text style={[styles.ratingText, active && styles.ratingTextActive]}>{value}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           <View style={styles.filter_categories}>

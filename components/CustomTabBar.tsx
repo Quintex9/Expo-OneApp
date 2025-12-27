@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 
 export default function CustomTabBar({ state, descriptors, navigation }: any) {
@@ -46,6 +46,13 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
               name="compass"
               size={24}
               color={isFocused ? "black" : "#999"}
+            />
+          );
+        } else if (route.name === "Search") {
+          icon = (
+            <Image
+              source={require("../images/search.png")}
+              style={[styles.searchIcon, { tintColor: isFocused ? "black" : "#999" }]}
             />
           );
         } else if (route.name === "Profile" || route.name === "Profil") {
@@ -101,5 +108,10 @@ const styles = StyleSheet.create({
   labelFocused: {
     color: "black",
     fontWeight: "600",
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
   },
 });

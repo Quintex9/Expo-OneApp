@@ -4,6 +4,7 @@ import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import BranchCard from "../BranchCard";
 import { styles } from "./discoverStyles";
 import type { DiscoverBranchOverlayProps } from "../../lib/interfaces";
+import { useNavigation } from "@react-navigation/native";
 
 export default function DiscoverBranchOverlay({
   insetsBottom,
@@ -18,6 +19,7 @@ export default function DiscoverBranchOverlay({
   branchCardWidth,
   t,
 }: DiscoverBranchOverlayProps) {
+  const navigation = useNavigation<any>();
   return (
     <View style={[styles.branchOverlay, { bottom: insetsBottom }]} pointerEvents="box-none">
       <View style={styles.branchOverlayHandle}>
@@ -62,9 +64,13 @@ export default function DiscoverBranchOverlay({
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
         {branches.map((b) => (
-          <View key={b.title} style={{ width: branchCardWidth, marginRight: 12, padding: 7 }}>
-            <BranchCard {...b} />
-          </View>
+          <TouchableOpacity
+            key={b.title}
+            style={{ width: branchCardWidth, marginRight: 12, padding: 7 }}
+          >
+            <BranchCard {...b} 
+            onPress={() => {navigation.navigate("BusinessDetailScreen", {branch: b})}}/>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>

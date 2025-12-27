@@ -21,6 +21,11 @@ export default function Tabs() {
       <Tab.Screen name="QR" component={HomeScreen} />
       <Tab.Screen name={t("Benefits")} component={BenefitsScreen} />
       <Tab.Screen name={t("Discover")} component={DiscoverScreen} />
+      <Tab.Screen
+        name="Search"
+        component={DiscoverScreen}
+        options={{ tabBarLabel: t("Search") }}
+      />
       <Tab.Screen name={t("Profile")} component={ProfileDecider} />
     </Tab.Navigator>
   );

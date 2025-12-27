@@ -1,9 +1,9 @@
 import { Platform, useWindowDimensions } from "react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Mapbox from "@rnmapbox/maps";
 import type { Camera } from "@rnmapbox/maps";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { coords } from "../lib/data/coords";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
@@ -17,6 +17,7 @@ import { styles } from "../components/discover/discoverStyles";
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -116,6 +117,14 @@ const filtered = query
     });
   }, [navigation, isSheetOpen]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (route.name === "Search") {
+        sheetRef.current?.snapToIndex(1);
+      }
+    }, [route.name])
+  );
+
   useEffect(() => {
     if (!userCoord || didInitialCenter) {
       return;
@@ -160,7 +169,15 @@ const filtered = query
     ? markerItems.filter(item => item.category === appliedFilter)
     : markerItems;
 
-  const handleSheetChange = (index: number) => {
+  const handleSearchSheetChange = (index: number) => {
+    setO(index === -1);
+    setIsSheetOpen(index !== -1);
+    if (index === -1 && route.name === "Search") {
+      navigation.navigate(t("Discover"));
+    }
+  };
+
+  const handleFilterSheetChange = (index: number) => {
     setO(index === -1);
     setIsSheetOpen(index !== -1);
   };
@@ -194,7 +211,7 @@ const filtered = query
       <DiscoverSearchSheet
         sheetRef={sheetRef}
         snapPoints={snapPoints}
-        onSheetChange={handleSheetChange}
+        onSheetChange={handleSearchSheetChange}
         text={text}
         setText={setText}
         filtered={filtered}
@@ -203,7 +220,7 @@ const filtered = query
       <DiscoverFilterSheet
         filterRef={filterRef}
         snapPoints={snapPoints}
-        onSheetChange={handleSheetChange}
+        onSheetChange={handleFilterSheetChange}
         insetsBottom={insets.bottom}
         filter={filter}
         setFilter={setFilter}
