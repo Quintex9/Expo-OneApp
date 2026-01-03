@@ -15,6 +15,21 @@ type Props = {
     website?: string;
 };
 
+function isToday(day: string) {
+    const todayIndex = new Date().getDay();
+    const days = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+    ];
+
+    return days[todayIndex] === day;
+}
+
 export function InfoSection({
     hours,
     address,
@@ -38,14 +53,21 @@ export function InfoSection({
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Opening hours</Text>
 
-                {hours.map((item) => (
-                    <View key={item.day} style={styles.row}>
-                        <Text style={[styles.day, item.isToday && styles.today]}>
-                            {item.day}
-                        </Text>
-                        <Text style={styles.time}>{item.time}</Text>
-                    </View>
-                ))}
+                {hours.map((item) => {
+                    const today = isToday(item.day);
+
+                    return (
+                        <View key={item.day} style={styles.row}>
+                            <Text style={[styles.day, today && styles.today]}>
+                                {item.day}
+                            </Text>
+                            <Text style={[styles.time, today && styles.todayTime]}>
+                                {item.time}
+                            </Text>
+                        </View>
+                    );
+                })}
+
 
                 <Text style={styles.note}>
                     * During holidays, opening hours may vary. For more information,
@@ -100,6 +122,11 @@ export function InfoSection({
 }
 
 const styles = StyleSheet.create({
+    todayTime: {
+        fontWeight: "700",
+        color: "#111",
+    },
+
     container: {
         paddingBottom: 20,
     },

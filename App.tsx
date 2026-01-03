@@ -14,6 +14,9 @@ import SignupScreen from "./screens/LoginRegister/SignupScreen";
 import ForgottenPasswordScreen from "./screens/LoginRegister/ForgotPasswordScreen";
 import LoginScreen from "./screens/LoginRegister/LoginScreen";
 
+import SavedLocationsScreen from "./screens/profile/SavedLocationsScreen";
+import EditLocationScreen from "./screens/profile/EditLocationScreen";
+
 import { TextEncoder, TextDecoder } from "text-encoding";
 import { useFonts } from "expo-font";
 import {
@@ -103,6 +106,11 @@ export default function App() {
               name="Login"
               component={LoginScreen}
             />
+            <Stack.Screen
+              name="SavedLocations"
+              component={SavedLocationsScreen}
+            />
+            <Stack.Screen name="EditLocation" component={EditLocationScreen}/>
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

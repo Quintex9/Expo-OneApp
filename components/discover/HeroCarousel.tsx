@@ -10,6 +10,7 @@ type Props = {
 };
 
 export function HeroCarousel({ data, height, width, index, onIndexChange }: Props) {
+  
   return (
     <>
       <FlatList
