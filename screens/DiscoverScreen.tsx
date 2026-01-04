@@ -210,6 +210,25 @@ const filtered = query
   const filteredMarkers = appliedFilter
     ? markerItems.filter(item => item.category === appliedFilter)
     : markerItems;
+  const selectedOptionCoord = useMemo(() => {
+    const selected = location.find((item) => item.label === option && item.coord);
+    return selected?.coord ?? null;
+  }, [location, option]);
+  const savedLocationMarkers = useMemo(
+    () =>
+      location
+        .filter((item) => item.isSaved && item.coord)
+        .map((item, index) => ({
+          id: `saved-${index}-${item.coord![0]}-${item.coord![1]}`,
+          coord: { lng: item.coord![0], lat: item.coord![1] },
+          icon: item.markerImage ?? item.image,
+        })),
+    [location]
+  );
+  const mapMarkers = useMemo(
+    () => [...filteredMarkers, ...savedLocationMarkers],
+    [filteredMarkers, savedLocationMarkers]
+  );
 
   const handleSearchSheetChange = (index: number) => {
     setSearchSheetIndex(index);
@@ -236,21 +255,30 @@ const filtered = query
   };
 
   const handleCameraChanged = useCallback(
-    (center: [number, number], zoom: number) => {
+    (center: [number, number], zoom: number, isUserGesture?: boolean) => {
       if (route.name === "Search") {
         return;
       }
       setMapCenter(center);
       lastDiscoverCameraState = { center, zoom };
+      if (!isUserGesture || !selectedOptionCoord) {
+        return;
+      }
+      const [selectedLng, selectedLat] = selectedOptionCoord;
+      const [centerLng, centerLat] = center;
+      const distance = Math.hypot(selectedLng - centerLng, selectedLat - centerLat);
+      if (distance > 0.0005) {
+        setOption("yourLocation");
+      }
     },
-    [route.name]
+    [route.name, selectedOptionCoord]
   );
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <DiscoverMap
         cameraRef={cameraRef}
-        filteredMarkers={filteredMarkers}
+        filteredMarkers={mapMarkers}
         onUserLocationUpdate={handleUserLocationUpdate}
         onCameraChanged={handleCameraChanged}
       />

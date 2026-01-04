@@ -7,6 +7,9 @@ import type { DiscoverTopControlsProps } from "../../lib/interfaces";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import Mapbox, { Camera, MapView, UserLocation } from "@rnmapbox/maps";
 
+const SAVED_LOCATION_LIST_ICON = require("../../images/pin.png");
+const SAVED_LOCATION_MARKER_ICON = require("../../images/test_placeholder.png");
+
 export default function DiscoverTopControls({
   insetsTop,
   open,
@@ -32,6 +35,7 @@ export default function DiscoverTopControls({
   const [searchQuery, setSearchQuery] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
+  const [locationName, setLocationName] = useState("");
   const [selectedCoord, setSelectedCoord] = useState<[number, number]>(
     () => mainMapCenter ?? userCoord ?? [18.091, 48.3069]
   );
@@ -55,6 +59,20 @@ export default function DiscoverTopControls({
       return title.includes(query) || subtitle.includes(query);
     });
   }, [searchQuery, searchResults]);
+  const selectedCoordLabel = useMemo(() => {
+    if (!Array.isArray(selectedCoord) || selectedCoord.length < 2) {
+      return "GPS --";
+    }
+    const [lng, lat] = selectedCoord;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return "GPS --";
+    }
+    return `GPS ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }, [selectedCoord]);
+  const selectedOptionLabel = useMemo(() => {
+    const saved = location.find((item) => item.isSaved && item.label === option);
+    return saved ? saved.label : t(option);
+  }, [location, option, t]);
 
   const renderLocationBackdrop = useCallback(
     (props: any) => {
@@ -78,7 +96,7 @@ export default function DiscoverTopControls({
     (returnTo: "add" | "search") => {
       setLocationReturnStep(returnTo);
       setHasMapMoved(false);
-      const target = mainMapCenter ?? userCoord ?? [18.091, 48.3069];
+      const target = userCoord ?? mainMapCenter ?? [18.091, 48.3069];
       setSelectedCoord(target);
       setLocationStep("map");
       locationRef.current?.snapToIndex(1);
@@ -110,12 +128,17 @@ export default function DiscoverTopControls({
     if (locationStep !== "map" || hasMapMoved) {
       return;
     }
-    if (mainMapCenter) {
-      setSelectedCoord(mainMapCenter);
-      return;
-    }
     if (userCoord) {
       setSelectedCoord(userCoord);
+      mapCameraRef.current?.setCamera({
+        centerCoordinate: userCoord,
+        zoomLevel: 14,
+        animationDuration: 350,
+      });
+      return;
+    }
+    if (mainMapCenter) {
+      setSelectedCoord(mainMapCenter);
     }
   }, [locationStep, hasMapMoved, mainMapCenter, userCoord]);
 
@@ -143,7 +166,7 @@ export default function DiscoverTopControls({
             >
               <Image source={require("../../images/pin.png")} style={styles.rowIcon} resizeMode="contain" />
               <Text style={styles.rowTextBold} numberOfLines={1}>
-                {t(option)}
+                {selectedOptionLabel}
               </Text>
 
               <Image
@@ -175,7 +198,7 @@ export default function DiscoverTopControls({
                 >
                   <Image source={opt.image} style={styles.rowIcon} resizeMode="contain" />
                   <Text style={styles.rowText} numberOfLines={1}>
-                    {t(opt.label)}
+                    {opt.isSaved ? opt.label : t(opt.label)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -185,10 +208,6 @@ export default function DiscoverTopControls({
                 onPress={() => {
                   setLocationStep("add");
                   locationRef.current?.expand();
-                  setLocation((prev) => [
-                    ...prev,
-                    { image: require("../../images/pin.png"), label: "testLocation" },
-                  ]);
                 }}
                 activeOpacity={0.85}
               >
@@ -339,7 +358,8 @@ export default function DiscoverTopControls({
                   <Text style={styles.locationFieldLabel}>Name</Text>
                   <TextInput
                     style={styles.locationInput}
-                    defaultValue="Alexandra's apartment"
+                    value={locationName}
+                    onChangeText={setLocationName}
                     placeholder="Name"
                     placeholderTextColor="#9CA3AF"
                   />
@@ -355,7 +375,30 @@ export default function DiscoverTopControls({
               </View>
 
               <View>
-                <TouchableOpacity style={styles.locationPrimaryButton} activeOpacity={0.9}>
+                <TouchableOpacity
+                  style={styles.locationPrimaryButton}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    const trimmedName = locationName.trim();
+                    if (!trimmedName) {
+                      return;
+                    }
+                    const coord: [number, number] = [selectedCoord[0], selectedCoord[1]];
+                    setLocation((prev) => [
+                      ...prev,
+                      {
+                        image: SAVED_LOCATION_LIST_ICON,
+                        markerImage: SAVED_LOCATION_MARKER_ICON,
+                        label: trimmedName,
+                        coord,
+                        isSaved: true,
+                      },
+                    ]);
+                    setLocationName("");
+                    setLocationStep("add");
+                    locationRef.current?.close();
+                  }}
+                >
                   <Text style={styles.locationPrimaryButtonText}>Save Location</Text>
                 </TouchableOpacity>
               </View>
@@ -444,7 +487,10 @@ export default function DiscoverTopControls({
                     styleURL={Mapbox.StyleURL.Street}
                     scaleBarEnabled={false}
                     onCameraChanged={(state) => {
-                      const center = state?.properties?.center ?? state?.geometry?.coordinates;
+                      const center =
+                        state?.properties?.center ??
+                        (state as { geometry?: { coordinates?: number[] } })?.geometry
+                          ?.coordinates;
                       if (!Array.isArray(center) || center.length < 2) {
                         return;
                       }
@@ -461,10 +507,19 @@ export default function DiscoverTopControls({
                     <UserLocation
                       visible
                       onUpdate={(location) => {
-                        if (hasMapMoved || mainMapCenter) {
+                        if (hasMapMoved) {
                           return;
                         }
-                        setSelectedCoord([location.coords.longitude, location.coords.latitude]);
+                        const nextCoord: [number, number] = [
+                          location.coords.longitude,
+                          location.coords.latitude,
+                        ];
+                        setSelectedCoord(nextCoord);
+                        mapCameraRef.current?.setCamera({
+                          centerCoordinate: nextCoord,
+                          zoomLevel: 14,
+                          animationDuration: 350,
+                        });
                       }}
                     />
                   </MapView>
@@ -472,7 +527,7 @@ export default function DiscoverTopControls({
                   <View style={styles.locationMapOverlay} pointerEvents="none">
                     <View style={styles.locationMapLabel}>
                       <Text style={styles.locationMapLabelText}>
-                        {addressLine1 || "Selected location"}
+                        {selectedCoordLabel}
                       </Text>
                     </View>
                     <Image
@@ -505,8 +560,26 @@ export default function DiscoverTopControls({
                   onPress={() => {
                     const lat = selectedCoord[1].toFixed(5);
                     const lng = selectedCoord[0].toFixed(5);
+                    const trimmedName = locationName.trim();
+                    if (!trimmedName) {
+                      setLocationStep("details");
+                      return;
+                    }
+                    const label = trimmedName;
+                    const coord: [number, number] = [selectedCoord[0], selectedCoord[1]];
                     setAddressLine1("Selected location");
                     setAddressLine2(`${lat}, ${lng}`);
+                    setLocation((prev) => [
+                      ...prev,
+                      {
+                        image: SAVED_LOCATION_LIST_ICON,
+                        markerImage: SAVED_LOCATION_MARKER_ICON,
+                        label,
+                        coord,
+                        isSaved: true,
+                      },
+                    ]);
+                    setLocationName("");
                     setLocationStep("add");
                   }}
                 >

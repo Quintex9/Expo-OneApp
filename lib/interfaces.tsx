@@ -23,6 +23,8 @@ export interface Location {
     image : ImageSourcePropType,
     label : string,
     coord?: [number, number],
+    isSaved?: boolean,
+    markerImage?: ImageSourcePropType,
 }
 
 export type BranchData = {
@@ -53,7 +55,7 @@ export interface DiscoverMapProps {
   cameraRef: RefObject<Camera>;
   filteredMarkers: DiscoverMapMarker[];
   onUserLocationUpdate: (coord: [number, number]) => void;
-  onCameraChanged: (center: [number, number], zoom: number) => void;
+  onCameraChanged: (center: [number, number], zoom: number, isUserGesture?: boolean) => void;
 }
 
 export interface DiscoverTopControlsProps {

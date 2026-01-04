@@ -16,12 +16,15 @@ export default function DiscoverMap({
       styleURL={Mapbox.StyleURL.Street}
       scaleBarEnabled={false}
       onCameraChanged={(state) => {
-        const center = state?.properties?.center ?? state?.geometry?.coordinates;
+        const center =
+          state?.properties?.center ??
+          (state as { geometry?: { coordinates?: number[] } })?.geometry?.coordinates;
         const zoom = state?.properties?.zoom;
         if (!Array.isArray(center) || center.length < 2 || typeof zoom !== "number") {
           return;
         }
-        onCameraChanged([center[0], center[1]], zoom);
+        const isUserGesture = Boolean(state?.gestures?.isGestureActive);
+        onCameraChanged([center[0], center[1]], zoom, isUserGesture);
       }}
     >
       <Camera ref={cameraRef} centerCoordinate={[18.091, 48.3069]} zoomLevel={14} />
