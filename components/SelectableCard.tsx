@@ -1,18 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-
-export type PlanId = "starter" | "medium" | "gold";
-
-interface SelectableCardProps {
-  id: PlanId;
-  title: string;
-  price: string;
-  description: string;
-  popular?: boolean;
-  selected: boolean;
-  onPress: (id: PlanId) => void;
-}
+import type { PlanId, SelectableCardProps } from "../lib/interfaces";
 
 export default function SelectableCard({
   id,

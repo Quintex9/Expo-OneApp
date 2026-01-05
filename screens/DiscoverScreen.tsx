@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import { coords } from "../lib/data/coords";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
-import { Location } from "../lib/interfaces";
+import type { DiscoverCategory, Location } from "../lib/interfaces";
 import DiscoverMap from "../components/discover/DiscoverMap";
 import DiscoverTopControls from "../components/discover/DiscoverTopControls";
 import DiscoverSearchSheet from "../components/discover/DiscoverSearchSheet";
@@ -37,6 +37,12 @@ export default function DiscoverScreen() {
     Beauty: require("../images/icons/beauty/Beauty.png"),
 
   }
+  const marker_icons: Record<DiscoverCategory, any> = {
+    Fitness: require("../images/icons/fitness/fitness_without_review.png"),
+    Gastro: require("../images/icons/gastro/gastro_without_rating.png"),
+    Relax: require("../images/icons/relax/relax_without_rating.png"),
+    Beauty: require("../images/icons/beauty/beauty_without_rating.png"),
+  };
 
   const subcategories = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
 
@@ -107,6 +113,7 @@ export default function DiscoverScreen() {
   const [userCoord, setUserCoord] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(NITRA_CENTER);
   const [didInitialCenter, setDidInitialCenter] = useState(false);
+  const [mapZoom, setMapZoom] = useState(14);
 
   const cameraRef = useRef<Camera>(null);
   
@@ -181,32 +188,12 @@ const filtered = query
 
   const subcategoryChipWidth = Math.max(96, Math.floor((screenWidth - 16 * 2 - 12 * 2) / 3));
   const branchCardWidth = Math.min(360, screenWidth - 32);
-  const markerItems = [
-    {
-      id: "fitness",
-      category: "Fitness",
-      coord: coords[0],
-      icon: require("../images/icons/fitness/fitness_without_review.png"),
-    },
-    {
-      id: "gastro",
-      category: "Gastro",
-      coord: coords[1],
-      icon: require("../images/icons/gastro/gastro_without_rating.png"),
-    },
-    {
-      id: "relax",
-      category: "Relax",
-      coord: coords[2],
-      icon: require("../images/icons/relax/relax_without_rating.png"),
-    },
-    {
-      id: "beauty",
-      category: "Beauty",
-      coord: coords[3],
-      icon: require("../images/icons/beauty/beauty_without_rating.png"),
-    },
-  ];
+  const markerItems = coords.map((item) => ({
+    id: item.id,
+    category: item.category,
+    coord: { lng: item.lng, lat: item.lat },
+    icon: marker_icons[item.category],
+  }));
   const filteredMarkers = appliedFilter
     ? markerItems.filter(item => item.category === appliedFilter)
     : markerItems;
@@ -225,9 +212,10 @@ const filtered = query
         })),
     [location]
   );
+  const hasActiveFilter = Boolean(appliedFilter);
   const mapMarkers = useMemo(
-    () => [...filteredMarkers, ...savedLocationMarkers],
-    [filteredMarkers, savedLocationMarkers]
+    () => (appliedFilter ? filteredMarkers : [...filteredMarkers, ...savedLocationMarkers]),
+    [appliedFilter, filteredMarkers, savedLocationMarkers]
   );
 
   const handleSearchSheetChange = (index: number) => {
@@ -256,6 +244,7 @@ const filtered = query
 
   const handleCameraChanged = useCallback(
     (center: [number, number], zoom: number, isUserGesture?: boolean) => {
+      setMapZoom(zoom);
       if (route.name === "Search") {
         return;
       }
@@ -281,6 +270,9 @@ const filtered = query
         filteredMarkers={mapMarkers}
         onUserLocationUpdate={handleUserLocationUpdate}
         onCameraChanged={handleCameraChanged}
+        mapZoom={mapZoom}
+        cityCenter={NITRA_CENTER}
+        isFilterActive={hasActiveFilter}
       />
       <DiscoverTopControls
         insetsTop={insets.top}

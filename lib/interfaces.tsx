@@ -3,6 +3,8 @@ import type BottomSheet from "@gorhom/bottom-sheet";
 import type { Camera } from "@rnmapbox/maps";
 import { ImageSourcePropType } from "react-native";
 
+export type DiscoverCategory = "Fitness" | "Gastro" | "Relax" | "Beauty";
+
 export interface User {
 
     id : string;
@@ -16,6 +18,7 @@ export interface Coords {
     id : string;
     lng : number;
     lat : number;
+    category: DiscoverCategory;
 
 }
 
@@ -56,6 +59,9 @@ export interface DiscoverMapProps {
   filteredMarkers: DiscoverMapMarker[];
   onUserLocationUpdate: (coord: [number, number]) => void;
   onCameraChanged: (center: [number, number], zoom: number, isUserGesture?: boolean) => void;
+  mapZoom?: number;
+  cityCenter?: [number, number];
+  isFilterActive?: boolean;
 }
 
 export interface DiscoverTopControlsProps {
@@ -74,6 +80,67 @@ export interface DiscoverTopControlsProps {
   cameraRef: RefObject<Camera>;
   t: (key: string) => string;
   onLocationSheetChange?: (index: number) => void;
+}
+
+export interface DiscoverLocationSearchResult {
+  title: string;
+  subtitle: string;
+}
+
+export interface DiscoverLocationSheetProps {
+  locationRef: RefObject<BottomSheet>;
+  setLocation: Dispatch<SetStateAction<Location[]>>;
+  userCoord: [number, number] | null;
+  mainMapCenter?: [number, number] | null;
+  onLocationSheetChange?: (index: number) => void;
+}
+
+export type PlanId = "starter" | "medium" | "gold";
+
+export interface SelectableCardProps {
+  id: PlanId;
+  title: string;
+  price: string;
+  description: string;
+  popular?: boolean;
+  selected: boolean;
+  onPress: (id: PlanId) => void;
+}
+
+export interface LocationAddStepProps {
+  addressLine1: string;
+  addressLine2: string;
+  onSearchPress: () => void;
+  onContinue: () => void;
+  onMapPress: () => void;
+}
+
+export interface LocationDetailsStepProps {
+  locationName: string;
+  onChangeName: (value: string) => void;
+  onBack: () => void;
+  onSave: () => void;
+}
+
+export interface LocationSearchStepProps {
+  searchQuery: string;
+  onChangeQuery: (value: string) => void;
+  results: DiscoverLocationSearchResult[];
+  onSelectResult: (item: DiscoverLocationSearchResult) => void;
+  onContinue: () => void;
+  onMapPress: () => void;
+}
+
+export interface LocationMapStepProps {
+  selectedCoord: [number, number];
+  selectedCoordLabel: string;
+  hasMapMoved: boolean;
+  onBack: () => void;
+  onCenterPress: () => void;
+  onSave: () => void;
+  setHasMapMoved: Dispatch<SetStateAction<boolean>>;
+  setSelectedCoord: Dispatch<SetStateAction<[number, number]>>;
+  mapCameraRef: RefObject<Camera>;
 }
 
 export interface DiscoverSearchSheetProps {
