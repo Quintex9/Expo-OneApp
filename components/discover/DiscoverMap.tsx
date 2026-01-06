@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Image, useWindowDimensions } from "react-native";
 import Mapbox, {
   Camera,
@@ -16,8 +16,13 @@ const CLUSTER_IMAGE = require("../../images/group_pin.png");
 const FILTER_CLUSTER_IMAGE = require("../../images/filter_pin.png");
 const BADGE_IMAGE = require("../../images/badge.png");
 const STAR_IMAGE = require("../../images/star_white.png");
+const NAVIGATION_IMAGE = require("../../images/navigation.png");
+const NAVIGATION_IMAGE_URI = Image.resolveAssetSource(NAVIGATION_IMAGE).uri;
 const CITY_CLUSTER_ZOOM = 12;
 const CLUSTER_MAX_ZOOM = 14;
+const CLUSTERING_MAX_ZOOM = CLUSTER_MAX_ZOOM - 0.01;
+const CLUSTER_FADE_RANGE = 0.25;
+const DEFAULT_CAMERA_ZOOM = 14;
 const DEFAULT_CITY_CENTER: [number, number] = [18.091, 48.3069];
 const CLUSTER_DEFAULT_NAME = "clusterDefault";
 const CLUSTER_FILTER_NAME = "clusterFilter";
@@ -31,14 +36,32 @@ const STAR_BASE_OFFSET_Y = BADGE_BASE_CENTER_Y + 3;
 const TEXT_BASE_OFFSET_X = BADGE_BASE_OFFSET_X;
 const TEXT_BASE_OFFSET_Y = BADGE_BASE_CENTER_Y;
 const BADGE_BASE_WIDTH = 360;
+const CLUSTER_FILTER = ["has", "point_count"] as const;
+const MARKER_FILTER = ["!", CLUSTER_FILTER] as const;
+const USER_PUCK_SCALE = ["interpolate", ["linear"], ["zoom"], 10, 1.0, 20, 4.0] as const;
+const USER_PUCK_PULSING = {
+  isEnabled: true,
+  color: "teal",
+  radius: 50.0,
+} as const;
+
+type MarkerFeatureProps = { icon: string; rating: string };
+type IconRegistry = Record<string, any>;
+
+const BASE_IMAGES: IconRegistry = {
+  [CLUSTER_DEFAULT_NAME]: CLUSTER_IMAGE,
+  [CLUSTER_FILTER_NAME]: FILTER_CLUSTER_IMAGE,
+  [BADGE_IMAGE_NAME]: BADGE_IMAGE,
+  [STAR_IMAGE_NAME]: STAR_IMAGE,
+};
 
 const clusterFadeOut = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  CLUSTER_MAX_ZOOM,
+  CLUSTER_MAX_ZOOM - CLUSTER_FADE_RANGE,
   1,
-  CLUSTER_MAX_ZOOM + 0.4,
+  CLUSTERING_MAX_ZOOM,
   0,
 ] as const;
 
@@ -46,9 +69,9 @@ const markerFadeIn = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  CLUSTER_MAX_ZOOM,
+  CLUSTER_MAX_ZOOM - CLUSTER_FADE_RANGE,
   0,
-  CLUSTER_MAX_ZOOM + 0.4,
+  CLUSTER_MAX_ZOOM,
   1,
 ] as const;
 
@@ -113,23 +136,70 @@ const badgeTextLayerBase = {
   textIgnorePlacement: true,
 } as const;
 
-const ratingValues = ["4.1", "4.3", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.0"];
-
-const getRatingForId = (id: string) => {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  return ratingValues[hash % ratingValues.length];
-};
-
 const toFeatureCollection = <TProps,>(features: Feature<Point, TProps>[]) =>
   ({
     type: "FeatureCollection",
     features,
   }) as FeatureCollection<Point, TProps>;
 
-export default function DiscoverMap({
+const buildCityClusterShape = (center: [number, number], count: number) => {
+  const cityFeature: Feature<Point, { point_count: number }> = {
+    type: "Feature",
+    id: "city-cluster",
+    properties: { point_count: count },
+    geometry: { type: "Point", coordinates: center },
+  };
+  return toFeatureCollection([cityFeature]);
+};
+
+const resolveMarkerIconName = (
+  markerIcon: DiscoverMapProps["filteredMarkers"][number]["icon"],
+  images: IconRegistry,
+  iconNameByKey: Map<string, string>
+) => {
+  if (typeof markerIcon === "string" && images[markerIcon]) {
+    return markerIcon;
+  }
+
+  const key = String(markerIcon);
+  let iconName = iconNameByKey.get(key);
+  if (!iconName) {
+    iconName = `marker-${key}`;
+    iconNameByKey.set(key, iconName);
+    images[iconName] = markerIcon;
+  }
+  return iconName;
+};
+
+const buildMarkersShapeAndImages = (
+  markers: DiscoverMapProps["filteredMarkers"],
+  baseImages: IconRegistry
+) => {
+  const images: IconRegistry = { ...baseImages };
+  const iconNameByKey = new Map<string, string>();
+  const features: Feature<Point, MarkerFeatureProps>[] = [];
+
+  markers.forEach((marker) => {
+    const iconName = resolveMarkerIconName(marker.icon, images, iconNameByKey);
+    const rating = marker.rating.toFixed(1);
+    features.push({
+      type: "Feature",
+      id: marker.id,
+      properties: { icon: iconName, rating },
+      geometry: {
+        type: "Point",
+        coordinates: [marker.coord.lng, marker.coord.lat],
+      },
+    });
+  });
+
+  return {
+    images,
+    shape: toFeatureCollection(features),
+  };
+};
+
+function DiscoverMap({
   cameraRef,
   filteredMarkers,
   onUserLocationUpdate,
@@ -137,6 +207,7 @@ export default function DiscoverMap({
   mapZoom,
   cityCenter,
   isFilterActive,
+  iconRegistry,
 }: DiscoverMapProps) {
   const { width } = useWindowDimensions();
   const badgeScale = width / BADGE_BASE_WIDTH;
@@ -152,14 +223,6 @@ export default function DiscoverMap({
   const clusterIconName = isFilterActive ? CLUSTER_FILTER_NAME : CLUSTER_DEFAULT_NAME;
   const clusterLayerStyle = useMemo(
     () => ({ ...clusterLayerBase, iconImage: clusterIconName }),
-    [clusterIconName]
-  );
-  const soloClusterLayerStyle = useMemo(
-    () => ({
-      ...clusterLayerBase,
-      iconImage: clusterIconName,
-      textField: "1",
-    }),
     [clusterIconName]
   );
   const badgeLayerStyle = useMemo(
@@ -183,95 +246,72 @@ export default function DiscoverMap({
     }),
     [textOffsetX, textOffsetY]
   );
+  const mergedImages = useMemo(
+    () => (iconRegistry ? { ...BASE_IMAGES, ...iconRegistry } : BASE_IMAGES),
+    [iconRegistry]
+  );
 
   const { shape, images, clusterEnabled } = useMemo(() => {
-    const imageMap: Record<string, any> = {
-      [CLUSTER_DEFAULT_NAME]: CLUSTER_IMAGE,
-      [CLUSTER_FILTER_NAME]: FILTER_CLUSTER_IMAGE,
-      [BADGE_IMAGE_NAME]: BADGE_IMAGE,
-      [STAR_IMAGE_NAME]: STAR_IMAGE,
-    };
-
     if (isCityCluster) {
-      const cityFeature: Feature<Point, { point_count: number }> = {
-        type: "Feature",
-        id: "city-cluster",
-        properties: { point_count: filteredMarkers.length },
-        geometry: { type: "Point", coordinates: clusterCenter },
-      };
+      const shape = buildCityClusterShape(clusterCenter, filteredMarkers.length);
       return {
         clusterEnabled: false,
-        images: imageMap,
-        shape: toFeatureCollection([cityFeature]),
+        images: mergedImages,
+        shape,
       };
     }
 
-    const iconNameByKey = new Map<string, string>();
-    let index = 0;
-    const features: Feature<Point, { icon: string; rating: string }>[] = filteredMarkers.map(
-      (marker) => {
-      const key = String(marker.icon);
-      let iconName = iconNameByKey.get(key);
-      if (!iconName) {
-        iconName = `marker-${index++}`;
-        iconNameByKey.set(key, iconName);
-        imageMap[iconName] = marker.icon;
-      }
-      const rating = getRatingForId(marker.id);
-      return {
-        type: "Feature",
-        id: marker.id,
-        properties: { icon: iconName, rating },
-        geometry: {
-          type: "Point",
-          coordinates: [marker.coord.lng, marker.coord.lat],
-        },
-      };
-    });
-
+    const { images, shape } = buildMarkersShapeAndImages(filteredMarkers, mergedImages);
     return {
       clusterEnabled: true,
-      images: imageMap,
-      shape: toFeatureCollection(features),
+      images,
+      shape,
     };
-  }, [clusterCenter, filteredMarkers, isCityCluster]);
+  }, [clusterCenter, filteredMarkers, isCityCluster, mergedImages]);
+
+  const handleUserLocationUpdate = useCallback(
+    (location: { coords: { longitude: number; latitude: number } }) => {
+      onUserLocationUpdate([location.coords.longitude, location.coords.latitude]);
+    },
+    [onUserLocationUpdate]
+  );
+
+  const handleCameraChanged = useCallback(
+    (state: any) => {
+      const center =
+        state?.properties?.center ??
+        (state as { geometry?: { coordinates?: number[] } })?.geometry?.coordinates;
+      const zoom = state?.properties?.zoom;
+      if (!Array.isArray(center) || center.length < 2 || typeof zoom !== "number") {
+        return;
+      }
+      const isUserGesture = Boolean(state?.gestures?.isGestureActive);
+      onCameraChanged([center[0], center[1]], zoom, isUserGesture);
+    },
+    [onCameraChanged]
+  );
 
   return (
     <MapView
       style={styles.map}
       styleURL={Mapbox.StyleURL.Street}
       scaleBarEnabled={false}
-      onCameraChanged={(state) => {
-        const center =
-          state?.properties?.center ??
-          (state as { geometry?: { coordinates?: number[] } })?.geometry?.coordinates;
-        const zoom = state?.properties?.zoom;
-        if (!Array.isArray(center) || center.length < 2 || typeof zoom !== "number") {
-          return;
-        }
-        const isUserGesture = Boolean(state?.gestures?.isGestureActive);
-        onCameraChanged([center[0], center[1]], zoom, isUserGesture);
-      }}
+      onCameraChanged={handleCameraChanged}
     >
       <Mapbox.Images images={images} />
-      <Camera ref={cameraRef} centerCoordinate={[18.091, 48.3069]} zoomLevel={14} />
-
-      <UserLocation
-        visible
-        onUpdate={(location) => {
-          onUserLocationUpdate([location.coords.longitude, location.coords.latitude]);
-        }}
+      <Camera
+        ref={cameraRef}
+        centerCoordinate={DEFAULT_CITY_CENTER}
+        zoomLevel={DEFAULT_CAMERA_ZOOM}
       />
 
+      <UserLocation visible onUpdate={handleUserLocationUpdate} />
+
       <LocationPuck
-        topImage={Image.resolveAssetSource(require("../../images/navigation.png")).uri}
+        topImage={NAVIGATION_IMAGE_URI}
         visible={true}
-        scale={["interpolate", ["linear"], ["zoom"], 10, 1.0, 20, 4.0]}
-        pulsing={{
-          isEnabled: true,
-          color: "teal",
-          radius: 50.0,
-        }}
+        scale={USER_PUCK_SCALE}
+        pulsing={USER_PUCK_PULSING}
       />
 
       <ShapeSource
@@ -279,41 +319,35 @@ export default function DiscoverMap({
         shape={shape}
         cluster={clusterEnabled}
         clusterRadius={120}
-        clusterMaxZoomLevel={CLUSTER_MAX_ZOOM}
+        clusterMaxZoomLevel={CLUSTERING_MAX_ZOOM}
       >
         <SymbolLayer
           id="discover-clusters"
-          filter={["has", "point_count"]}
+          filter={CLUSTER_FILTER}
           style={clusterLayerStyle}
-          maxZoomLevel={CLUSTER_MAX_ZOOM}
-        />
-        <SymbolLayer
-          id="discover-solo-clusters"
-          filter={["!", ["has", "point_count"]]}
-          style={soloClusterLayerStyle}
-          maxZoomLevel={CLUSTER_MAX_ZOOM}
+          maxZoomLevel={CLUSTERING_MAX_ZOOM}
         />
         <SymbolLayer
           id="discover-markers-layer"
-          filter={["!", ["has", "point_count"]]}
+          filter={MARKER_FILTER}
           style={pointLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
         <SymbolLayer
           id="discover-badge-layer"
-          filter={["!", ["has", "point_count"]]}
+          filter={MARKER_FILTER}
           style={badgeLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
         <SymbolLayer
           id="discover-badge-star"
-          filter={["!", ["has", "point_count"]]}
+          filter={MARKER_FILTER}
           style={badgeStarLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
         <SymbolLayer
           id="discover-badge-text"
-          filter={["!", ["has", "point_count"]]}
+          filter={MARKER_FILTER}
           style={badgeTextLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
@@ -321,3 +355,5 @@ export default function DiscoverMap({
     </MapView>
   );
 }
+
+export default memo(DiscoverMap);

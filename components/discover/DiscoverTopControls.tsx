@@ -135,6 +135,6 @@ export default function DiscoverTopControls({
         mainMapCenter={mainMapCenter}
         onLocationSheetChange={onLocationSheetChange}
       />
-    </>
+      </>
   );
 }

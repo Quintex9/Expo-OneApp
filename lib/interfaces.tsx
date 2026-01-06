@@ -52,6 +52,7 @@ export interface DiscoverMapMarker {
   id: string;
   coord: { lng: number; lat: number };
   icon: any;
+  rating: number;
 }
 
 export interface DiscoverMapProps {
@@ -62,6 +63,7 @@ export interface DiscoverMapProps {
   mapZoom?: number;
   cityCenter?: [number, number];
   isFilterActive?: boolean;
+  iconRegistry?: Record<string, any>;
 }
 
 export interface DiscoverTopControlsProps {
@@ -161,6 +163,8 @@ export interface DiscoverFilterSheetProps {
   insetsBottom: number;
   filter: string;
   setFilter: Dispatch<SetStateAction<string>>;
+  rating: Set<string>;
+  setRating: Dispatch<SetStateAction<Set<string>>>;
   filterOptions: string[];
   filterIcons: Record<string, any>;
   subcategories: string[];
@@ -168,6 +172,7 @@ export interface DiscoverFilterSheetProps {
   toggle: (name: string) => void;
   count: number;
   setAppliedFilter: Dispatch<SetStateAction<string | null>>;
+  setAppliedRatings: Dispatch<SetStateAction<Set<string>>>;
   setSub: Dispatch<SetStateAction<Set<string>>>;
   subcategoryChipWidth: number;
   t: (key: string) => string;

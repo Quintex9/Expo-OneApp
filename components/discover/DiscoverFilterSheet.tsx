@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Image, Text, View } from "react-native";
 import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -12,6 +12,8 @@ export default function DiscoverFilterSheet({
   insetsBottom,
   filter,
   setFilter,
+  rating,
+  setRating,
   filterOptions,
   filterIcons,
   subcategories,
@@ -19,11 +21,11 @@ export default function DiscoverFilterSheet({
   toggle,
   count,
   setAppliedFilter,
+  setAppliedRatings,
   setSub,
   subcategoryChipWidth,
   t,
 }: DiscoverFilterSheetProps) {
-  const [rating, setRating] = useState<Set<string>>(() => new Set());
   const ratingOptions = ["4.7", "4.5", "4.0", "3.5"];
 
   return (
@@ -48,6 +50,7 @@ export default function DiscoverFilterSheet({
                 setAppliedFilter(null);
                 setSub(new Set());
                 setRating(new Set());
+                setAppliedRatings(new Set());
               }}
             >
               <Text style={{ fontSize: 14, color: "gray" }}>{t("reset")}</Text>
@@ -57,25 +60,17 @@ export default function DiscoverFilterSheet({
           <View style={styles.ratingSection}>
             <Text style={styles.ratingTitle}>Rating</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ratingRow}>
-              {ratingOptions.map((value) => {
-                const active = rating.has(value);
-                return (
-                  <TouchableOpacity
-                    key={value}
-                    style={[styles.ratingChip, active && styles.ratingChipActive]}
-                    onPress={() =>
-                      setRating((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(value)) {
-                          next.delete(value);
-                        } else {
-                          next.add(value);
-                        }
-                        return next;
-                      })
-                    }
-                    activeOpacity={0.85}
-                  >
+                {ratingOptions.map((value) => {
+                  const active = rating.has(value);
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      style={[styles.ratingChip, active && styles.ratingChipActive]}
+                      onPress={() =>
+                        setRating(() => (active ? new Set() : new Set([value])))
+                      }
+                      activeOpacity={0.85}
+                    >
                     <Image
                       source={
                         active
@@ -200,6 +195,7 @@ export default function DiscoverFilterSheet({
             }}
             onPress={() => {
               setAppliedFilter(filter);
+              setAppliedRatings(new Set(rating));
               filterRef.current?.close();
             }}
           >

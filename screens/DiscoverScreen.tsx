@@ -18,6 +18,29 @@ import { styles } from "../components/discover/discoverStyles";
 let lastDiscoverCameraState: { center: [number, number]; zoom: number } | null = null;
 let preserveDiscoverCamera = false;
 const NITRA_CENTER: [number, number] = [18.091, 48.3069];
+const FILTER_OPTIONS: DiscoverCategory[] = ["Fitness", "Gastro", "Relax", "Beauty"];
+const FILTER_ICONS: Record<DiscoverCategory, any> = {
+  Fitness: require("../images/icons/fitness/Fitness.png"),
+  Gastro: require("../images/icons/gastro/Gastro.png"),
+  Relax: require("../images/icons/relax/Relax.png"),
+  Beauty: require("../images/icons/beauty/Beauty.png"),
+};
+const MARKER_ICONS: Record<DiscoverCategory, any> = {
+  Fitness: require("../images/icons/fitness/fitness_without_review.png"),
+  Gastro: require("../images/icons/gastro/gastro_without_rating.png"),
+  Relax: require("../images/icons/relax/relax_without_rating.png"),
+  Beauty: require("../images/icons/beauty/beauty_without_rating.png"),
+};
+const SUBCATEGORIES = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
+const RATING_VALUES = [4.1, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0];
+
+const getRatingForId = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return RATING_VALUES[hash % RATING_VALUES.length];
+};
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
@@ -29,23 +52,6 @@ export default function DiscoverScreen() {
   const filterRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["25%", "85%"], []);
 
-  const filter_options = ["Fitness", "Gastro", "Relax", "Beauty"];
-  const filter_icons: Record<string, any> = {
-    Fitness: require("../images/icons/fitness/Fitness.png"),
-    Gastro: require("../images/icons/gastro/Gastro.png"),
-    Relax: require("../images/icons/relax/Relax.png"),
-    Beauty: require("../images/icons/beauty/Beauty.png"),
-
-  }
-  const marker_icons: Record<DiscoverCategory, any> = {
-    Fitness: require("../images/icons/fitness/fitness_without_review.png"),
-    Gastro: require("../images/icons/gastro/gastro_without_rating.png"),
-    Relax: require("../images/icons/relax/relax_without_rating.png"),
-    Beauty: require("../images/icons/beauty/beauty_without_rating.png"),
-  };
-
-  const subcategories = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
-
   const { t } = useTranslation();
 
   const branches = [
@@ -53,6 +59,7 @@ export default function DiscoverScreen() {
     title: t("365 GYM Nitra"),
     image: require("../assets/365.jpg"),
     rating: 4.6,
+    category: "Fitness",
     distance: t("1.7 km"),
     hours: t("9:00 - 21:00"),
     discount: t("20% discount on first entry"),
@@ -67,6 +74,7 @@ export default function DiscoverScreen() {
     title: t("RED ROYAL GYM"),
     image: require("../assets/royal.jpg"),
     rating: 4.6,
+    category: "Fitness",
     distance: t("1.7 km"),
     hours: t("9:00 - 21:00"),
     discount: t("20% discount on first entry"),
@@ -81,6 +89,7 @@ export default function DiscoverScreen() {
     title: t("GYM KLUB"),
     image: require("../assets/klub.jpg"),
     rating: 4.6,
+    category: "Fitness",
     distance: t("1.7 km"),
     hours: t("9:00 - 21:00"),
     discount: t("20% discount on first entry"),
@@ -110,6 +119,8 @@ export default function DiscoverScreen() {
   const [filter, setFilter] = useState("Gastro")
   const [appliedFilter, setAppliedFilter] = useState<string | null>(null);
   const [sub, setSub] = useState<Set<string>>(() => new Set());
+  const [ratingFilter, setRatingFilter] = useState<Set<string>>(() => new Set());
+  const [appliedRatings, setAppliedRatings] = useState<Set<string>>(() => new Set());
   const [userCoord, setUserCoord] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(NITRA_CENTER);
   const [didInitialCenter, setDidInitialCenter] = useState(false);
@@ -117,11 +128,6 @@ export default function DiscoverScreen() {
 
   const cameraRef = useRef<Camera>(null);
   
-const query = text.trim().toLowerCase();
-const filtered = query
-  ? branches.filter(b => b.title.toLowerCase().includes(query))
-  : branches;
-
   const toggle = (name: string) => {
     setSub(prev => {
       const next = new Set(prev);
@@ -188,15 +194,45 @@ const filtered = query
 
   const subcategoryChipWidth = Math.max(96, Math.floor((screenWidth - 16 * 2 - 12 * 2) / 3));
   const branchCardWidth = Math.min(360, screenWidth - 32);
-  const markerItems = coords.map((item) => ({
-    id: item.id,
-    category: item.category,
-    coord: { lng: item.lng, lat: item.lat },
-    icon: marker_icons[item.category],
-  }));
+  const ratingThreshold = useMemo(() => {
+    const values = Array.from(appliedRatings)
+      .map((value) => Number(value))
+      .filter((value) => !Number.isNaN(value));
+    if (values.length === 0) {
+      return null;
+    }
+    return Math.max(...values);
+  }, [appliedRatings]);
+  const query = text.trim().toLowerCase();
+  const ratingFilteredBranches =
+    ratingThreshold === null
+      ? branches
+      : branches.filter((branch) => branch.rating >= ratingThreshold);
+  const filteredBranches = appliedFilter
+    ? ratingFilteredBranches.filter((branch) => branch.category === appliedFilter)
+    : ratingFilteredBranches;
+  const filtered = query
+    ? filteredBranches.filter((branch) => branch.title.toLowerCase().includes(query))
+    : filteredBranches;
+  const filterCount = sub.size + ratingFilter.size;
+  const markerItems = useMemo(
+    () =>
+      coords.map((item) => ({
+        id: item.id,
+        category: item.category,
+        coord: { lng: item.lng, lat: item.lat },
+        icon: MARKER_ICONS[item.category],
+        rating: getRatingForId(item.id),
+      })),
+    []
+  );
+  const ratingFilteredMarkers =
+    ratingThreshold === null
+      ? markerItems
+      : markerItems.filter((item) => item.rating >= ratingThreshold);
   const filteredMarkers = appliedFilter
-    ? markerItems.filter(item => item.category === appliedFilter)
-    : markerItems;
+    ? ratingFilteredMarkers.filter((item) => item.category === appliedFilter)
+    : ratingFilteredMarkers;
   const selectedOptionCoord = useMemo(() => {
     const selected = location.find((item) => item.label === option && item.coord);
     return selected?.coord ?? null;
@@ -205,17 +241,21 @@ const filtered = query
     () =>
       location
         .filter((item) => item.isSaved && item.coord)
-        .map((item, index) => ({
-          id: `saved-${index}-${item.coord![0]}-${item.coord![1]}`,
-          coord: { lng: item.coord![0], lat: item.coord![1] },
-          icon: item.markerImage ?? item.image,
-        })),
+        .map((item, index) => {
+          const id = `saved-${index}-${item.coord![0]}-${item.coord![1]}`;
+          return {
+            id,
+            coord: { lng: item.coord![0], lat: item.coord![1] },
+            icon: item.markerImage ?? item.image,
+            rating: getRatingForId(id),
+          };
+        }),
     [location]
   );
-  const hasActiveFilter = Boolean(appliedFilter);
+  const hasActiveFilter = Boolean(appliedFilter) || appliedRatings.size > 0;
   const mapMarkers = useMemo(
-    () => (appliedFilter ? filteredMarkers : [...filteredMarkers, ...savedLocationMarkers]),
-    [appliedFilter, filteredMarkers, savedLocationMarkers]
+    () => (hasActiveFilter ? filteredMarkers : [...filteredMarkers, ...savedLocationMarkers]),
+    [hasActiveFilter, filteredMarkers, savedLocationMarkers]
   );
 
   const handleSearchSheetChange = (index: number) => {
@@ -308,13 +348,16 @@ const filtered = query
         insetsBottom={insets.bottom}
         filter={filter}
         setFilter={setFilter}
-        filterOptions={filter_options}
-        filterIcons={filter_icons}
-        subcategories={subcategories}
+        rating={ratingFilter}
+        setRating={setRatingFilter}
+        filterOptions={FILTER_OPTIONS}
+        filterIcons={FILTER_ICONS}
+        subcategories={SUBCATEGORIES}
         sub={sub}
         toggle={toggle}
-        count={sub.size}
+        count={filterCount}
         setAppliedFilter={setAppliedFilter}
+        setAppliedRatings={setAppliedRatings}
         setSub={setSub}
         subcategoryChipWidth={subcategoryChipWidth}
         t={t}
@@ -324,12 +367,12 @@ const filtered = query
           insetsBottom={insets.bottom}
           categoriesOpen={categoriesOpen}
           setCategoriesOpen={setCategoriesOpen}
-          filterOptions={filter_options}
-          filterIcons={filter_icons}
+          filterOptions={FILTER_OPTIONS}
+          filterIcons={FILTER_ICONS}
           appliedFilter={appliedFilter}
           setAppliedFilter={setAppliedFilter}
           setFilter={setFilter}
-          branches={branches}
+          branches={filteredBranches}
           branchCardWidth={branchCardWidth}
           t={t}
         />
