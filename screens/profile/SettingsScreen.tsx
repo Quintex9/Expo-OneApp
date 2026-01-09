@@ -1,11 +1,52 @@
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import { useAuth } from "../../lib/AuthContext";
+
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+
+  const { signOut, user } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    Alert.alert(
+      t("logOut") || "Logout",
+      t("logoutConfirm") || "Are you sure you want to logout?",
+      [
+        {
+          text: t("cancel") || "Cancel",
+          style: "cancel",
+          onPress: () => setMenuOpen(false),
+        },
+        {
+          text: t("logOut") || "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut();
+              setMenuOpen(false);
+              // Presmerovanie na Login screen
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              });
+            } catch (error: any) {
+              console.error("Logout error:", error);
+              Alert.alert(
+                t("error") || "Error",
+                error?.message || t("logoutError") || "Failed to logout"
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -44,7 +85,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* LOG OUT */}
-      <TouchableOpacity style={styles.logout}>
+      <TouchableOpacity style={styles.logout} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={18} color="#666" />
         <Text style={styles.logoutText}>{t("logOut")}</Text>
       </TouchableOpacity>

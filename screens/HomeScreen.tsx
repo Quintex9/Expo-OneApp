@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { users } from '../lib/data/users';
-
+import { useAuth } from '../lib/AuthContext';
+import { extractNameFromEmail } from '../lib/utils/userUtils';
 
 export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
+  const { user } = useAuth();
   const qrPadding = 20;
   const qrMaxSize = 325;
   const qrSize = Math.max(
@@ -12,13 +13,20 @@ export default function HomeScreen() {
     Math.floor(Math.min(qrMaxSize, screenWidth - 32 - qrPadding * 2))
   );
 
+  // Extrahujeme meno a priezvisko z emailu
+  const userName = extractNameFromEmail(user?.email);
+  const firstName = userName?.firstName || 'User';
+  const lastName = userName?.lastName || '';
+  const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+  const userId = user?.id || 'N/A';
+
   return (
     <View style={styles.container}>
 
         <View style={styles.container_items}>
         <Image source={require('../images/photo.png')} style={styles.image} />         
-         <Text style={styles.container_text_top}>{users[0].first_name} {users[0].last_name}</Text>
-          <Text style={styles.container_text_bottom}>ID: {users[0].id} </Text>
+         <Text style={styles.container_text_top}>{fullName}</Text>
+          <Text style={styles.container_text_bottom}>ID: {userId.substring(0, 8)}</Text>
         </View> 
       
         <View style={[styles.container_qr, { padding: qrPadding }]}>

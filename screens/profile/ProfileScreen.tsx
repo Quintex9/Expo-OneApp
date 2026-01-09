@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../lib/AuthContext";
+import { getFullNameFromEmail } from "../../lib/utils/userUtils";
 
 import BranchCard from "../../components/BranchCard";
 
@@ -19,8 +22,47 @@ export default function ProfileScreen() {
   const subscription: SubscriptionType = "gold";
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+  const { signOut, user } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Extrahujeme meno z emailu
+  const userName = getFullNameFromEmail(user?.email);
+
+  const handleLogout = async () => {
+    Alert.alert(
+      t("logOut") || "Logout",
+      t("logoutConfirm") || "Are you sure you want to logout?",
+      [
+        {
+          text: t("cancel") || "Cancel",
+          style: "cancel",
+          onPress: () => setMenuOpen(false),
+        },
+        {
+          text: t("logOut") || "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut();
+              setMenuOpen(false);
+              // Presmerovanie na Login screen
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              });
+            } catch (error: any) {
+              console.error("Logout error:", error);
+              Alert.alert(
+                t("error") || "Error",
+                error?.message || t("logoutError") || "Failed to logout"
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,7 +70,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatar} />
-          <Text style={styles.name}>Martin Novák</Text>
+          <Text style={styles.name}>{userName}</Text>
         </View>
 
         {/* HAMBURGER BUTTON */}
@@ -92,9 +134,9 @@ export default function ProfileScreen() {
 
           <DropdownItem
             icon="log-out-outline"
-            label={t("logout")}
+            label={t("logOut")}
             danger
-            onPress={() => setMenuOpen(false)}
+            onPress={handleLogout}
           />
         </View>
       )}

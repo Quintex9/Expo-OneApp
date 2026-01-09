@@ -2,41 +2,116 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ActivityIndicator } from "react-native";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function SignupScreen() {
-    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const navigation = useNavigation<any>();
     const { t } = useTranslation();
 
+    const handleSignup = async () => {
+        // Validácia
+        if (!email || !password || !confirmPassword) {
+            Alert.alert(t("error") || "Error", t("fillAllFields") || "Please fill all fields");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            Alert.alert(t("error") || "Error", t("passwordsDoNotMatch") || "Passwords do not match");
+            return;
+        }
+
+        if (password.length < 6) {
+            Alert.alert(t("error") || "Error", t("passwordTooShort") || "Password must be at least 6 characters");
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Registrácia používateľa - len email a heslo
+            const { data, error } = await supabase.auth.signUp({
+                email: email.trim(),
+                password: password,
+            });
+
+            if (error) {
+                console.error("Signup error:", error);
+                throw error;
+            }
+
+            if (data.user) {
+                Alert.alert(
+                    t("success") || "Success",
+                    t("signupSuccess") || "Account created successfully! Please check your email to verify your account.",
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => navigation.navigate("Login"),
+                        },
+                    ]
+                );
+            }
+        } catch (error: any) {
+            console.error("Signup catch error:", error);
+            const errorMessage = error?.message || error?.error_description || t("signupError") || "An error occurred during signup";
+            Alert.alert(
+                t("signupFailed") || "Signup Failed",
+                errorMessage
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignup = async () => {
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+            });
+            if (error) throw error;
+        } catch (error: any) {
+            Alert.alert(t("error") || "Error", error.message);
+        }
+    };
+
+    const handleAppleSignup = async () => {
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'apple',
+            });
+            if (error) throw error;
+        } catch (error: any) {
+            Alert.alert(t("error") || "Error", error.message);
+        }
+    };
+
+    const handleFacebookSignup = async () => {
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'facebook',
+            });
+            if (error) throw error;
+        } catch (error: any) {
+            Alert.alert(t("error") || "Error", error.message);
+        }
+    };
+
     return (
         <View style={styles.container}>
-
             {/* Header */}
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.navigate('Tabs', { screen: 'Discover' })}>
                 <Ionicons name="arrow-back" size={24} />
             </TouchableOpacity>
             <Text style={styles.title}>{t("createAccount")}</Text>
-            <Text style={styles.subtitle}>
-                {t("createSubtitle")}
-            </Text>
-
-            {/* Full Name */}
-            <View style={styles.inputWrapper}>
-                <Ionicons name="person-outline" size={20} style={styles.inputIcon} />
-                <TextInput
-                    placeholder={t("fullName")}
-                    style={styles.input}
-                    value={name}
-                    onChangeText={setName}
-                />
-            </View>
+            <Text style={styles.subtitle}>{t("createSubtitle")}</Text>
 
             {/* Email */}
             <View style={styles.inputWrapper}>
@@ -47,21 +122,22 @@ export default function SignupScreen() {
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!loading}
                 />
             </View>
 
             {/* Password */}
             <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} style={styles.inputIcon} />
-
                 <TextInput
                     placeholder={t("password")}
                     style={styles.input}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    editable={!loading}
                 />
-
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                     <Ionicons
                         name={showPassword ? "eye-outline" : "eye-off-outline"}
@@ -74,15 +150,14 @@ export default function SignupScreen() {
             {/* Confirm Password */}
             <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed-outline" size={20} style={styles.inputIcon} />
-
                 <TextInput
                     placeholder={t("confirmPassword")}
                     style={styles.input}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
+                    editable={!loading}
                 />
-
                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                     <Ionicons
                         name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
@@ -93,12 +168,20 @@ export default function SignupScreen() {
             </View>
 
             {/* Create Account Button */}
-            <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>{t("createAccount")}</Text>
+            <TouchableOpacity 
+                style={[styles.button, loading && styles.buttonDisabled]} 
+                onPress={handleSignup}
+                disabled={loading}
+            >
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.buttonText}>{t("createAccount")}</Text>
+                )}
             </TouchableOpacity>
 
             {/* Sign in link */}
-            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")} disabled={loading}>
                 <Text style={styles.signin}>
                     {t("already")}
                     <Text style={styles.signinLink}>{t("sign")}</Text>
@@ -112,28 +195,28 @@ export default function SignupScreen() {
                 <View style={styles.divider} />
             </View>
 
-            {/* Social login */}
+            {/* Social signup */}
             <View style={styles.socialRow}>
-                <View style={styles.socialButton}>
+                <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignup} disabled={loading}>
                     <Image
                         source={{ uri: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png" }}
                         style={styles.socialIcon}
                     />
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.socialButton}>
+                <TouchableOpacity style={styles.socialButton} onPress={handleAppleSignup} disabled={loading}>
                     <Image
                         source={{ uri: "https://cdn-icons-png.flaticon.com/512/0/747.png" }}
                         style={styles.socialIcon}
                     />
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.socialButton}>
+                <TouchableOpacity style={styles.socialButton} onPress={handleFacebookSignup} disabled={loading}>
                     <Image
                         source={{ uri: "https://cdn-icons-png.flaticon.com/512/5968/5968764.png" }}
                         style={styles.socialIcon}
                     />
-                </View>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -171,6 +254,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 10,
         marginBottom: 20,
+    },
+    buttonDisabled: {
+        opacity: 0.6,
     },
     buttonText: {
         color: "#fff",

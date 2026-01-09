@@ -1,6 +1,8 @@
 declare module '@env' {
   export const NEXT_PUBLIC_MAPBOX_TOKEN: string;
   export const EXPO_PUBLIC_MAPBOX_TOKEN: string;
+  export const SUPABASE_ANON_KEY: string;
+  export const SUPABASE_URL: string;
 }
 
 declare module 'text-encoding' {

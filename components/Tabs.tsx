@@ -4,13 +4,13 @@ import CustomTabBar from "./CustomTabBar";
 import HomeScreen from "../screens/HomeScreen";
 import BenefitsScreen from "../screens/BenefitsScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
-import ProfileDecider from "../screens/profile/ProfileDecider";
+import ProfileScreen from "../screens/profile/ProfileScreen";
+import ProtectedRoute from "./ProtectedRoute";
 import { useTranslation } from "react-i18next";
 
 const Tab = createBottomTabNavigator();
 
 export default function Tabs() {
-
   const { t } = useTranslation();
 
   return (
@@ -18,7 +18,16 @@ export default function Tabs() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen name="QR" component={HomeScreen} />
+      {/* CHRÁNENÝ - vyžaduje prihlásenie */}
+      <Tab.Screen name="QR">
+        {() => (
+          <ProtectedRoute>
+            <HomeScreen />
+          </ProtectedRoute>
+        )}
+      </Tab.Screen>
+
+      {/* VEREJNÉ - bez prihlásenia */}
       <Tab.Screen name={t("Benefits")} component={BenefitsScreen} />
       <Tab.Screen name={t("Discover")} component={DiscoverScreen} />
       <Tab.Screen
@@ -26,7 +35,15 @@ export default function Tabs() {
         component={DiscoverScreen}
         options={{ tabBarLabel: t("Search") }}
       />
-      <Tab.Screen name={t("Profile")} component={ProfileDecider} />
+
+      {/* CHRÁNENÝ - vyžaduje prihlásenie */}
+      <Tab.Screen name={t("Profile")}>
+        {() => (
+          <ProtectedRoute>
+            <ProfileScreen />
+          </ProtectedRoute>
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

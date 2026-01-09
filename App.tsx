@@ -16,6 +16,7 @@ import LoginScreen from "./screens/LoginRegister/LoginScreen";
 
 import SavedLocationsScreen from "./screens/profile/SavedLocationsScreen";
 import EditLocationScreen from "./screens/profile/EditLocationScreen";
+import DiscoverScreen from "./screens/DiscoverScreen";
 
 import { TextEncoder, TextDecoder } from "text-encoding";
 import { useFonts } from "expo-font";
@@ -30,6 +31,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./i18n";
 import BusinessDetailScreen from "./screens/BusinessDetailScreen";
 
+// AUTH
+import { AuthProvider } from "./lib/AuthContext";
+//AUTH
 
 if (typeof global.TextEncoder === "undefined") {
   // @ts-ignore
@@ -66,53 +70,56 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Tabs" component={Tabs} />
-            <Stack.Screen
-              name="SubscriptionActivation"
-              component={SubscriptionActivationScreen}
-            />
-            <Stack.Screen
-              name="FavoriteBranches"
-              component={FavoriteBranchesScreen}
-            />
-            <Stack.Screen
-              name="Settings"
-              component={SettingsScreen}
-            />
-            <Stack.Screen
-              name="UserAccount"
-              component={UserAccountScreen}
-            />
-            <Stack.Screen
-              name="Language"
-              component={LanguageScreen}
-            />
-            <Stack.Screen
-              name="BusinessDetailScreen"
-              component={BusinessDetailScreen}
-            />
-            <Stack.Screen
-              name="Signup"
-              component={SignupScreen}
-            />
-            <Stack.Screen
-              name="ForgottenPassword"
-              component={ForgottenPasswordScreen}
-            />
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-            />
-            <Stack.Screen
-              name="SavedLocations"
-              component={SavedLocationsScreen}
-            />
-            <Stack.Screen name="EditLocation" component={EditLocationScreen}/>
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AuthProvider>
+          <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Tabs" component={Tabs} />
+              <Stack.Screen
+                name="SubscriptionActivation"
+                component={SubscriptionActivationScreen}
+              />
+              <Stack.Screen
+                name="FavoriteBranches"
+                component={FavoriteBranchesScreen}
+              />
+              <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+              />
+              <Stack.Screen
+                name="UserAccount"
+                component={UserAccountScreen}
+              />
+              <Stack.Screen
+                name="Language"
+                component={LanguageScreen}
+              />
+              <Stack.Screen
+                name="BusinessDetailScreen"
+                component={BusinessDetailScreen}
+              />
+              <Stack.Screen
+                name="Signup"
+                component={SignupScreen}
+              />
+              <Stack.Screen
+                name="ForgottenPassword"
+                component={ForgottenPasswordScreen}
+              />
+              <Stack.Screen
+                name="Login"
+                component={LoginScreen}
+              />
+              <Stack.Screen
+                name="SavedLocations"
+                component={SavedLocationsScreen}
+              />
+              <Stack.Screen name="Discover" component={DiscoverScreen} />
+              <Stack.Screen name="EditLocation" component={EditLocationScreen}/>
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
