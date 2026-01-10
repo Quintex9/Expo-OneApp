@@ -1,4 +1,4 @@
-import { Platform, useWindowDimensions } from "react-native";
+import { Platform, useWindowDimensions, View, Text } from "react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Mapbox from "@rnmapbox/maps";
 import type { Camera } from "@rnmapbox/maps";
@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import { coords } from "../lib/data/coords";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
-import type { DiscoverCategory, Location } from "../lib/interfaces";
+import type { DiscoverCategory, DiscoverMapMarker, Location } from "../lib/interfaces";
 import DiscoverMap from "../components/discover/DiscoverMap";
 import DiscoverTopControls from "../components/discover/DiscoverTopControls";
 import DiscoverSearchSheet from "../components/discover/DiscoverSearchSheet";
@@ -31,6 +31,8 @@ const MARKER_ICONS: Record<DiscoverCategory, any> = {
   Relax: require("../images/icons/relax/relax_without_rating.png"),
   Beauty: require("../images/icons/beauty/beauty_without_rating.png"),
 };
+const MULTI_MARKER_ICON = require("../images/icons/multi/multi.png");
+
 const SUBCATEGORIES = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
 const RATING_VALUES = [4.1, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0];
 
@@ -43,6 +45,7 @@ const getRatingForId = (id: string) => {
 };
 
 export default function DiscoverScreen() {
+
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
@@ -55,59 +58,59 @@ export default function DiscoverScreen() {
   const { t } = useTranslation();
 
   const branches = [
-  {
-    title: t("365 GYM Nitra"),
-    image: require("../assets/365.jpg"),
-    rating: 4.6,
-    category: "Fitness",
-    distance: t("1.7 km"),
-    hours: t("9:00 - 21:00"),
-    discount: t("20% discount on first entry"),
-    moreCount: 2,
+    {
+      title: t("365 GYM Nitra"),
+      image: require("../assets/365.jpg"),
+      rating: 4.6,
+      category: "Fitness",
+      distance: t("1.7 km"),
+      hours: t("9:00 - 21:00"),
+      discount: t("20% discount on first entry"),
+      moreCount: 2,
 
-    address: "Chrenovská 16, Nitra",
-    phone: "+421903776925",
-    email: "info@365gym.sk",
-    website: "https://365gym.sk",
-  },
-  {
-    title: t("RED ROYAL GYM"),
-    image: require("../assets/royal.jpg"),
-    rating: 4.6,
-    category: "Fitness",
-    distance: t("1.7 km"),
-    hours: t("9:00 - 21:00"),
-    discount: t("20% discount on first entry"),
-    moreCount: 3,
+      address: "Chrenovská 16, Nitra",
+      phone: "+421903776925",
+      email: "info@365gym.sk",
+      website: "https://365gym.sk",
+    },
+    {
+      title: t("RED ROYAL GYM"),
+      image: require("../assets/royal.jpg"),
+      rating: 4.6,
+      category: "Fitness",
+      distance: t("1.7 km"),
+      hours: t("9:00 - 21:00"),
+      discount: t("20% discount on first entry"),
+      moreCount: 3,
 
-    address: "Trieda Andreja Hlinku 3, Nitra",
-    phone: "+421911222333",
-    email: "info@redroyal.sk",
-    website: "https://redroyal.sk",
-  },
-  {
-    title: t("GYM KLUB"),
-    image: require("../assets/klub.jpg"),
-    rating: 4.6,
-    category: "Fitness",
-    distance: t("1.7 km"),
-    hours: t("9:00 - 21:00"),
-    discount: t("20% discount on first entry"),
-    moreCount: 5,
+      address: "Trieda Andreja Hlinku 3, Nitra",
+      phone: "+421911222333",
+      email: "info@redroyal.sk",
+      website: "https://redroyal.sk",
+    },
+    {
+      title: t("GYM KLUB"),
+      image: require("../assets/klub.jpg"),
+      rating: 4.6,
+      category: "Fitness",
+      distance: t("1.7 km"),
+      hours: t("9:00 - 21:00"),
+      discount: t("20% discount on first entry"),
+      moreCount: 5,
 
-    address: "Mostná 42, Nitra",
-    phone: "+421904555666",
-    email: "kontakt@gymklub.sk",
-    website: "https://gymklub.sk",
-  },
-];
+      address: "Mostná 42, Nitra",
+      phone: "+421904555666",
+      email: "kontakt@gymklub.sk",
+      website: "https://gymklub.sk",
+    },
+  ];
 
-  const [location,setLocation] = useState <Location[]>([
-    { image:require("../images/home.png"),label:"home" },
+  const [location, setLocation] = useState<Location[]>([
+    { image: require("../images/home.png"), label: "home" },
     { image: require("../images/business.png"), label: "business" },
     { image: require("../images/pin.png"), label: "nitra", coord: NITRA_CENTER },
   ]
- );
+  );
 
   const [open, setOpen] = useState(false);
   const [option, setOption] = useState<string>("yourLocation");
@@ -126,8 +129,13 @@ export default function DiscoverScreen() {
   const [didInitialCenter, setDidInitialCenter] = useState(false);
   const [mapZoom, setMapZoom] = useState(14);
 
+  const [selectedGroup, setSelectedGroup] = useState<{
+    coord: { lng: number; lat: number };
+    items: DiscoverMapMarker[];
+  } | null>(null);
+
   const cameraRef = useRef<Camera>(null);
-  
+
   const toggle = (name: string) => {
     setSub(prev => {
       const next = new Set(prev);
@@ -192,6 +200,37 @@ export default function DiscoverScreen() {
     setDidInitialCenter(true);
   }, [userCoord, didInitialCenter, route.name]);
 
+  const groupedMarkers = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; lng: number; lat: number; items: DiscoverMapMarker[] }
+    >();
+
+    coords.forEach((item) => {
+      const key = item.groupId ?? item.id;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          lng: item.lng,
+          lat: item.lat,
+          items: [],
+        });
+      }
+
+      map.get(key)!.items.push({
+        id: item.id,
+        coord: { lng: item.lng, lat: item.lat },
+        icon: MARKER_ICONS[item.category],
+        rating: getRatingForId(item.id),
+        category: item.category,
+      });
+    });
+
+    return Array.from(map.values());
+  }, []);
+
+
   const subcategoryChipWidth = Math.max(96, Math.floor((screenWidth - 16 * 2 - 12 * 2) / 3));
   const branchCardWidth = Math.min(360, screenWidth - 32);
   const ratingThreshold = useMemo(() => {
@@ -215,17 +254,26 @@ export default function DiscoverScreen() {
     ? filteredBranches.filter((branch) => branch.title.toLowerCase().includes(query))
     : filteredBranches;
   const filterCount = sub.size + ratingFilter.size;
-  const markerItems = useMemo(
-    () =>
-      coords.map((item) => ({
-        id: item.id,
-        category: item.category,
-        coord: { lng: item.lng, lat: item.lat },
-        icon: MARKER_ICONS[item.category],
-        rating: getRatingForId(item.id),
-      })),
-    []
-  );
+  const markerItems = useMemo<DiscoverMapMarker[]>(() => {
+    return groupedMarkers.map((group) => {
+      // skupina s 1 položkou → normálny pin
+      if (group.items.length === 1) {
+        return group.items[0];
+      }
+
+      // skupina s viacerými položkami → LEN 1 čierny multi-pin
+      return {
+        id: group.id, 
+        coord: { lng: group.lng, lat: group.lat },
+        icon: MULTI_MARKER_ICON,
+        rating: Math.max(...group.items.map((i) => i.rating)),
+        category: "Multi",
+      };
+    });
+  }, [groupedMarkers]);
+
+
+
   const ratingFilteredMarkers =
     ratingThreshold === null
       ? markerItems
@@ -237,7 +285,7 @@ export default function DiscoverScreen() {
     const selected = location.find((item) => item.label === option && item.coord);
     return selected?.coord ?? null;
   }, [location, option]);
-  const savedLocationMarkers = useMemo(
+  const savedLocationMarkers = useMemo<DiscoverMapMarker[]>(
     () =>
       location
         .filter((item) => item.isSaved && item.coord)
@@ -248,10 +296,12 @@ export default function DiscoverScreen() {
             coord: { lng: item.coord![0], lat: item.coord![1] },
             icon: item.markerImage ?? item.image,
             rating: getRatingForId(id),
+            category: "Multi",
           };
         }),
     [location]
   );
+
   const hasActiveFilter = Boolean(appliedFilter) || appliedRatings.size > 0;
   const mapMarkers = useMemo(
     () => (hasActiveFilter ? filteredMarkers : [...filteredMarkers, ...savedLocationMarkers]),
@@ -303,17 +353,37 @@ export default function DiscoverScreen() {
     [route.name, selectedOptionCoord]
   );
 
+  const handleMarkerPress = (id: string) => {
+    const group = groupedMarkers.find((g) => g.id === id);
+
+    if (!group || group.items.length === 1) {
+      setSelectedGroup(null);
+      return;
+    }
+
+    setSelectedGroup({
+      coord: { lng: group.lng, lat: group.lat },
+      items: group.items,
+    });
+  };
+
+
+
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <DiscoverMap
         cameraRef={cameraRef}
         filteredMarkers={mapMarkers}
+        onMarkerPress={handleMarkerPress}
+        selectedGroup={selectedGroup}
+        categoryIcons={FILTER_ICONS}
         onUserLocationUpdate={handleUserLocationUpdate}
         onCameraChanged={handleCameraChanged}
         mapZoom={mapZoom}
         cityCenter={NITRA_CENTER}
         isFilterActive={hasActiveFilter}
       />
+
       <DiscoverTopControls
         insetsTop={insets.top}
         open={open}
@@ -377,6 +447,8 @@ export default function DiscoverScreen() {
           t={t}
         />
       )}
+
+      
     </SafeAreaView>
   );
 }

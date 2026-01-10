@@ -47,4 +47,8 @@ export const coords : Coords[] = [
     {id: "salon_shine", lng: 18.060384, lat: 48.297477, category: "Beauty"},
     {id: "artin_restaurant", lng: 18.097004, lat: 48.331480, category: "Gastro"},
     {id: "kadernictvo_katarina", lng: 18.1110583, lat: 48.3297934, category: "Beauty"},
+
+    {id: "Diamond gym", lng: 18.0668, lat: 48.2923, category: "Fitness", groupId: "diamond_center"},
+    {id: "Diamond barber", lng: 18.0668, lat: 48.2923, category: "Beauty", groupId: "diamond_center"},
+
 ]

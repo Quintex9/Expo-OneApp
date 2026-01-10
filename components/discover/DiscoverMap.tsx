@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from "react";
-import { Image, useWindowDimensions } from "react-native";
+import { Image, useWindowDimensions, View, Text } from "react-native";
 import Mapbox, {
   Camera,
   MapView,
@@ -44,8 +44,13 @@ const USER_PUCK_PULSING = {
   color: "teal",
   radius: 50.0,
 } as const;
+const NOT_MULTI_FILTER = [
+  "all",
+  MARKER_FILTER,
+  ["!=", ["get", "isMulti"], true],
+] as const;
 
-type MarkerFeatureProps = { icon: string; rating: string };
+type MarkerFeatureProps = { icon: string; rating: string, isMulti?: boolean; };
 type IconRegistry = Record<string, any>;
 
 const BASE_IMAGES: IconRegistry = {
@@ -182,10 +187,16 @@ const buildMarkersShapeAndImages = (
   markers.forEach((marker) => {
     const iconName = resolveMarkerIconName(marker.icon, images, iconNameByKey);
     const rating = marker.rating.toFixed(1);
+    const isMulti = marker.category === "Multi";
+
     features.push({
       type: "Feature",
       id: marker.id,
-      properties: { icon: iconName, rating },
+      properties: {
+        icon: iconName,
+        rating,
+        isMulti, // pridal som multi
+      },
       geometry: {
         type: "Point",
         coordinates: [marker.coord.lng, marker.coord.lat],
@@ -199,6 +210,7 @@ const buildMarkersShapeAndImages = (
   };
 };
 
+
 function DiscoverMap({
   cameraRef,
   filteredMarkers,
@@ -208,6 +220,9 @@ function DiscoverMap({
   cityCenter,
   isFilterActive,
   iconRegistry,
+  onMarkerPress,
+  selectedGroup,
+  categoryIcons,
 }: DiscoverMapProps) {
   const { width } = useWindowDimensions();
   const badgeScale = width / BADGE_BASE_WIDTH;
@@ -269,6 +284,7 @@ function DiscoverMap({
     };
   }, [clusterCenter, filteredMarkers, isCityCluster, mergedImages]);
 
+
   const handleUserLocationUpdate = useCallback(
     (location: { coords: { longitude: number; latitude: number } }) => {
       onUserLocationUpdate([location.coords.longitude, location.coords.latitude]);
@@ -320,38 +336,126 @@ function DiscoverMap({
         cluster={clusterEnabled}
         clusterRadius={120}
         clusterMaxZoomLevel={CLUSTERING_MAX_ZOOM}
+        onPress={(e) => {
+          const feature = e.features?.[0];
+          if (!feature) return;
+
+          const id = String(feature.id);
+          onMarkerPress?.(id);
+        }}
       >
+
         <SymbolLayer
           id="discover-clusters"
           filter={CLUSTER_FILTER}
           style={clusterLayerStyle}
           maxZoomLevel={CLUSTERING_MAX_ZOOM}
         />
+
+        {/* PIN (ikonka) – pre VŠETKY markery */}
         <SymbolLayer
           id="discover-markers-layer"
           filter={MARKER_FILTER}
           style={pointLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
+
+        {/* BADGE – iba pre NON-MULTI */}
         <SymbolLayer
           id="discover-badge-layer"
-          filter={MARKER_FILTER}
+          filter={NOT_MULTI_FILTER}
           style={badgeLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
+
         <SymbolLayer
           id="discover-badge-star"
-          filter={MARKER_FILTER}
+          filter={NOT_MULTI_FILTER}
           style={badgeStarLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
+
         <SymbolLayer
           id="discover-badge-text"
-          filter={MARKER_FILTER}
+          filter={NOT_MULTI_FILTER}
           style={badgeTextLayerStyle}
           minZoomLevel={CLUSTER_MAX_ZOOM}
         />
       </ShapeSource>
+      {selectedGroup && (
+        <Mapbox.PointAnnotation
+          id="multi-callout"
+          coordinate={[
+            selectedGroup.coord.lng,
+            selectedGroup.coord.lat,
+          ]}
+          anchor={{ x: 0.5, y: 0 }} // pod pinom
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              borderRadius: 10,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              minWidth: 200,
+              shadowColor: "#000",
+              shadowOpacity: 0.15,
+              shadowRadius: 6,
+              elevation: 6,
+              marginTop: 6,
+            }}
+          >
+            {selectedGroup.items.map((item, index) => (
+              <View key={item.id}>
+                {/* RIADOK */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 6,
+                  }}
+                >
+                  {/* ĽAVO – LOGO + NÁZOV */}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Image
+                      source={categoryIcons[item.category]}
+                      style={{ width: 16, height: 16, marginRight: 6 }}
+                    />
+
+                    <Text style={{ fontSize: 14, fontWeight: "600" }}>
+                      {item.id}
+                    </Text>
+                  </View>
+
+                  {/* PRAVO – HVIEZDA + RATING */}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Image
+                      source={require("../../images/star_black.png")}
+                      style={{ width: 12, height: 12, marginRight: 4 }}
+                    />
+                    <Text style={{ fontSize: 12 }}>
+                      {item.rating.toFixed(1)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* DIVIDER medzi biznismi */}
+                {index < selectedGroup.items.length - 1 && (
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: "#E6E6E6",
+                      marginVertical: 4,
+                    }}
+                  />
+                )}
+              </View>
+            ))}
+          </View>
+        </Mapbox.PointAnnotation>
+      )}
+
     </MapView>
   );
 }

@@ -20,6 +20,9 @@ export interface Coords {
     lat : number;
     category: DiscoverCategory;
 
+    groupId?: string; 
+    items?: DiscoverMapMarker[];
+
 }
 
 export interface Location {
@@ -53,18 +56,35 @@ export interface DiscoverMapMarker {
   coord: { lng: number; lat: number };
   icon: any;
   rating: number;
+
+  category: DiscoverCategory | "Multi";
 }
 
 export interface DiscoverMapProps {
   cameraRef: RefObject<Camera>;
   filteredMarkers: DiscoverMapMarker[];
   onUserLocationUpdate: (coord: [number, number]) => void;
-  onCameraChanged: (center: [number, number], zoom: number, isUserGesture?: boolean) => void;
+  onCameraChanged: (
+    center: [number, number],
+    zoom: number,
+    isUserGesture?: boolean
+  ) => void;
+
+  onMarkerPress?: (id: string) => void;
+
+  selectedGroup?: {
+    coord: { lng: number; lat: number };
+    items: DiscoverMapMarker[];
+  } | null;
+
+  categoryIcons: Record<string, any>;
+
   mapZoom?: number;
   cityCenter?: [number, number];
   isFilterActive?: boolean;
   iconRegistry?: Record<string, any>;
 }
+
 
 export interface DiscoverTopControlsProps {
   insetsTop: number;
