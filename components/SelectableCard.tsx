@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import type { PlanId, SelectableCardProps } from "../lib/interfaces";
@@ -58,11 +58,15 @@ const styles = StyleSheet.create({
   },
   selectedCard: {
     borderWidth: 0,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 5,
+        }),
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardTitle: { fontSize: 16, fontWeight: "600" },

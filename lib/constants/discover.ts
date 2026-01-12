@@ -1,4 +1,4 @@
-import { Image} from "react-native";
+import { Image, Platform } from "react-native";
 import type { Feature, FeatureCollection, Point } from "geojson";
 import type { DiscoverMapProps } from "../../lib/interfaces";
 
@@ -22,7 +22,28 @@ const FILTER_CLUSTER_IMAGE = require("../../images/filter_pin.png");
 const BADGE_IMAGE = require("../../images/badge.png");
 const STAR_IMAGE = require("../../images/star_white.png");
 const NAVIGATION_IMAGE = require("../../images/navigation.png");
-const NAVIGATION_IMAGE_URI = Image.resolveAssetSource(NAVIGATION_IMAGE).uri;
+const getNavigationImageUri = () => {
+  if (Platform.OS === "web") {
+    // On web, require() may return a string or an object with default
+    const img = NAVIGATION_IMAGE as any;
+    if (typeof img === "string") return img;
+    if (img?.default) return img.default;
+    if (img?.uri) return img.uri;
+    // If Image.resolveAssetSource exists on web, try it
+    if (typeof Image.resolveAssetSource === "function") {
+      try {
+        const resolved = Image.resolveAssetSource(NAVIGATION_IMAGE);
+        return resolved?.uri || "";
+      } catch {
+        return "";
+      }
+    }
+    return "";
+  }
+  // On native platforms, use resolveAssetSource
+  return Image.resolveAssetSource(NAVIGATION_IMAGE).uri;
+};
+const NAVIGATION_IMAGE_URI = getNavigationImageUri();
 const CITY_CLUSTER_ZOOM = 12;
 const CLUSTER_MAX_ZOOM = 14;
 const CLUSTERING_MAX_ZOOM = CLUSTER_MAX_ZOOM - 0.01;

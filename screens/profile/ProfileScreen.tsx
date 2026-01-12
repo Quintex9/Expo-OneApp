@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -307,12 +308,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
-    elevation: 1,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.03,
+          shadowOffset: { width: 0, height: 1 },
+          shadowRadius: 2,
+          elevation: 1,
+        }),
   },
 
   dropdown: {

@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
@@ -63,11 +63,15 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 8px rgba(0, 0, 0, 0.12)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.12,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
+        }),
   },
   categoryIcon: {
     width: 16,
@@ -121,13 +125,15 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     zIndex: 2,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-
-    elevation: 10,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 6px 12px rgba(0, 0, 0, 0.14)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.14,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 10,
+        }),
   },
 
   row: {
@@ -176,11 +182,15 @@ export const styles = StyleSheet.create({
     backgroundColor: "white",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 5px 10px rgba(0, 0, 0, 0.12)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.12,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 5 },
+          elevation: 8,
+        }),
   },
   locationSheetContainer: {
     zIndex: 20,
@@ -438,11 +448,15 @@ export const styles = StyleSheet.create({
     backgroundColor: "#111",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.7)",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.2,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 6,
+        }),
   },
   locationMapHint: {
     backgroundColor: "#111",

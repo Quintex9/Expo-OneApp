@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef } from "react";
-import { Image, useWindowDimensions, View, Text } from "react-native";
+import { Image, useWindowDimensions, View, Text, Platform } from "react-native";
 import Mapbox, {
   Camera,
   MapView,
@@ -259,10 +259,16 @@ function DiscoverMap({
               paddingVertical: 8,
               minWidth: 200,
               maxWidth: 300,
-              shadowColor: "#000",
-              shadowOpacity: 0.15,
-              shadowRadius: 6,
-              elevation: 6,
+              ...(Platform.OS === "web"
+                ? {
+                    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+                  }
+                : {
+                    shadowColor: "#000",
+                    shadowOpacity: 0.15,
+                    shadowRadius: 6,
+                    elevation: 6,
+                  }),
               marginTop: 40, // 40px pod pinom
             }}
             pointerEvents="none"
