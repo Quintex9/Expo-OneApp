@@ -4,7 +4,7 @@ RUN apk add --no-cache git
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production=false
+RUN npm ci
 
 # Install @expo/ngrok globally for tunnel mode support
 RUN npm install -g @expo/ngrok@^4.1.0
