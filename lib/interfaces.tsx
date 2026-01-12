@@ -34,11 +34,13 @@ export interface Location {
 }
 
 export type BranchData = {
+  id?: string;
   title: string;
   image: any;
   rating: number;
   distance: string;
   hours: string;
+  category?: string;
   discount?: string;
   moreCount?: number;
   address?: string;
@@ -53,7 +55,9 @@ export interface BranchCardProps extends BranchData {
 
 export interface DiscoverMapMarker {
   id: string;
+  title?: string;
   coord: { lng: number; lat: number };
+  groupId?: string;
   icon: any;
   rating: number;
 

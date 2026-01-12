@@ -48,6 +48,7 @@ import {
   buildCityClusterShape,
   buildMarkersShapeAndImages,
 } from "../../lib/constants/discover";
+import { formatTitleFromId } from "../../lib/data/normalizers";
 
 function DiscoverMap({
   cameraRef,
@@ -284,7 +285,7 @@ function DiscoverMap({
                       />
                     )}
                     <Text style={{ fontSize: 14, fontWeight: "600" }}>
-                      {item.id}
+                      {item.title ?? formatTitleFromId(item.id)}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>

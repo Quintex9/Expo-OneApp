@@ -18,6 +18,7 @@ export default function BranchCard(props: BranchCardProps) {
     rating,
     distance,
     hours,
+    category,
     discount,
     moreCount,
     address,
@@ -28,7 +29,7 @@ export default function BranchCard(props: BranchCardProps) {
   } = props;
 
   const { width } = useWindowDimensions();
-  const imageSize = Math.min(96, Math.max(64, Math.floor(width * 0.18)));
+  const imageSize = Math.min(96, Math.max(80, Math.floor(width * 0.2)));
   const navigation = useNavigation<any>();
 
   const handlePress = () => {
@@ -38,6 +39,7 @@ export default function BranchCard(props: BranchCardProps) {
       rating,
       distance,
       hours,
+      category,
       discount,
       moreCount,
       address,
@@ -151,7 +153,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
   },
 
   badge: {

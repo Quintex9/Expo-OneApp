@@ -3,19 +3,21 @@ import { View, Text, Image, StyleSheet } from "react-native";
 
 type Props = {
   title: string;
-  rating: string;
+  rating: number;
   distance: string;
   hours: string;
+  category?: string;
 };
 
-export function HeroInfo({ title, rating, distance, hours }: Props) {
+export function HeroInfo({ title, rating, distance, hours, category }: Props) {
+  const badgeLabel = category || "Fitness";
   return (
     <View style={styles.container}>
       {/* TITLE + BADGE */}
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>Fitness</Text>
+          <Text style={styles.badgeText}>{badgeLabel}</Text>
         </View>
       </View>
 

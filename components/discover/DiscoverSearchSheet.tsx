@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
-import BottomSheet from "@gorhom/bottom-sheet";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import BranchCard from "../BranchCard";
 import { styles } from "./discoverStyles";
 import type { DiscoverSearchSheetProps } from "../../lib/interfaces";
@@ -35,11 +35,15 @@ export default function DiscoverSearchSheet({
         />
       </View>
 
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+      <BottomSheetScrollView
+        style={{ paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
         {filtered.map((b) => (
           <BranchCard key={b.title} {...b} />
         ))}
-      </View>
+      </BottomSheetScrollView>
     </BottomSheet>
   );
 }

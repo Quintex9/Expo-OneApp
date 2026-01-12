@@ -4,10 +4,9 @@ import Mapbox from "@rnmapbox/maps";
 import type { Camera } from "@rnmapbox/maps";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
-import { coords } from "../lib/data/coords";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
-import type { DiscoverCategory, DiscoverMapMarker, Location } from "../lib/interfaces";
+import type { BranchData, DiscoverCategory, DiscoverMapMarker, Location } from "../lib/interfaces";
 import DiscoverMap from "../components/discover/DiscoverMap";
 import DiscoverTopControls from "../components/discover/DiscoverTopControls";
 import DiscoverSearchSheet from "../components/discover/DiscoverSearchSheet";
@@ -15,6 +14,7 @@ import DiscoverFilterSheet from "../components/discover/DiscoverFilterSheet";
 import DiscoverBranchOverlay from "../components/discover/DiscoverBranchOverlay";
 import { styles } from "../components/discover/discoverStyles";
 import { DUMMY_BRANCH } from "../lib/constants/discover";
+import { useDataSource } from "../lib/data/useDataSource";
 
 let lastDiscoverCameraState: { center: [number, number]; zoom: number } | null = null;
 let preserveDiscoverCamera = false;
@@ -25,12 +25,6 @@ const FILTER_ICONS: Record<DiscoverCategory, any> = {
   Gastro: require("../images/icons/gastro/Gastro.png"),
   Relax: require("../images/icons/relax/Relax.png"),
   Beauty: require("../images/icons/beauty/Beauty.png"),
-};
-const MARKER_ICONS: Record<DiscoverCategory, any> = {
-  Fitness: require("../images/icons/fitness/fitness_without_review.png"),
-  Gastro: require("../images/icons/gastro/gastro_without_rating.png"),
-  Relax: require("../images/icons/relax/relax_without_rating.png"),
-  Beauty: require("../images/icons/beauty/beauty_without_rating.png"),
 };
 const MULTI_MARKER_ICON = require("../images/icons/multi/multi.png");
 
@@ -58,53 +52,8 @@ export default function DiscoverScreen() {
 
   const { t } = useTranslation();
 
-  const branches = [
-    {
-      title: t("365 GYM Nitra"),
-      image: require("../assets/365.jpg"),
-      rating: 4.6,
-      category: "Fitness",
-      distance: t("1.7 km"),
-      hours: t("9:00 - 21:00"),
-      discount: t("20% discount on first entry"),
-      moreCount: 2,
-
-      address: "Chrenovská 16, Nitra",
-      phone: "+421903776925",
-      email: "info@365gym.sk",
-      website: "https://365gym.sk",
-    },
-    {
-      title: t("RED ROYAL GYM"),
-      image: require("../assets/royal.jpg"),
-      rating: 4.6,
-      category: "Fitness",
-      distance: t("1.7 km"),
-      hours: t("9:00 - 21:00"),
-      discount: t("20% discount on first entry"),
-      moreCount: 3,
-
-      address: "Trieda Andreja Hlinku 3, Nitra",
-      phone: "+421911222333",
-      email: "info@redroyal.sk",
-      website: "https://redroyal.sk",
-    },
-    {
-      title: t("GYM KLUB"),
-      image: require("../assets/klub.jpg"),
-      rating: 4.6,
-      category: "Fitness",
-      distance: t("1.7 km"),
-      hours: t("9:00 - 21:00"),
-      discount: t("20% discount on first entry"),
-      moreCount: 5,
-
-      address: "Mostná 42, Nitra",
-      phone: "+421904555666",
-      email: "kontakt@gymklub.sk",
-      website: "https://gymklub.sk",
-    },
-  ];
+  const [branches, setBranches] = useState<BranchData[]>([]);
+  const [markers, setMarkers] = useState<DiscoverMapMarker[]>([]);
 
   const [location, setLocation] = useState<Location[]>([
     { image: require("../images/home.png"), label: "home" },
@@ -134,6 +83,41 @@ export default function DiscoverScreen() {
     coord: { lng: number; lat: number };
     items: DiscoverMapMarker[];
   } | null>(null);
+
+  const dataSource = useDataSource();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([dataSource.getBranches(), dataSource.getMarkers()])
+      .then(([branchData, markerData]) => {
+        if (!active) return;
+        const translated = branchData.map((branch) => ({
+          ...branch,
+          title: t(branch.title),
+          distance: t(branch.distance),
+          hours: t(branch.hours),
+        }));
+        setBranches(translated);
+        setMarkers(markerData);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err?.message ?? "Failed to load data");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [t, dataSource]);
   
   const cameraRef = useRef<Camera>(null);
 
@@ -207,33 +191,27 @@ export default function DiscoverScreen() {
       { id: string; lng: number; lat: number; items: DiscoverMapMarker[] }
     >();
 
-    coords.forEach((item) => {
+    markers.forEach((item) => {
       const key = item.groupId ?? item.id;
 
       if (!map.has(key)) {
         map.set(key, {
           id: key,
-          lng: item.lng,
-          lat: item.lat,
+          lng: item.coord.lng,
+          lat: item.coord.lat,
           items: [],
         });
       }
 
-      map.get(key)!.items.push({
-        id: item.id,
-        coord: { lng: item.lng, lat: item.lat },
-        icon: MARKER_ICONS[item.category],
-        rating: getRatingForId(item.id),
-        category: item.category,
-      });
+      map.get(key)!.items.push(item);
     });
 
     return Array.from(map.values());
-  }, []);
+  }, [markers]);
 
 
   const subcategoryChipWidth = Math.max(96, Math.floor((screenWidth - 16 * 2 - 12 * 2) / 3));
-  const branchCardWidth = Math.min(360, screenWidth - 32);
+  const branchCardWidth = Math.max(280, Math.min(340, screenWidth - 48));
   const ratingThreshold = useMemo(() => {
     const values = Array.from(appliedRatings)
       .map((value) => Number(value))
@@ -335,6 +313,65 @@ export default function DiscoverScreen() {
     setUserCoord(coord);
   };
 
+  const formatTitleFromId = useCallback((id: string) => {
+    return id
+      .replace(/[_-]+/g, " ")
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }, []);
+
+  const categoryPlaceholderImages: Record<DiscoverCategory, any> = {
+    Fitness: require("../assets/365.jpg"),
+    Gastro: require("../assets/royal.jpg"),
+    Relax: require("../assets/klub.jpg"),
+    Beauty: require("../assets/royal.jpg"),
+  };
+
+  const markerBranchOverrides: Record<string, Partial<BranchData>> = useMemo(
+    () => ({
+      gym_365: { title: t("365 GYM Nitra"), image: require("../assets/365.jpg"), category: "Fitness" },
+      gym_klub: { title: t("GYM KLUB"), image: require("../assets/klub.jpg"), category: "Fitness" },
+      "Diamond gym": { title: t("Diamond Gym"), image: require("../assets/klub.jpg"), category: "Fitness" },
+      "Diamond barber": { title: t("Diamond Barber"), image: require("../assets/royal.jpg"), category: "Beauty" },
+    }),
+    [t]
+  );
+
+  const buildBranchFromMarker = useCallback(
+    (marker: DiscoverMapMarker): BranchData => {
+      const override = markerBranchOverrides[marker.id] ?? {};
+      const title = override.title ?? formatTitleFromId(marker.id);
+      const category = override.category ?? (marker.category === "Multi" ? "" : marker.category);
+      const resolvedCategory: DiscoverCategory | undefined =
+        category && category !== "Multi" ? (category as DiscoverCategory) : undefined;
+      const image =
+        override.image ??
+        (resolvedCategory ? categoryPlaceholderImages[resolvedCategory] : undefined) ??
+        DUMMY_BRANCH.image;
+      return {
+        ...DUMMY_BRANCH,
+        ...override,
+        title,
+        category: resolvedCategory ?? DUMMY_BRANCH.category ?? "Fitness",
+        rating: marker.rating,
+        distance: `${(Math.random() * 2 + 0.5).toFixed(1)} km`,
+        hours: override?.hours ?? DUMMY_BRANCH.hours,
+        image,
+      };
+    },
+    [formatTitleFromId, markerBranchOverrides, categoryPlaceholderImages]
+  );
+
+  const fetchBranchForMarker = useCallback(
+    async (marker: DiscoverMapMarker) => {
+      const branch = await dataSource.getBranchById(marker.id);
+      return branch ?? buildBranchFromMarker(marker);
+    },
+    [buildBranchFromMarker, dataSource]
+  );
+
   const handleCameraChanged = useCallback(
     (center: [number, number], zoom: number, isUserGesture?: boolean) => {
       setMapZoom(zoom);
@@ -357,6 +394,7 @@ export default function DiscoverScreen() {
   );
 
   const handleMarkerPress = (id: string) => {
+    if (loading || error) return;
     if (!id || id === "") {
       setSelectedGroup(null);
       return;
@@ -377,8 +415,11 @@ export default function DiscoverScreen() {
     // Klasicky PIN
     setSelectedGroup(null);
 
-    navigation.navigate("BusinessDetailScreen", {
-      branch: DUMMY_BRANCH,
+    const marker = group.items[0];
+    fetchBranchForMarker(marker).then((branch) => {
+      navigation.navigate("BusinessDetailScreen", {
+        branch,
+      });
     });
   };
 

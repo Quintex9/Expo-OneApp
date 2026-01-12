@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Text, View, useWindowDimensions } from "react-native";
 import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import BranchCard from "../BranchCard";
 import { styles } from "./discoverStyles";
@@ -19,6 +19,9 @@ export default function DiscoverBranchOverlay({
   branchCardWidth,
   t,
 }: DiscoverBranchOverlayProps) {
+  const { width: screenWidth } = useWindowDimensions();
+  const pageWidth = screenWidth;
+  const snapOffsets = branches.map((_, index) => index * pageWidth);
   const navigation = useNavigation<any>();
   return (
     <View style={[styles.branchOverlay, { bottom: insetsBottom }]} pointerEvents="box-none">
@@ -62,21 +65,38 @@ export default function DiscoverBranchOverlay({
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-        {branches.map((b) => {
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        pagingEnabled
+        contentContainerStyle={{}}
+        snapToOffsets={snapOffsets}
+        snapToAlignment="start"
+        snapToInterval={pageWidth}
+        decelerationRate="fast"
+        disableIntervalMomentum
+        bounces={false}
+      >
+        {branches.map((b, index) => {
           
           const { onPress: _onPress, ...branchData } = b;
           return (
             <TouchableOpacity
               key={b.title}
-              style={{ width: branchCardWidth, marginRight: 12, padding: 7 }}
+              style={{
+                width: pageWidth,
+                paddingVertical: 7,
+                alignItems: "center",
+              }}
             >
-              <BranchCard
-                {...b}
-                onPress={() => {
-                  navigation.navigate("BusinessDetailScreen", { branch: branchData });
-                }}
-              />
+              <View style={{ width: branchCardWidth }}>
+                <BranchCard
+                  {...b}
+                  onPress={() => {
+                    navigation.navigate("BusinessDetailScreen", { branch: branchData });
+                  }}
+                />
+              </View>
             </TouchableOpacity>
           );
         })}

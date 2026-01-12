@@ -13,11 +13,13 @@ import { HeroActions } from "../components/discover/HeroActions";
 import { HeroInfo } from "../components/discover/HeroInfo";
 import { InfoSection } from "../components/discover/InfoSection";
 import { ReviewsSection } from "../components/discover/ReviewsSection";
+import { normalizeBranch } from "../lib/data/normalizers";
 
 export default function BusinessDetailScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const branch = route.params?.branch;
+    const branchParam = route.params?.branch;
+    const branch = normalizeBranch(branchParam ?? {});
 
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
@@ -46,6 +48,8 @@ export default function BusinessDetailScreen() {
         rating: 0,
         distance: "",
         hours: "",
+        category: "",
+        image: require("../assets/365.jpg"),
         address: "",
         phone: "",
         email: "",
@@ -97,6 +101,7 @@ export default function BusinessDetailScreen() {
                     rating={safeBranch.rating}
                     distance={safeBranch.distance}
                     hours={safeBranch.hours}
+                    category={safeBranch.category}
                 />
             </View>
 
