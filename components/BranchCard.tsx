@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BranchCardProps, BranchData } from "../lib/interfaces";
@@ -109,12 +110,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E8E8E8",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 6px 10px rgba(0, 0, 0, 0.1)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 6,
+        }),
     width: "100%",
   },
 

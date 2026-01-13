@@ -1,7 +1,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ActivityIndicator, StatusBar, View } from "react-native";
+import { ActivityIndicator, StatusBar, View, Platform } from "react-native";
 
 import Tabs from "./components/Tabs";
 import SubscriptionActivationScreen from "./screens/profile/SubscriptionActivationScreen";
@@ -58,7 +58,9 @@ export default function App() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          {Platform.OS !== 'web' && (
+            <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          )}
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <ActivityIndicator />
           </View>
@@ -71,7 +73,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          {Platform.OS !== 'web' && (
+            <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+          )}
           <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="Tabs" component={Tabs} />

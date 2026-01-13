@@ -8,6 +8,7 @@ export default ({ config }) => ({
     './plugins/withAndroidXFix',
     './plugins/withGradleProperties',
     "expo-localization",
+    "expo-asset",
   ],
   web: {
     ...config.web,
