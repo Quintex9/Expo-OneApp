@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, Linking } from "react-native";
+import { View, Text, StyleSheet, Linking, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native-gesture-handler";
+import Mapbox, { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
 
 type Props = {
     hours: {
@@ -13,6 +14,7 @@ type Props = {
     phone: string;
     email: string;
     website?: string;
+    coordinates?: [number, number]; // [lng, lat]
 };
 
 function isToday(day: string) {
@@ -36,7 +38,11 @@ export function InfoSection({
     phone,
     email,
     website,
+    coordinates,
 }: Props) {
+    // Default koordináty (Nitra) ak nie sú poskytnuté
+    const mapCoords = coordinates || [18.0936, 48.3061];
+
     const handleNavigate = () => {
         if (!address) return;
 
@@ -47,7 +53,6 @@ export function InfoSection({
     };
 
     return (
-
         <View style={styles.container}>
             {/* OPENING HOURS */}
             <View style={styles.card}>
@@ -68,7 +73,6 @@ export function InfoSection({
                     );
                 })}
 
-
                 <Text style={styles.note}>
                     * During holidays, opening hours may vary. For more information,
                     please contact the venue.
@@ -80,15 +84,25 @@ export function InfoSection({
                 <Text style={styles.cardTitle}>Contact</Text>
 
                 <View style={styles.contactRow}>
-                    <Ionicons name="home-outline" size={18} />
+                    <Ionicons name="home-outline" size={20} color="#9B9B9B" />
                     <Text style={styles.contactText}>{address}</Text>
                 </View>
+
+                {website && (
+                    <TouchableOpacity
+                        style={styles.contactRow}
+                        onPress={() => Linking.openURL(website)}
+                    >
+                        <Ionicons name="globe-outline" size={20} color="#9B9B9B" />
+                        <Text style={[styles.contactText, styles.linkText]}>{website}</Text>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                     style={styles.contactRow}
                     onPress={() => Linking.openURL(`tel:${phone}`)}
                 >
-                    <Ionicons name="call-outline" size={18} />
+                    <Ionicons name="call-outline" size={20} color="#9B9B9B" />
                     <Text style={styles.contactText}>{phone}</Text>
                 </TouchableOpacity>
 
@@ -96,106 +110,190 @@ export function InfoSection({
                     style={styles.contactRow}
                     onPress={() => Linking.openURL(`mailto:${email}`)}
                 >
-                    <Ionicons name="mail-outline" size={18} />
+                    <Ionicons name="mail-outline" size={20} color="#9B9B9B" />
                     <Text style={styles.contactText}>{email}</Text>
                 </TouchableOpacity>
-
-                {website && (
-                    <TouchableOpacity
-                        style={styles.contactRow}
-                        onPress={() => Linking.openURL(website)}
-                    >
-                        <Ionicons name="globe-outline" size={18} />
-                        <Text style={styles.contactText}>{website}</Text>
-                    </TouchableOpacity>
-                )}
             </View>
 
-            {/* MAP / NAVIGATION */}
-            <TouchableOpacity style={styles.navigateBtn} onPress={handleNavigate}>
-                <Ionicons name="navigate" size={18} color="#fff" />
-                <Text style={styles.navigateText}>Navigate</Text>
-            </TouchableOpacity>
+            {/* MAP */}
+            <View style={styles.mapContainer}>
+                {Platform.OS !== "web" ? (
+                    <MapView
+                        style={styles.map}
+                        styleURL={Mapbox.StyleURL.Street}
+                        scrollEnabled={false}
+                        zoomEnabled={false}
+                        pitchEnabled={false}
+                        rotateEnabled={false}
+                        scaleBarEnabled={false}
+                        attributionEnabled={false}
+                        logoEnabled={false}
+                    >
+                        <Camera
+                            centerCoordinate={mapCoords}
+                            zoomLevel={19}
+                            animationMode="none"
+                        />
+                        <PointAnnotation
+                            id="business-location"
+                            coordinate={mapCoords}
+                        >
+                            <View style={styles.markerContainer}>
+                                <Ionicons name="location" size={32} color="#E53935" />
+                            </View>
+                        </PointAnnotation>
+                    </MapView>
+                ) : (
+                    <View style={[styles.map, styles.mapPlaceholder]}>
+                        <Text style={styles.mapPlaceholderText}>Mapa nie je dostupná na webe</Text>
+                    </View>
+                )}
 
+                {/* Navigate button overlay */}
+                <TouchableOpacity style={styles.navigateBtn} onPress={handleNavigate}>
+                    <Ionicons name="navigate" size={14} color="#FAFAFA" />
+                    <Text style={styles.navigateText}>Navigate</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    todayTime: {
-        fontWeight: "700",
-        color: "#111",
-    },
-
     container: {
         paddingBottom: 20,
     },
 
     card: {
         backgroundColor: "#fff",
-        borderRadius: 16,
+        borderRadius: 20,
         padding: 16,
         marginBottom: 16,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: "#E4E4E7",
     },
 
     cardTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        marginBottom: 12,
+        fontFamily: "Inter_700Bold",
+        fontSize: 17,
+        lineHeight: 20,
+        color: "#000",
+        marginBottom: 16,
     },
 
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
         marginBottom: 6,
     },
 
     day: {
+        fontFamily: "Inter_500Medium",
         fontSize: 14,
+        lineHeight: 20,
+        color: "rgba(0, 0, 0, 0.5)",
     },
 
     today: {
-        fontWeight: "700",
+        fontFamily: "Inter_600SemiBold",
+        color: "#000",
     },
 
     time: {
+        fontFamily: "Inter_500Medium",
         fontSize: 14,
-        color: "#71717A",
+        lineHeight: 20,
+        color: "rgba(0, 0, 0, 0.5)",
+        textAlign: "right",
+    },
+
+    todayTime: {
+        fontFamily: "Inter_600SemiBold",
+        color: "#000",
     },
 
     note: {
+        fontFamily: "Inter_500Medium",
         fontSize: 11,
-        color: "#71717A",
-        marginTop: 10,
+        lineHeight: 15,
+        color: "rgba(0, 0, 0, 0.5)",
+        marginTop: 14,
     },
 
     contactRow: {
         flexDirection: "row",
+        justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 10,
+        marginBottom: 16,
     },
 
     contactText: {
-        marginLeft: 10,
+        fontFamily: "Inter_500Medium",
         fontSize: 14,
+        lineHeight: 20,
+        color: "rgba(0, 0, 0, 0.5)",
+        textAlign: "right",
         flex: 1,
-        color: "#111"
+        marginLeft: 16,
+    },
+
+    linkText: {
+        textDecorationLine: "underline",
+    },
+
+    mapContainer: {
+        position: "relative",
+        marginHorizontal: -15,
+        marginTop: 16,
+        height: 220,
+    },
+
+    map: {
+        flex: 1,
+    },
+
+    mapPlaceholder: {
+        backgroundColor: "#E5E7EB",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    mapPlaceholderText: {
+        color: "#71717A",
+        fontFamily: "Inter_500Medium",
+    },
+
+    markerContainer: {
+        alignItems: "center",
+        justifyContent: "center",
     },
 
     navigateBtn: {
+        position: "absolute",
+        left: 26,
+        top: -210,
+        zIndex: 10,
+        elevation: 10,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#F97316",
-        paddingVertical: 14,
-        borderRadius: 14,
+        backgroundColor: "#EB8100",
+        width: 106,
+        height: 32,
+        borderRadius: 16,
+        gap: 8,
+    },
+
+    navigateIcon: {
+        width: 14,
+        height: 14,
     },
 
     navigateText: {
-        color: "#fff",
-        fontWeight: "600",
-        marginLeft: 8,
+        color: "#FAFAFA",
+        fontFamily: "Inter_600SemiBold",
+        fontSize: 12,
+        lineHeight: 14,
     },
 });

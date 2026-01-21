@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { View, ScrollView, StyleSheet, useWindowDimensions } from "react-native";
+import { View, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BottomSheet from "@gorhom/bottom-sheet";
@@ -14,10 +14,14 @@ import { HeroInfo } from "../components/discover/HeroInfo";
 import { InfoSection } from "../components/discover/InfoSection";
 import { ReviewsSection } from "../components/discover/ReviewsSection";
 import { normalizeBranch } from "../lib/data/normalizers";
+import { useAuth } from "../lib/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function BusinessDetailScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
+    const { user } = useAuth();
+    const { t } = useTranslation();
     const branchParam = route.params?.branch;
     const branch = normalizeBranch(branchParam ?? {});
 
@@ -99,6 +103,7 @@ export default function BusinessDetailScreen() {
                 <HeroInfo
                     title={safeBranch.title}
                     rating={safeBranch.rating}
+                    ratingCount={reviews.length}
                     distance={safeBranch.distance}
                     hours={safeBranch.hours}
                     category={safeBranch.category}
@@ -137,7 +142,15 @@ export default function BusinessDetailScreen() {
                 )}
 
                 {activeTab === "Benefits" && (
-                    <BenefitsSection onActivate={() => sheetRef.current?.expand()} />
+                    <BenefitsSection onActivate={() => {
+                        if (user) {
+                            // Prihlásený → rovno na Benefits
+                            navigation.navigate("Tabs", { screen: t("Benefits") });
+                        } else {
+                            // Neprihlásený → sign-in prompt
+                            sheetRef.current?.expand();
+                        }
+                    }} />
                 )}
 
                 {activeTab === "Info" && (
@@ -151,10 +164,10 @@ export default function BusinessDetailScreen() {
                             { day: "Saturday", time: "7:00 - 20:00" },
                             { day: "Sunday", time: "7:00 - 20:00" },
                         ]}
-                        address={safeBranch.address}
-                        phone={safeBranch.phone}
-                        email={safeBranch.email}
-                        website={safeBranch.website}
+                        address={safeBranch.address ?? ""}
+                        phone={safeBranch.phone ?? ""}
+                        email={safeBranch.email ?? ""}
+                        website={safeBranch.website ?? ""}
                     />
                 )}
 
@@ -168,14 +181,29 @@ export default function BusinessDetailScreen() {
 
             </ScrollView>
 
-            {/* BOTTOM SHEET */}
-            {activeTab === "Benefits" && (
+            {/* BOTTOM SHEET - len pre neprihlásených */}
+            {activeTab === "Benefits" && !user && (
                 <BenefitsBottomSheet
                     sheetRef={sheetRef}
                     snapPoints={snapPoints}
                     onLogin={() => navigation.navigate("Login")}
                 />
             )}
+
+            {/* Floating QR tlačidlo */}
+            <TouchableOpacity
+                style={[styles.qrButton, { bottom: insets.bottom + 20 }]}
+                onPress={() => {
+                    if (user) {
+                        navigation.navigate("Tabs", { screen: t("Benefits") });
+                    } else {
+                        navigation.navigate("Login");
+                    }
+                }}
+                activeOpacity={0.85}
+            >
+                <Image source={require("../images/qr.png")} style={styles.qrIcon} />
+            </TouchableOpacity>
         </SafeAreaView>
     );
 }
@@ -187,5 +215,18 @@ const styles = StyleSheet.create({
     },
     menuWrapper: {
         position: "absolute",
+    },
+    qrButton: {
+        position: "absolute",
+        right: 16,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+    },
+    qrIcon: {
+        width: 48,
+        height: 48,
     },
 });

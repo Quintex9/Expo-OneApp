@@ -4,12 +4,13 @@ import { View, Text, Image, StyleSheet } from "react-native";
 type Props = {
   title: string;
   rating: number;
+  ratingCount?: number;
   distance: string;
   hours: string;
   category?: string;
 };
 
-export function HeroInfo({ title, rating, distance, hours, category }: Props) {
+export function HeroInfo({ title, rating, ratingCount, distance, hours, category }: Props) {
   const badgeLabel = category || "Fitness";
   return (
     <View style={styles.container}>
@@ -21,14 +22,16 @@ export function HeroInfo({ title, rating, distance, hours, category }: Props) {
         </View>
       </View>
 
-      {/* META */}
+      {/* META - rating, vzdialenosť, hodiny */}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <Image
             source={require("../../images/star.png")}
-            style={styles.icon}
+            style={styles.starIcon}
           />
-          <Text style={styles.metaText}>{rating}</Text>
+          <Text style={styles.metaText}>
+            {rating}{ratingCount ? ` (${ratingCount})` : ""}
+          </Text>
         </View>
 
         <View style={styles.metaItem}>
@@ -54,56 +57,67 @@ export function HeroInfo({ title, rating, distance, hours, category }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    left: 14,
-    right: 70,
-    bottom: 26,
+    left: 16,
+    right: 16,
+    bottom: 28,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
+    marginBottom: 7,
   },
   title: {
     color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-    textShadowColor: "rgba(0,0,0,0.4)",
+    fontSize: 25,
+    lineHeight: 30,
+    fontFamily: "Inter_700Bold",
+    textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   badge: {
     backgroundColor: "#EB8100",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 9999,
     marginLeft: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   badgeText: {
     color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
+    fontSize: 9,
+    lineHeight: 11,
+    fontFamily: "Inter_600SemiBold",
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    gap: 13,
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 14,
+    gap: 5,
   },
   icon: {
-    width: 12,
-    height: 12,
-    marginRight: 4,
+    width: 13,
+    height: 13,
+    tintColor: "#fff",
+  },
+  starIcon: {
+    width: 13,
+    height: 13,
+    tintColor: "#FFD000",
   },
   metaText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "600",
-    textShadowColor: "rgba(0,0,0,0.4)",
+    lineHeight: 14,
+    fontFamily: "Inter_600SemiBold",
+    textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
 });

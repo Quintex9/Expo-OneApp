@@ -1,7 +1,8 @@
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ActivityIndicator, StatusBar, View, Platform } from "react-native";
+import { ActivityIndicator, StatusBar, View, Platform, Text, TextInput } from "react-native";
 
 import Tabs from "./components/Tabs";
 import SubscriptionActivationScreen from "./screens/profile/SubscriptionActivationScreen";
@@ -47,6 +48,33 @@ if (typeof global.TextDecoder === "undefined") {
 
 const Stack = createNativeStackNavigator();
 
+// Globálne nastavenie Inter fontu pre všetky Text a TextInput komponenty
+const setDefaultFonts = () => {
+  const oldTextRender = (Text as any).render;
+  (Text as any).render = function (...args: any[]) {
+    const origin = oldTextRender.call(this, ...args);
+    return {
+      ...origin,
+      props: {
+        ...origin.props,
+        style: [{ fontFamily: "Inter_400Regular" }, origin.props.style],
+      },
+    };
+  };
+
+  const oldTextInputRender = (TextInput as any).render;
+  (TextInput as any).render = function (...args: any[]) {
+    const origin = oldTextInputRender.call(this, ...args);
+    return {
+      ...origin,
+      props: {
+        ...origin.props,
+        style: [{ fontFamily: "Inter_400Regular" }, origin.props.style],
+      },
+    };
+  };
+};
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -54,6 +82,13 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // Nastaví Inter font po načítaní fontov
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      setDefaultFonts();
+    }
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return (
