@@ -8,6 +8,7 @@
 import { useState, useMemo, useCallback } from "react";
 import type { BranchData, DiscoverMapMarker } from "../interfaces";
 
+
 /**
  * Typ pre návratovú hodnotu hooku - definuje čo všetko hook vracia
  */

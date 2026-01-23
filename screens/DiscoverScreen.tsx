@@ -17,6 +17,8 @@ import {
   useDiscoverData,
   useSavedLocationMarkers,
 } from "../lib/hooks";
+import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPanel";
+
 
 // Constants
 const NITRA_CENTER: [number, number] = [18.091, 48.3069];
@@ -39,6 +41,7 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
+  const [sideFilterOpen, setSideFilterOpen] = useState(false);
 
   // Refs
   const sheetRef = useRef<BottomSheet>(null);
@@ -247,6 +250,8 @@ export default function DiscoverScreen() {
         isFilterActive={filters.hasActiveFilter}
       />
 
+
+
       <DiscoverTopControls
         insetsTop={insets.top}
         open={open}
@@ -299,6 +304,22 @@ export default function DiscoverScreen() {
         t={t}
       />
 
+      <DiscoverSideFilterPanel
+        visible={sideFilterOpen}
+        onOpen={() => setSideFilterOpen(true)}
+        onClose={() => setSideFilterOpen(false)}
+        filterOptions={FILTER_OPTIONS}
+        appliedFilter={filters.appliedFilter}
+        setAppliedFilter={filters.setAppliedFilter}
+        rating={filters.ratingFilter}
+        setRating={filters.setRatingFilter}
+        setAppliedRatings={filters.setAppliedRatings}
+        subcategories={SUBCATEGORIES}
+        sub={filters.sub}
+        toggleSubcategory={filters.toggleSubcategory}
+      />
+
+
       {!isSheetOpen && (
         <DiscoverBranchOverlay
           insetsBottom={insets.bottom}
@@ -314,6 +335,7 @@ export default function DiscoverScreen() {
           t={t}
         />
       )}
+
     </SafeAreaView>
   );
 }
