@@ -100,8 +100,8 @@ export interface DiscoverTopControlsProps {
   option: string;
   setOption: Dispatch<SetStateAction<string>>;
   o: boolean;
-  sheetRef: RefObject<BottomSheet>;
   filterRef: RefObject<BottomSheet>;
+  onOpenSearch: () => void;
   userCoord: [number, number] | null;
   mainMapCenter?: [number, number] | null;
   cameraRef: RefObject<Camera>;
@@ -172,8 +172,6 @@ export interface LocationMapStepProps {
 }
 
 export interface DiscoverSearchSheetProps {
-  sheetRef: RefObject<BottomSheet>;
-  snapPoints: string[];
   onSheetChange: (index: number) => void;
   sheetIndex: number;
   text: string;
@@ -197,7 +195,8 @@ export interface DiscoverFilterSheetProps {
   sub: Set<string>;
   toggle: (name: string) => void;
   count: number;
-  setAppliedFilter: Dispatch<SetStateAction<string | null>>;
+  appliedFilters: Set<string>;
+  setAppliedFilters: Dispatch<SetStateAction<Set<string>>>;
   setAppliedRatings: Dispatch<SetStateAction<Set<string>>>;
   setSub: Dispatch<SetStateAction<Set<string>>>;
   subcategoryChipWidth: number;
@@ -210,8 +209,8 @@ export interface DiscoverBranchOverlayProps {
   setCategoriesOpen: Dispatch<SetStateAction<boolean>>;
   filterOptions: string[];
   filterIcons: Record<string, ImageSourcePropType>;
-  appliedFilter: string | null;
-  setAppliedFilter: Dispatch<SetStateAction<string | null>>;
+  appliedFilters: Set<string>;
+  setAppliedFilters: Dispatch<SetStateAction<Set<string>>>;
   setFilter: Dispatch<SetStateAction<string>>;
   branches: BranchCardProps[];
   branchCardWidth: number;

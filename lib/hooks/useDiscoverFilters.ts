@@ -16,8 +16,8 @@ export interface UseDiscoverFiltersReturn {
   // === STAV FILTROV ===
   filter: string;                                                    // aktuálne vybraná kategória (napr. "Gastro")
   setFilter: React.Dispatch<React.SetStateAction<string>>;          // funkcia na zmenu kategórie
-  appliedFilter: string | null;                                      // aktívny filter (null = žiadny)
-  setAppliedFilter: React.Dispatch<React.SetStateAction<string | null>>;
+  appliedFilters: Set<string>;                                      // aktívne kategórie (prázdne = žiadny)
+  setAppliedFilters: React.Dispatch<React.SetStateAction<Set<string>>>;
 
   // === STAV PODKATEGÓRIÍ ===
   sub: Set<string>;                                                  // vybrané podkategórie (napr. "Vegan", "Pizza")
@@ -56,7 +56,7 @@ export const useDiscoverFilters = (
   
   // Stav pre kategóriu (Fitness, Gastro, Relax, Beauty)
   const [filter, setFilter] = useState(defaultFilter);
-  const [appliedFilter, setAppliedFilter] = useState<string | null>(null);
+  const [appliedFilters, setAppliedFilters] = useState<Set<string>>(() => new Set());
 
   // Stav pre podkategórie (Vegan, Pizza, atď.) - používame Set pre rýchle vyhľadávanie
   const [sub, setSub] = useState<Set<string>>(() => new Set());
@@ -83,11 +83,11 @@ export const useDiscoverFilters = (
 
   /**
    * Či je nejaký filter aktívny - používame na zobrazenie/skrytie uložených lokácií
-   * useMemo zabezpečí, že sa hodnota prepočíta len keď sa zmení appliedFilter alebo appliedRatings
+   * useMemo zabezpečí, že sa hodnota prepočíta len keď sa zmení appliedFilters alebo appliedRatings
    */
   const hasActiveFilter = useMemo(
-    () => Boolean(appliedFilter) || appliedRatings.size > 0,
-    [appliedFilter, appliedRatings]
+    () => appliedFilters.size > 0 || appliedRatings.size > 0,
+    [appliedFilters, appliedRatings]
   );
 
   /**
@@ -136,8 +136,8 @@ export const useDiscoverFilters = (
           : branches.filter((branch) => branch.rating >= ratingThreshold);
 
       // Krok 2: Aplikujeme filter kategórie
-      if (appliedFilter) {
-        filtered = filtered.filter((branch) => branch.category === appliedFilter);
+      if (appliedFilters.size > 0) {
+        filtered = filtered.filter((branch) => appliedFilters.has(branch.category));
       }
 
       // Krok 3: Aplikujeme vyhľadávanie v názve
@@ -149,7 +149,7 @@ export const useDiscoverFilters = (
 
       return filtered;
     },
-    [appliedFilter, ratingThreshold]
+    [appliedFilters, ratingThreshold]
   );
 
   /**
@@ -165,21 +165,21 @@ export const useDiscoverFilters = (
           : markers.filter((item) => item.rating >= ratingThreshold);
 
       // Krok 2: Filter podľa kategórie
-      if (appliedFilter) {
-        filtered = filtered.filter((item) => item.category === appliedFilter);
+      if (appliedFilters.size > 0) {
+        filtered = filtered.filter((item) => appliedFilters.has(item.category));
       }
 
       return filtered;
     },
-    [appliedFilter, ratingThreshold]
+    [appliedFilters, ratingThreshold]
   );
 
   // Vrátime všetky hodnoty a funkcie, ktoré komponenty potrebujú
   return {
     filter,
     setFilter,
-    appliedFilter,
-    setAppliedFilter,
+    appliedFilters,
+    setAppliedFilters,
     sub,
     setSub,
     toggleSubcategory,

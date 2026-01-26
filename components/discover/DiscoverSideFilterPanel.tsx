@@ -9,6 +9,7 @@ import {
   ScrollView,
   useWindowDimensions,
   PanResponder,
+  Image,
 } from "react-native";
 
 interface Props {
@@ -16,8 +17,8 @@ interface Props {
   onOpen: () => void;
   onClose: () => void;
   filterOptions: readonly string[];
-  appliedFilter: string | null;
-  setAppliedFilter: (c: string | null) => void;
+  appliedFilters: Set<string>;
+  setAppliedFilters: React.Dispatch<React.SetStateAction<Set<string>>>;
   rating: Set<string>;
   setRating: React.Dispatch<React.SetStateAction<Set<string>>>;
   setAppliedRatings: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -28,8 +29,8 @@ interface Props {
 
 // Emoji ikony pre kategórie
 const CATEGORY_EMOJIS: Record<string, string> = {
-  Fitness: "💪",
-  Relax: "🧖‍♀️",
+  Fitness: "🏋️",
+  Relax: "🧖",
   Beauty: "💄",
   Gastro: "🍽️",
 };
@@ -68,13 +69,16 @@ const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
   Relax: ["Spa", "Wellness", "Massage", "Sauna"],
 };
 
+// Discover options (zatiaľ nič nerobia)
+const DISCOVER_OPTIONS = ["Top rated", "Trending", "Top 10", "Open near you"];
+
 export default function DiscoverSideFilterPanel({
   visible,
   onOpen,
   onClose,
   filterOptions,
-  appliedFilter,
-  setAppliedFilter,
+  appliedFilters,
+  setAppliedFilters,
   rating,
   setRating,
   setAppliedRatings,
@@ -83,12 +87,15 @@ export default function DiscoverSideFilterPanel({
   toggleSubcategory,
 }: Props) {
   const { width, height } = useWindowDimensions();
-  const PANEL_WIDTH = 272;
+  const PANEL_WIDTH = 326;
 
   // Animácie
   const translateX = useRef(new Animated.Value(PANEL_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const pullHandleOpacity = useRef(new Animated.Value(visible ? 0 : 1)).current;
+
+  // Discover state (zatiaľ nič nerobí)
+  const [discoverOptions, setDiscoverOptions] = React.useState<Set<string>>(new Set());
 
   // Pan responder pre zatvorenie panelu (swipe doprava)
   const closePanResponder = useRef(
@@ -205,6 +212,22 @@ export default function DiscoverSideFilterPanel({
     }
   }, [PANEL_WIDTH]);
 
+  const toggleDiscover = (option: string) => {
+    // Zatiaľ nič nerobí
+    setDiscoverOptions((prev) => {
+      const next = new Set(prev);
+      if (next.has(option)) {
+        next.delete(option);
+      } else {
+        next.add(option);
+      }
+      return next;
+    });
+  };
+
+  const selectedCategories = filterOptions.filter((cat) => appliedFilters.has(cat));
+  const isFilterActive = appliedFilters.size > 0 || rating.size > 0 || sub.size > 0;
+
   return (
     <>
       {/* Pull Handle - viditeľný keď panel nie je otvorený */}
@@ -220,11 +243,19 @@ export default function DiscoverSideFilterPanel({
           {...openPanResponder.panHandlers}
         >
           <TouchableOpacity
-            style={styles.pullHandle}
+            style={[
+              styles.pullHandle,
+              isFilterActive ? styles.pullHandleActive : styles.pullHandleInactive,
+            ]}
             onPress={onOpen}
             activeOpacity={0.7}
           >
-            <View style={{ width: 3, height: 24, backgroundColor: "#AEAEAE", borderRadius: 3 }} />
+            <View
+              style={[
+                styles.pullHandleLine,
+                isFilterActive ? styles.pullHandleLineActive : styles.pullHandleLineInactive,
+              ]}
+            />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -258,160 +289,186 @@ export default function DiscoverSideFilterPanel({
             },
           ]}
         >
-          {/* HANDLE - pre swipe gesture na zatvorenie - zobrazuje sa len keď je panel viditeľný */}
+          {/* Orange Handle - pre swipe gesture na zatvorenie */}
           {visible && (
             <View
               style={styles.handleWrapper}
               {...closePanResponder.panHandlers}
             >
-              <View style={styles.pullHandle}>
-                <View style={{ width: 3, height: 24, backgroundColor: "#AEAEAE", borderRadius: 3 }} />
+              <View
+                style={[
+                  styles.orangeHandle,
+                  isFilterActive ? styles.pullHandleActive : styles.pullHandleInactive,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.orangeHandleLine,
+                    isFilterActive ? styles.pullHandleLineActive : styles.pullHandleLineInactive,
+                  ]}
+                />
               </View>
             </View>
           )}
 
-          <View style={styles.contentContainer}>
-            {/* Left Column - Categories */}
-            <View style={styles.leftColumn}>
-              <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>Categories</Text>
-                  <View style={styles.chips}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Filter</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={closePanel}>
+              <Image
+                source={require("../../images/plus.png")}
+                style={styles.closeButtonIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Categories */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Categories</Text>
+              <View style={styles.chipsGrid}>
+                {filterOptions.map((cat, index) => {
+                  const isActive = appliedFilters.has(cat);
+                  const emoji = CATEGORY_EMOJIS[cat] || "";
+                  return (
                     <TouchableOpacity
+                      key={cat}
                       style={[
                         styles.chip,
-                        !appliedFilter && styles.chipActive,
+                        isActive && styles.chipActive,
+                        index % 2 === 1 && styles.chipRight,
                       ]}
-                      onPress={() => setAppliedFilter(null)}
+                      onPress={() =>
+                        setAppliedFilters((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(cat)) {
+                            next.delete(cat);
+                          } else {
+                            next.add(cat);
+                          }
+                          return next;
+                        })
+                      }
                     >
-                      <Text
-                        style={
-                          !appliedFilter
-                            ? styles.chipTextActive
-                            : styles.chipText
-                        }
-                      >
-                        All
+                      <Text style={styles.chipContent}>
+                        <Text>{emoji} </Text>
+                        <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                          {cat}
+                        </Text>
                       </Text>
                     </TouchableOpacity>
-                    {filterOptions.map((cat) => {
-                      const isActive = appliedFilter === cat;
-                      const emoji = CATEGORY_EMOJIS[cat] || "";
-                      return (
-                        <TouchableOpacity
-                          key={cat}
-                          style={[styles.chip, styles.chipRow, isActive && styles.chipActive]}
-                          onPress={() =>
-                            setAppliedFilter(isActive ? null : cat)
-                          }
-                        >
-                          <Text style={styles.chipEmoji}>{emoji}</Text>
-                          <Text
-                            style={
-                              isActive
-                                ? styles.chipTextActive
-                                : styles.chipText
-                            }
-                          >
-                            {cat}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </ScrollView>
+                  );
+                })}
+              </View>
             </View>
 
-            {/* Divider */}
-            <View style={styles.divider} />
-
-            {/* Right Column - Rating & Subcategories */}
-            <View style={styles.rightColumn}>
-              <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                 {/* Rating */}
-                 <View style={styles.sectionContainer}>
-                   <Text style={styles.sectionTitle}>Rating</Text>
-                   <View style={styles.chips}>
-                     {["4.7", "4.5", "4.0", "3.5", "3.0"].map((r) => {
-                       const isActive = rating.has(r);
-                       return (
-                         <TouchableOpacity
-                           key={r}
-                           style={[styles.chip, isActive && styles.chipActive]}
-                           onPress={() => {
-                             setRating((prev) => {
-                               const next = new Set(prev);
-                               if (next.has(r)) {
-                                 next.delete(r);
-                               } else {
-                                 next.add(r);
-                               }
-                               return next;
-                             });
-                             setAppliedRatings((prev) => {
-                               const next = new Set(prev);
-                               if (next.has(r)) {
-                                 next.delete(r);
-                               } else {
-                                 next.add(r);
-                               }
-                               return next;
-                             });
-                           }}
-                         >
-                           <Text
-                             style={
-                               isActive ? styles.chipTextActive : styles.chipText
-                             }
-                           >
-                             {"⭐"} {r}
-                           </Text>
-                         </TouchableOpacity>
-                       );
-                     })}
-                   </View>
-                 </View>
-
-                {/* Subcategories - zobrazujú sa vždy (default Gastro ak nie je vybraná kategória) */}
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>Subcategories</Text>
-                  <View style={styles.chips}>
-                    {(CATEGORY_SUBCATEGORIES[appliedFilter ?? "Gastro"] || CATEGORY_SUBCATEGORIES.Gastro).map((s) => {
+            {/* Subcategories - zobrazí sa len keď je vybraná aspoň 1 kategória */}
+            {selectedCategories.map((category) => {
+              const currentSubcategories =
+                CATEGORY_SUBCATEGORIES[category] || CATEGORY_SUBCATEGORIES.Gastro;
+              return (
+                <View style={styles.sectionSub} key={`sub-${category}`}>
+                  <Text style={styles.sectionTitle}>Subcategories {category}</Text>
+                  <View style={styles.chipsGrid}>
+                    {currentSubcategories.map((s, index) => {
                       const isActive = sub.has(s);
                       const emoji = SUBCATEGORY_EMOJIS[s] || "";
                       return (
                         <TouchableOpacity
-                          key={s}
-                          style={[styles.chip, styles.chipRow, isActive && styles.chipActive]}
+                          key={`${category}-${s}`}
+                          style={[
+                            styles.chipSub,
+                            isActive && styles.chipActive,
+                            index % 2 === 1 && styles.chipRight,
+                          ]}
                           onPress={() => toggleSubcategory(s)}
                         >
-                          <Text style={styles.chipEmoji}>{emoji}</Text>
-                          <Text
-                            style={
-                              isActive
-                                ? styles.chipTextActive
-                                : styles.chipText
-                            }
-                          >
-                            {s}
+                          <Text style={styles.chipContent}>
+                            <Text>{emoji} </Text>
+                            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                              {s}
+                            </Text>
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 </View>
-              </ScrollView>
+              );
+            })}
+
+            {/* Rating */}
+            <View style={styles.sectionRating}>
+              <Text style={styles.sectionTitle}>Rating</Text>
+              <View style={styles.chipsGridRating}>
+                {["4.7", "4.5", "4.0", "3.5", "3.0"].map((r, index) => {
+                  const isActive = rating.has(r);
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      style={[
+                        styles.ratingChip,
+                        isActive && styles.chipActive,
+                      ]}
+                      onPress={() => {
+                        setRating((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(r)) {
+                            next.delete(r);
+                          } else {
+                            next.add(r);
+                          }
+                          return next;
+                        });
+                        setAppliedRatings((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(r)) {
+                            next.delete(r);
+                          } else {
+                            next.add(r);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                        ⭐ {r}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
+
+            {/* Discover (zatiaľ nič nerobí) */}
+            <View style={styles.sectionDiscover}>
+              <Text style={styles.sectionTitle}>Discover</Text>
+              <View style={styles.chipsGrid}>
+                {DISCOVER_OPTIONS.map((option, index) => {
+                  const isActive = discoverOptions.has(option);
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.chip,
+                        isActive && styles.chipActive,
+                        index % 2 === 1 && styles.chipRight,
+                      ]}
+                      onPress={() => toggleDiscover(option)}
+                    >
+                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
         </Animated.View>
       </View>
     </>
@@ -434,7 +491,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: "#FFFFFF",
-    paddingTop: 55,
     borderTopLeftRadius: 30,
     borderBottomLeftRadius: 30,
     elevation: 10,
@@ -445,94 +501,163 @@ const styles = StyleSheet.create({
   },
   handleWrapper: {
     position: "absolute",
-    left: -18,
+    left: -22,
     top: "50%",
     marginTop: -27,
-    width: 18,
+    width: 22,
     height: 54,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10000,
   },
-  contentContainer: {
-    flex: 1,
+  orangeHandle: {
+    width: 22,
+    height: 54,
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  orangeHandleLine: {
+    width: 3,
+    height: 22,
+    borderRadius: 2,
+  },
+  pullHandleActive: {
+    backgroundColor: "#EB8100",
+  },
+  pullHandleInactive: {
+    backgroundColor: "#FFFFFF",
+  },
+  pullHandleLineActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  pullHandleLineInactive: {
+    backgroundColor: "#AEAEAE",
+  },
+  header: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 55,
+    paddingHorizontal: 16,
+    paddingBottom: 23,
   },
-  leftColumn: {
-    width: 116,
-    paddingLeft: 16,
-    paddingRight: 16,
-    borderRightWidth: 1,
-    borderRightColor: "#E4E4E7",
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 24,
+    color: "#000000",
   },
-  rightColumn: {
-    flex: 1,
-    paddingLeft: 16,
-    paddingRight: 16,
+  closeButton: {
+    padding: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  divider: {
-    display: "none",
+  closeButtonIcon: {
+    width: 25.58,
+    height: 25.58,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
-  sectionContainer: {
-    marginBottom: 12,
+  section: {
+    marginBottom: 0,
+  },
+  sectionSub: {
+    paddingTop: 16,
+  },
+  sectionRating: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  sectionDiscover: {
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
+    lineHeight: 21,
     color: "#000000",
     marginBottom: 12,
-    lineHeight: 21,
   },
-  chips: {
-    flexDirection: "column",
-    alignItems: "flex-start",
+  chipsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
+    width: 294,
+  },
+  chipsGridRating: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    width: 294,
   },
   chip: {
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 0.5,
     borderColor: "#E4E4E7",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
+    width: 141,
+  },
+  chipSub: {
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
+    width: 141,
   },
-  chipRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  chipEmoji: {
-    fontSize: 16,
-    lineHeight: 20,
+  chipRight: {
+    // Pre grid alignment
   },
   chipActive: {
     backgroundColor: "#EB8100",
     borderColor: "#EB8100",
   },
+  chipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   chipText: {
     fontSize: 15,
-    color: "#000000",
-    fontWeight: "600",
+    fontWeight: "700",
     lineHeight: 18,
+    color: "#000000",
   },
   chipTextActive: {
-    fontSize: 15,
     color: "#FFFFFF",
-    fontWeight: "600",
-    lineHeight: 18,
+  },
+  ratingChip: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
+    width: 90,
   },
   pullHandleContainer: {
     position: "absolute",
     right: 0,
-    width: 18,
+    width: 22,
     height: 54,
     justifyContent: "center",
     alignItems: "center",
@@ -540,12 +665,16 @@ const styles = StyleSheet.create({
     pointerEvents: "auto",
   },
   pullHandle: {
-    width: 18,
+    width: 22,
     height: 54,
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderBottomLeftRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+  },
+  pullHandleLine: {
+    width: 3,
+    height: 22,
+    borderRadius: 2,
   },
 });

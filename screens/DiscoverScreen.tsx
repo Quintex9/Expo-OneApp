@@ -87,7 +87,6 @@ export default function DiscoverScreen() {
   const [sideFilterOpen, setSideFilterOpen] = useState(false);
 
   // Refs
-  const sheetRef = useRef<BottomSheet>(null);
   const filterRef = useRef<BottomSheet>(null);
   const cameraRef = useRef<any>(null);
   const snapPoints = useMemo(() => ["25%", "85%"], []);
@@ -105,13 +104,23 @@ export default function DiscoverScreen() {
 
   // Custom hooks
   const filters = useDiscoverFilters("Gastro");
-  const { branches, groupedMarkers, markerItems, loading, error, refetch, fetchBranchForMarker } =
-    useDiscoverData({ t, markerBranchOverrides });
+  const {
+    branches,
+    markers,
+    groupedMarkers,
+    markerItems,
+    loading,
+    error,
+    refetch,
+    fetchBranchForMarker,
+    buildBranchFromMarker,
+  } = useDiscoverData({ t, markerBranchOverrides });
 
   // Location state
   const [location, setLocation] = useState<Location[]>([
     { image: require("../images/home.png"), label: "home" },
     { image: require("../images/business.png"), label: "business" },
+    { image: require("../images/list.png"), label: "All Addresses" },
     { image: require("../images/pin.png"), label: "nitra", coord: NITRA_CENTER },
   ]);
   const [option, setOption] = useState<string>("yourLocation");
@@ -153,11 +162,12 @@ export default function DiscoverScreen() {
   );
 
   // Handle tab navigation and camera preservation
-  const searchExpandedIndex = snapPoints.length > 1 ? 1 : 0;
   useFocusEffect(
     useCallback(() => {
       if (route.name === "Search") {
-        setSearchSheetIndex(searchExpandedIndex);
+        setSearchSheetIndex(0);
+        setO(false);
+        setIsSheetOpen(true);
         const target = lastDiscoverCameraState?.center ?? camera.userCoord ?? NITRA_CENTER;
         const zoomLevel = lastDiscoverCameraState?.zoom ?? 14;
         cameraRef.current?.setCamera({
@@ -177,7 +187,7 @@ export default function DiscoverScreen() {
         }
         preserveDiscoverCamera = false;
       }
-    }, [route.name, searchExpandedIndex, camera.userCoord])
+    }, [route.name, camera.userCoord])
   );
 
   // Computed dimensions
@@ -186,6 +196,19 @@ export default function DiscoverScreen() {
 
   // Filter branches and markers
   const filteredBranches = filters.filterBranches(branches, text);
+  const searchBranchCandidates = useMemo(
+    () => markers.map((marker) => buildBranchFromMarker(marker)),
+    [markers, buildBranchFromMarker]
+  );
+  const searchBranches = useMemo(() => {
+    const query = text.trim().toLowerCase();
+    if (!query) {
+      return searchBranchCandidates;
+    }
+    return searchBranchCandidates.filter((branch) =>
+      branch.title.toLowerCase().includes(query)
+    );
+  }, [searchBranchCandidates, text]);
   const filteredMarkers = filters.filterMarkers(markerItems);
 
   // Saved location markers
@@ -217,6 +240,10 @@ export default function DiscoverScreen() {
     },
     [route.name, navigation, t]
   );
+
+  const handleOpenSearch = useCallback(() => {
+    handleSearchSheetChange(0);
+  }, [handleSearchSheetChange]);
 
   const handleFilterSheetChange = useCallback((index: number) => {
     setO(index === -1);
@@ -311,8 +338,8 @@ export default function DiscoverScreen() {
         option={option}
         setOption={setOption}
         o={o}
-        sheetRef={sheetRef}
         filterRef={filterRef}
+        onOpenSearch={handleOpenSearch}
         userCoord={camera.userCoord}
         mainMapCenter={camera.mapCenter}
         cameraRef={cameraRef}
@@ -322,13 +349,11 @@ export default function DiscoverScreen() {
       />
 
       <DiscoverSearchSheet
-        sheetRef={sheetRef}
-        snapPoints={snapPoints}
         onSheetChange={handleSearchSheetChange}
         sheetIndex={searchSheetIndex}
         text={text}
         setText={setText}
-        filtered={filteredBranches}
+        filtered={searchBranches}
         t={t}
       />
 
@@ -347,7 +372,8 @@ export default function DiscoverScreen() {
         sub={filters.sub}
         toggle={filters.toggleSubcategory}
         count={filters.filterCount}
-        setAppliedFilter={filters.setAppliedFilter}
+        appliedFilters={filters.appliedFilters}
+        setAppliedFilters={filters.setAppliedFilters}
         setAppliedRatings={filters.setAppliedRatings}
         setSub={filters.setSub}
         subcategoryChipWidth={subcategoryChipWidth}
@@ -359,8 +385,8 @@ export default function DiscoverScreen() {
         onOpen={() => setSideFilterOpen(true)}
         onClose={() => setSideFilterOpen(false)}
         filterOptions={FILTER_OPTIONS}
-        appliedFilter={filters.appliedFilter}
-        setAppliedFilter={filters.setAppliedFilter}
+        appliedFilters={filters.appliedFilters}
+        setAppliedFilters={filters.setAppliedFilters}
         rating={filters.ratingFilter}
         setRating={filters.setRatingFilter}
         setAppliedRatings={filters.setAppliedRatings}
@@ -377,8 +403,8 @@ export default function DiscoverScreen() {
           setCategoriesOpen={setCategoriesOpen}
           filterOptions={FILTER_OPTIONS}
           filterIcons={FILTER_ICONS}
-          appliedFilter={filters.appliedFilter}
-          setAppliedFilter={filters.setAppliedFilter}
+          appliedFilters={filters.appliedFilters}
+          setAppliedFilters={filters.setAppliedFilters}
           setFilter={filters.setFilter}
           branches={filteredBranches}
           branchCardWidth={branchCardWidth}

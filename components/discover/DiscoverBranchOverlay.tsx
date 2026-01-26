@@ -26,8 +26,8 @@ function DiscoverBranchOverlay({
   setCategoriesOpen,   // funkcia na otvorenie/zatvorenie prepínača
   filterOptions,       // možnosti filtrov (Fitness, Gastro, atď.)
   filterIcons,         // ikonky pre jednotlivé kategórie
-  appliedFilter,       // aktuálne aplikovaný filter
-  setAppliedFilter,    // funkcia na zmenu filtra
+  appliedFilters,      // aktuálne aplikované filtre
+  setAppliedFilters,   // funkcia na zmenu filtrov
   setFilter,           // funkcia na nastavenie filtra v sheete
   branches,            // zoznam pobočiek na zobrazenie
   branchCardWidth,     // šírka karty (responzívna)
@@ -110,9 +110,17 @@ function DiscoverBranchOverlay({
   const handleCategoryPress = useCallback(
     (option: string) => {
       setFilter(option);
-      setAppliedFilter((prev) => (prev === option ? null : option));
+      setAppliedFilters((prev) => {
+        const next = new Set(prev);
+        if (next.has(option)) {
+          next.delete(option);
+        } else {
+          next.add(option);
+        }
+        return next;
+      });
     },
-    [setFilter, setAppliedFilter]
+    [setFilter, setAppliedFilters]
   );
 
   /**

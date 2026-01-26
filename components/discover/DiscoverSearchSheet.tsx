@@ -11,16 +11,14 @@
  */
 
 import React, { memo, useCallback } from "react";
-import { Image, View, StyleSheet } from "react-native";
-import { TextInput } from "react-native-gesture-handler";
-import BottomSheet, { BottomSheetFlatList } from "@gorhom/bottom-sheet";
+import { FlatList, Image, View, StyleSheet, Text } from "react-native";
+import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BranchCard from "../BranchCard";
 import { styles } from "./discoverStyles";
 import type { DiscoverSearchSheetProps, BranchCardProps } from "../../lib/interfaces";
 
 function DiscoverSearchSheet({
-  sheetRef,          // ref na BottomSheet (pre programatické ovládanie)
-  snapPoints,        // body uchytenia (napr. ["25%", "85%"])
   onSheetChange,     // callback pri zmene pozície sheetu
   sheetIndex,        // aktuálna pozícia (-1 = zatvorený)
   text,              // text vo vyhľadávacom poli
@@ -28,6 +26,7 @@ function DiscoverSearchSheet({
   filtered,          // prefiltrované pobočky
   t,                 // prekladová funkcia
 }: DiscoverSearchSheetProps) {
+  const insets = useSafeAreaInsets();
   
   /**
    * Funkcia na extrahovanie kľúča pre FlatList
@@ -47,16 +46,27 @@ function DiscoverSearchSheet({
     []
   );
 
+  if (sheetIndex === -1) {
+    return null;
+  }
+
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={sheetIndex}
-      snapPoints={snapPoints}
-      enablePanDownToClose={true}  // umožníme zatvoriť potiahnutím nadol
-      onChange={onSheetChange}
-    >
+    <View style={[styles.searchScreen, { paddingTop: insets.top + 8 }]}>
+
+      {/* Header */}
+      <View style={styles.searchSheetHeader}>
+        <TouchableOpacity style={styles.searchLocationChip} activeOpacity={0.9}>
+          <Image source={require("../../images/pin.png")} style={styles.searchLocationIcon} />
+          <Text style={styles.searchLocationText}>Your Location</Text>
+          <Image source={require("../../images/options.png")} style={styles.searchLocationCaret} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => onSheetChange(-1)} activeOpacity={0.8}>
+          <Text style={styles.searchCancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Vyhľadávacie pole */}
-      <View style={styles.searchField}>
+      <View style={styles.searchInputWrapper}>
         <Image source={require("../../images/search.png")} style={styles.searchIcon} />
         <TextInput
           value={text}
@@ -65,10 +75,19 @@ function DiscoverSearchSheet({
           style={styles.searchInput}
           placeholderTextColor="#9CA3AF"
         />
+        {text.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setText("")}
+            style={styles.searchClearButton}
+            activeOpacity={0.8}
+          >
+            <Image source={require("../../images/searchclose.png")} style={styles.searchClearIcon} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Virtualizovaný zoznam pobočiek */}
-      <BottomSheetFlatList
+      <FlatList
         data={filtered}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
@@ -80,7 +99,7 @@ function DiscoverSearchSheet({
         windowSize={5}               // koľko "obrazoviek" držať v pamäti
         removeClippedSubviews={true} // odstráni položky mimo obrazovky (šetrí pamäť)
       />
-    </BottomSheet>
+    </View>
   );
 }
 

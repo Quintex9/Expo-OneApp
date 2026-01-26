@@ -95,7 +95,43 @@ export const styles = StyleSheet.create({
     zIndex: 1,
   },
 
-  searchField: {
+  searchSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  searchScreen: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#FFFFFF",
+    zIndex: 30,
+  },
+  searchLocationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6E6E6",
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 8px rgba(0, 0, 0, 0.08)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+        }),
+  },
+  searchLocationIcon: { width: 14, height: 14, resizeMode: "contain" },
+  searchLocationText: { fontSize: 14, fontWeight: "600", color: "#111" },
+  searchLocationCaret: { width: 14, height: 14, opacity: 0.7, resizeMode: "contain" },
+  searchCancelText: { fontSize: 14, fontWeight: "600", color: "#6B7280" },
+  searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
@@ -107,15 +143,26 @@ export const styles = StyleSheet.create({
     borderColor: "#eee",
     marginHorizontal: 16,
     marginTop: 12,
-    gap: 5,
     marginBottom: 15,
+    gap: 8,
   },
-  searchIcon: { marginRight: 6 },
+  searchIcon: { marginRight: 2 },
   searchInput: {
     flex: 1,
     paddingVertical: 0,
     color: "#111827",
     fontSize: 16,
+  },
+  searchClearButton: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchClearIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: "contain",
   },
   card: {
     flex: 1,
@@ -512,7 +559,7 @@ export const styles = StyleSheet.create({
     flexDirection: "column",
   },
   filterScrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   filter_header: {
     flexDirection: "row",
@@ -578,6 +625,155 @@ export const styles = StyleSheet.create({
     marginLeft: 5,
   },
   ratingTextActive: {
+    color: "#FFFFFF",
+  },
+  filterSheetBackground: {
+    backgroundColor: "transparent",
+  },
+  filterSheetHandle: {
+    height: 0,
+  },
+  filterSheetHandleIndicator: {
+    width: 0,
+    height: 0,
+  },
+  filterDrawerWrapper: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  filterDrawerPanel: {
+    width: "85%",
+    maxWidth: 326,
+    minWidth: 280,
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 30,
+    borderBottomLeftRadius: 30,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    alignSelf: "flex-end",
+    overflow: "visible",
+  },
+  filterDrawerHandle: {
+    position: "absolute",
+    left: -22,
+    top: "45%",
+    width: 22,
+    height: 54,
+    backgroundColor: "#EB8100",
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDrawerHandleLine: {
+    width: 16,
+    height: 3,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 2,
+  },
+  filterScroll: {
+    flex: 1,
+  },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  filterHeaderTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 24,
+    color: "#000000",
+  },
+  filterHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  filterHeaderReset: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#8E8E93",
+  },
+  filterCloseButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#C7C7C7",
+  },
+  filterCloseText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#C7C7C7",
+  },
+  filterSection: {
+    marginTop: 16,
+  },
+  filterSectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 21,
+    color: "#000000",
+  },
+  filterChips: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 12,
+    rowGap: 12,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
+  },
+  filterChipActive: {
+    backgroundColor: "#EB8100",
+    borderColor: "#EB8100",
+  },
+  filterChipEmoji: {
+    fontSize: 15,
+    lineHeight: 18,
+  },
+  filterChipText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#000000",
+    includeFontPadding: false,
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
+  filterRatingChip: {
+    minWidth: 70,
+  },
+  filterApplyRow: {
+    paddingTop: 12,
+  },
+  filterApplyButton: {
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#EB8100",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterApplyText: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
 });

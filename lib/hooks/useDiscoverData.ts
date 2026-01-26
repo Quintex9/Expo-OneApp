@@ -226,6 +226,7 @@ export const useDiscoverData = ({
 
       // Vrátime kompletný objekt pobočky
       return {
+        id: marker.id,
         ...DUMMY_BRANCH,           // základné hodnoty
         ...override,               // vlastné hodnoty
         title,

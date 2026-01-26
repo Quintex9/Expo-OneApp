@@ -16,8 +16,8 @@ export default function DiscoverTopControls({
   option,
   setOption,
   o,
-  sheetRef: _sheetRef,
   filterRef,
+  onOpenSearch,
   userCoord,
   mainMapCenter,
   cameraRef,
@@ -63,6 +63,11 @@ export default function DiscoverTopControls({
                   key={`${opt.label}-${index}`}
                   style={styles.menuRow}
                   onPress={() => {
+                    if (opt.label === "All Addresses") {
+                      setOpen(false);
+                      navigation.navigate("SavedLocations");
+                      return;
+                    }
                     setOption(opt.label);
                     setOpen(false);
                     if (opt.coord) {
@@ -106,7 +111,7 @@ export default function DiscoverTopControls({
               activeOpacity={0.85}
               onPress={() => {
                 setOpen(false);
-                _sheetRef.current?.expand();
+                onOpenSearch();
               }}
             >
               <Image source={require("../../images/search.png")} style={styles.actionBtnIcon} />

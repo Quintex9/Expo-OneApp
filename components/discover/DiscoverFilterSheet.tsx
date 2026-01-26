@@ -1,6 +1,6 @@
-import React from "react";
-import { Image, Text, View } from "react-native";
-import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
+﻿import React from "react";
+import { Text, View } from "react-native";
+import { TouchableOpacity } from "react-native-gesture-handler";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { styles } from "./discoverStyles";
 import type { DiscoverFilterSheetProps } from "../../lib/interfaces";
@@ -15,18 +15,18 @@ export default function DiscoverFilterSheet({
   rating,
   setRating,
   filterOptions,
-  filterIcons,
+  filterIcons: _filterIcons,
   subcategories,
   sub,
   toggle,
   count,
-  setAppliedFilter,
+  setAppliedFilters,
   setAppliedRatings,
   setSub,
-  subcategoryChipWidth,
+  subcategoryChipWidth: _subcategoryChipWidth,
   t,
 }: DiscoverFilterSheetProps) {
-  const ratingOptions = ["4.7", "4.5", "4.0", "3.5"];
+  const ratingOptions = ["4.7", "4.5", "4.0", "3.5", "3.0"];
   const categoryEmojis: Record<string, string> = {
     Fitness: "🏋️‍♂️",
     Relax: "🧖‍♀️",
@@ -35,7 +35,7 @@ export default function DiscoverFilterSheet({
   };
   const subcategoryEmojis: Record<string, string> = {
     Vegan: "🌱",
-    Coffee: "☕",
+    Coffee: "☕️",
     Seafood: "🦐",
     Pizza: "🍕",
     Sushi: "🍣",
@@ -51,172 +51,141 @@ export default function DiscoverFilterSheet({
       snapPoints={snapPoints}
       enablePanDownToClose={true}
       onChange={onSheetChange}
+      backgroundStyle={styles.filterSheetBackground}
+      handleStyle={styles.filterSheetHandle}
+      handleIndicatorStyle={styles.filterSheetHandleIndicator}
     >
-      <View style={{ flex: 1 }}>
-        <BottomSheetScrollView
-          contentContainerStyle={[
-            styles.filterScrollContent,
-            { paddingBottom: insetsBottom + 110 },
-          ]}
-        >
-          <View style={styles.filter_header}>
-            <Text style={{ fontSize: 20, fontWeight: "bold" }}>{t("filters")}</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setAppliedFilter(null);
-                setSub(new Set());
-                setRating(new Set());
-                setAppliedRatings(new Set());
-              }}
-            >
-              <Text style={{ fontSize: 14, color: "gray" }}>{t("reset")}</Text>
-            </TouchableOpacity>
+      <View style={styles.filterDrawerWrapper}>
+        <View style={styles.filterDrawerPanel}>
+          <View style={styles.filterDrawerHandle}>
+            <View style={styles.filterDrawerHandleLine} />
           </View>
 
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingTitle}>Rating</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ratingRow}>
+          <BottomSheetScrollView
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.filterHeader}>
+              <Text style={styles.filterHeaderTitle}>{t("filters")}</Text>
+              <View style={styles.filterHeaderActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setAppliedFilters(new Set());
+                    setSub(new Set());
+                    setRating(new Set());
+                    setAppliedRatings(new Set());
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.filterHeaderReset}>{t("reset")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.filterCloseButton}
+                  onPress={() => filterRef.current?.close()}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.filterCloseText}>X</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>{t("categories")}</Text>
+              <View style={styles.filterChips}>
+                {filterOptions.map((option) => {
+                  const active = filter === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
+                      onPress={() => setFilter(option)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.filterChipEmoji}>
+                        {categoryEmojis[option] ?? "🍽️"}
+                      </Text>
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                        {t(option)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>
+                {t(filter)} {t("subcategories")}
+              </Text>
+              <View style={styles.filterChips}>
+                {subcategories.map((subs) => {
+                  const active = sub.has(subs);
+                  const emoji = subcategoryEmojis[subs];
+
+                  return (
+                    <TouchableOpacity
+                      key={subs}
+                      onPress={() => toggle(subs)}
+                      activeOpacity={0.85}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
+                    >
+                      {emoji ? <Text style={styles.filterChipEmoji}>{emoji}</Text> : null}
+                      <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        style={[styles.filterChipText, active && styles.filterChipTextActive]}
+                      >
+                        {t(subs)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Rating</Text>
+              <View style={styles.filterChips}>
                 {ratingOptions.map((value) => {
                   const active = rating.has(value);
                   return (
                     <TouchableOpacity
                       key={value}
-                      style={[styles.ratingChip, active && styles.ratingChipActive]}
+                      style={[
+                        styles.filterChip,
+                        styles.filterRatingChip,
+                        active && styles.filterChipActive,
+                      ]}
                       onPress={() =>
                         setRating(() => (active ? new Set() : new Set([value])))
                       }
                       activeOpacity={0.85}
                     >
-                    <Text style={[styles.ratingEmoji, active && styles.ratingEmojiActive]}>⭐</Text>
-                    <Text style={[styles.ratingText, active && styles.ratingTextActive]}>{value}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          <View style={styles.filter_categories}>
-            <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10, marginTop: 22 }}>
-              {t("categories")}
-            </Text>
-
-            <View style={{ flexDirection: "row" }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {filterOptions.map((option) => (
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: "row",
-                      backgroundColor: filter === option ? "#EB8100" : "#FFFFFF",
-                      borderRadius: 20,
-                      padding: 15,
-                      borderWidth: 1,
-                      borderColor: "#eee",
-                      gap: 10,
-                      marginRight: 10,
-                      marginTop: 10,
-                      width: 125,
-                      marginLeft: 9,
-                    }}
-                    onPress={() => setFilter(option)}
-                    key={option}
-                  >
-                    <Text style={{ fontSize: 18, lineHeight: 18 }}>
-                      {categoryEmojis[option] ?? "🏷️"}
-                    </Text>
-                    <Text
-                      style={{
-                        fontWeight: "600",
-                        fontSize: 16,
-                        marginLeft: 5,
-                        color: filter === option ? "white" : "black",
-                      }}
-                    >
-                      {t(option)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                      <Text style={styles.filterChipEmoji}>⭐️</Text>
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                        {value}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          </BottomSheetScrollView>
 
-          <View>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "bold",
-                marginLeft: 10,
-                marginTop: 25,
-                marginBottom: 10,
+          <View style={[styles.filterApplyRow, { paddingBottom: insetsBottom + 12 }]}>
+            <TouchableOpacity
+              style={styles.filterApplyButton}
+              onPress={() => {
+                setAppliedFilters(new Set([filter]));
+                setAppliedRatings(new Set(rating));
+                filterRef.current?.close();
               }}
+              activeOpacity={0.9}
             >
-              {t(filter)} {t("subcategories")}
-            </Text>
-
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: 10 }}>
-              {subcategories.map((subs) => {
-                const active = sub.has(subs);
-                const emoji = subcategoryEmojis[subs];
-
-                return (
-                  <TouchableOpacity
-                    key={subs}
-                    onPress={() => toggle(subs)}
-                    activeOpacity={0.85}
-                    style={{
-                      borderRadius: 20,
-                      paddingVertical: 12,
-                      paddingHorizontal: 14,
-                      borderWidth: 1,
-                      borderColor: active ? "transparent" : "#eee",
-                      backgroundColor: active ? "#EB8100" : "#FFFFFF",
-                      marginLeft: 0,
-                      marginTop: 10,
-                      marginRight: 12,
-                      alignSelf: "flex-start",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={{
-                        fontWeight: "600",
-                        fontSize: 16,
-                        color: active ? "white" : "black",
-                        textAlign: "center",
-                        includeFontPadding: false,
-                      }}
-                    >
-                      {emoji ? `${emoji} ` : ""}{t(subs)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              <Text style={styles.filterApplyText}>Filter ({count})</Text>
+            </TouchableOpacity>
           </View>
-        </BottomSheetScrollView>
-
-        <View style={{ paddingHorizontal: 10, paddingBottom: insetsBottom + 12 }}>
-          <TouchableOpacity
-            style={{
-              borderRadius: 20,
-              padding: 15,
-              borderWidth: 1,
-              backgroundColor: "#EB8100",
-              width: "auto",
-              justifyContent: "center",
-              borderColor: "#eee",
-            }}
-            onPress={() => {
-              setAppliedFilter(filter);
-              setAppliedRatings(new Set(rating));
-              filterRef.current?.close();
-            }}
-          >
-            <Text style={{ fontWeight: "bold", fontSize: 18, color: "white", textAlign: "center" }}>
-              Filter ({count})
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     </BottomSheet>
