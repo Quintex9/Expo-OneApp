@@ -32,36 +32,33 @@ export default function ForgotPasswordScreen() {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Header */}
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>{t("forgotPassword")}</Text>
-                    <Text style={styles.subtitle}>
-                        {t("forgotSubtitle")}
-                    </Text>
+                    <View style={styles.form}>
+                        {/* Header */}
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <Ionicons name="arrow-back" size={22} color="#000" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>{t("forgotPassword")}</Text>
+                        <Text style={styles.subtitle}>{t("forgotSubtitle")}</Text>
 
-                    {/* Email input */}
-                    <View style={styles.inputWrapper}>
-                        <Ionicons
-                            name="mail-outline"
-                            size={20}
-                            style={styles.inputIcon}
-                        />
+                        {/* Email input */}
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="mail-outline" size={20} style={styles.inputIcon} />
+                            <TextInput
+                                placeholder={t("email")}
+                                placeholderTextColor="#71717A"
+                                style={styles.input}
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                returnKeyType="done"
+                            />
+                        </View>
 
-                        <TextInput
-                            placeholder={t("email")}
-                            style={styles.input}
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                        />
+                        {/* Continue button */}
+                        <TouchableOpacity style={styles.button}>
+                            <Text style={styles.buttonText}>{t("continue")}</Text>
+                        </TouchableOpacity>
                     </View>
-
-                    {/* Continue button */}
-                    <TouchableOpacity style={styles.button}>
-                        <Text style={styles.buttonText}>{t("continue")}</Text>
-                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -77,56 +74,76 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        padding: 24,
-        paddingTop: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 32,
+    },
+    form: {
+        width: "100%",
+        maxWidth: 420,
+        alignSelf: "center",
+    },
+    backButton: {
+        width: 32,
+        height: 32,
+        alignSelf: "flex-start",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        marginBottom: 12,
     },
     title: {
-        fontSize: 26,
+        fontSize: 27,
         fontWeight: "700",
         marginBottom: 8,
-        marginTop: 20,
         textAlign: "center",
+        color: "#000",
     },
     subtitle: {
-        fontSize: 14,
-        color: "#888",
-        marginBottom: 24,
+        fontSize: 15,
+        lineHeight: 18,
+        color: "rgba(0, 0, 0, 0.5)",
+        marginBottom: 28,
         textAlign: "center",
     },
     inputWrapper: {
+        width: "100%",
         flexDirection: "row",
         alignItems: "center",
+        height: 50,
         borderWidth: 1,
-        borderColor: "#eee",
-        borderRadius: 14,
-        paddingHorizontal: 14,
-        backgroundColor: "#fafafa",
-        marginBottom: 16,
+        borderColor: "#E4E4E7",
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        backgroundColor: "#FFFFFF",
+        marginBottom: 20,
+        gap: 10,
     },
     inputIcon: {
-        marginRight: 10,
-        color: "#999",
-    },
-    eyeIcon: {
-        marginLeft: 10,
-        color: "#999",
+        color: "#71717A",
     },
     input: {
         flex: 1,
-        paddingVertical: 14,
-        fontSize: 15,
+        paddingVertical: 0,
+        fontSize: 14,
         color: "#000",
         backgroundColor: "transparent",
     },
     button: {
-        backgroundColor: "#f57c00",
-        paddingVertical: 16,
-        borderRadius: 14,
+        width: "100%",
+        backgroundColor: "#EB8100",
+        height: 48,
+        borderRadius: 16,
         alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 3,
     },
     buttonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "700",
+        color: "#FAFAFA",
+        fontSize: 18,
+        fontWeight: "600",
     },
 });

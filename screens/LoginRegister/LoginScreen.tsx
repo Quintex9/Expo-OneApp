@@ -24,7 +24,9 @@ export default function LoginScreen() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
+    const passwordInputRef = useRef<TextInput>(null);
 
     const navigation = useNavigation<any>();
     const { t } = useTranslation();
@@ -137,105 +139,130 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Header */}
-                    <TouchableOpacity onPress={() => navigation.navigate("Tabs", { screen: t("Discover") })}>
-                        <Ionicons name="arrow-back" size={24} />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>{t("loginTitle")}</Text>
-                    <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
+                    <View style={styles.form}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => navigation.navigate("Tabs", { screen: t("Discover") })}
+                        >
+                            <Ionicons name="arrow-back" size={22} color="#000" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>{t("loginTitle")}</Text>
+                        <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
 
-                    {/* Email */}
-                    <View style={styles.inputWrapper}>
-                        <Ionicons name="mail-outline" size={20} style={styles.inputIcon} />
+                        {/* Email */}
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="mail-outline" size={20} style={styles.inputIcon} />
                         <TextInput
                             placeholder={t("email")}
+                            placeholderTextColor="#71717A"
                             style={styles.input}
                             value={email}
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            returnKeyType="next"
+                            blurOnSubmit={false}
+                            onSubmitEditing={() => passwordInputRef.current?.focus()}
                             editable={!loading}
                         />
                     </View>
 
-                    {/* Password */}
-                    <View style={styles.inputWrapper}>
-                        <Ionicons name="lock-closed-outline" size={20} style={styles.inputIcon} />
+                        {/* Password */}
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="lock-closed-outline" size={20} style={styles.inputIcon} />
                         <TextInput
                             placeholder={t("password")}
+                            placeholderTextColor="#71717A"
                             style={styles.input}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
+                            ref={passwordInputRef}
+                            returnKeyType="done"
+                            onSubmitEditing={handleLogin}
                             editable={!loading}
                         />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <Ionicons
-                                name={showPassword ? "eye-outline" : "eye-off-outline"}
-                                size={20}
-                                style={styles.eyeIcon}
-                            />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                <Ionicons
+                                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                                    size={20}
+                                    style={styles.eyeIcon}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.helperRow}>
+                            <TouchableOpacity
+                                style={styles.rememberRow}
+                                onPress={() => setRememberMe(!rememberMe)}
+                                disabled={loading}
+                                activeOpacity={0.8}
+                            >
+                                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                                    {rememberMe ? <Ionicons name="checkmark" size={12} color="#000" /> : null}
+                                </View>
+                                <Text style={styles.rememberText}>{t("rememberMe", "Remember me")}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate("ForgottenPassword")}
+                                style={styles.forgotPassword}
+                                disabled={loading}
+                            >
+                                <Text style={styles.forgotPasswordText}>{t("forgotPassword")}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Login Button */}
+                        <TouchableOpacity
+                            style={[styles.button, loading && styles.buttonDisabled]}
+                            onPress={handleLogin}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>{t("login")}</Text>
+                            )}
                         </TouchableOpacity>
-                    </View>
 
-                    {/* Forgot Password */}
-                    <TouchableOpacity 
-                        onPress={() => navigation.navigate("ForgottenPassword")} 
-                        style={styles.forgotPassword}
-                        disabled={loading}
-                    >
-                        <Text style={styles.forgotPasswordText}>{t("forgotPassword")}</Text>
-                    </TouchableOpacity>
-
-                    {/* Login Button */}
-                    <TouchableOpacity 
-                        style={[styles.button, loading && styles.buttonDisabled]} 
-                        onPress={handleLogin}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.buttonText}>{t("login")}</Text>
-                        )}
-                    </TouchableOpacity>
-
-                    {/* Sign up link */}
+                        {/* Sign up link */}
                     <TouchableOpacity onPress={() => navigation.navigate("Signup")} disabled={loading}>
                         <Text style={styles.signin}>
-                            {t("dont")}
+                            {t("dont")}{" "}
                             <Text style={styles.signinLink}>{t("signup")}</Text>
                         </Text>
                     </TouchableOpacity>
 
-                    {/* Divider */}
-                    <View style={styles.dividerRow}>
-                        <View style={styles.divider} />
-                        <Text style={styles.or}>{t("or")}</Text>
-                        <View style={styles.divider} />
-                    </View>
+                        {/* Divider */}
+                        <View style={styles.dividerRow}>
+                            <View style={styles.divider} />
+                            <Text style={styles.or}>{t("or")}</Text>
+                            <View style={styles.divider} />
+                        </View>
 
-                    {/* Social login */}
-                    <View style={styles.socialRow}>
-                        <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={loading}>
-                            <Image
-                                source={{ uri: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png" }}
-                                style={styles.socialIcon}
-                            />
-                        </TouchableOpacity>
+                        {/* Social login */}
+                        <View style={styles.socialRow}>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={loading}>
+                                <Image
+                                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png" }}
+                                    style={styles.socialIcon}
+                                />
+                            </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin} disabled={loading}>
-                            <Image
-                                source={{ uri: "https://cdn-icons-png.flaticon.com/512/0/747.png" }}
-                                style={styles.socialIcon}
-                            />
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin} disabled={loading}>
+                                <Image
+                                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/0/747.png" }}
+                                    style={styles.socialIcon}
+                                />
+                            </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
-                            <Image
-                                source={{ uri: "https://cdn-icons-png.flaticon.com/512/5968/5968764.png" }}
-                                style={styles.socialIcon}
-                            />
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
+                                <Image
+                                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/5968/5968764.png" }}
+                                    style={styles.socialIcon}
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -253,112 +280,173 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        padding: 24,
-        paddingTop: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 32,
+    },
+    form: {
+        width: "100%",
+        maxWidth: 420,
+        alignSelf: "center",
+    },
+    backButton: {
+        width: 32,
+        height: 32,
+        alignSelf: "flex-start",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        marginBottom: 12,
     },
     title: {
-        fontSize: 26,
+        fontSize: 27,
         fontWeight: "700",
         marginBottom: 8,
         textAlign: "center",
+        color: "#000",
     },
     subtitle: {
-        fontSize: 14,
-        color: "#888",
-        marginBottom: 24,
+        fontSize: 15,
+        lineHeight: 18,
+        color: "rgba(0, 0, 0, 0.5)",
+        marginBottom: 28,
         textAlign: "center",
     },
     input: {
         flex: 1,
-        paddingVertical: 14,
-        fontSize: 15,
+        paddingVertical: 0,
+        fontSize: 14,
         color: "#000",
     },
     button: {
-        backgroundColor: "#f57c00",
-        paddingVertical: 16,
-        borderRadius: 14,
+        width: "100%",
+        backgroundColor: "#EB8100",
+        height: 48,
+        borderRadius: 16,
         alignItems: "center",
-        marginTop: 10,
-        marginBottom: 20,
+        justifyContent: "center",
+        marginTop: 16,
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 3,
     },
     buttonDisabled: {
         opacity: 0.6,
     },
     buttonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "700",
+        color: "#FAFAFA",
+        fontSize: 18,
+        fontWeight: "600",
     },
     signin: {
         textAlign: "center",
-        marginBottom: 20,
-        color: "#666",
+        marginBottom: 18,
+        color: "rgba(0, 0, 0, 0.5)",
+        fontSize: 14,
     },
     signinLink: {
-        color: "#f57c00",
-        fontWeight: "700",
+        color: "#000",
+        fontWeight: "600",
+        textDecorationLine: "underline",
     },
     dividerRow: {
+        width: "100%",
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 18,
     },
     divider: {
         flex: 1,
         height: 1,
-        backgroundColor: "#eee",
+        backgroundColor: "#E4E4E7",
     },
     or: {
         marginHorizontal: 10,
-        color: "#999",
+        fontSize: 13,
+        color: "rgba(0, 0, 0, 0.5)",
     },
     socialRow: {
+        width: "100%",
         flexDirection: "row",
         justifyContent: "center",
-        gap: 20,
+        gap: 24,
     },
     socialButton: {
-        width: 54,
-        height: 54,
-        borderRadius: 27,
+        width: 55,
+        height: 55,
+        borderRadius: 100,
         backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#eee",
         justifyContent: "center",
         alignItems: "center",
-        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 3,
     },
     socialIcon: {
-        width: 26,
-        height: 26,
+        width: 30,
+        height: 30,
         resizeMode: "contain",
     },
     inputWrapper: {
+        width: "100%",
         flexDirection: "row",
         alignItems: "center",
+        height: 50,
         borderWidth: 1,
-        borderColor: "#eee",
-        borderRadius: 14,
-        paddingHorizontal: 14,
-        backgroundColor: "#fafafa",
-        marginBottom: 16,
+        borderColor: "#E4E4E7",
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        backgroundColor: "#FFFFFF",
+        marginBottom: 14,
+        gap: 10,
     },
     inputIcon: {
-        marginRight: 10,
-        color: "#999",
+        color: "#71717A",
     },
     eyeIcon: {
-        marginLeft: 10,
-        color: "#999",
+        color: "#A6A6A6",
     },
     forgotPassword: {
-        alignSelf: "flex-end",
-        marginBottom: 20,
+        justifyContent: "center",
     },
     forgotPasswordText: {
-        color: "#f57c00",
-        fontSize: 14,
-        fontWeight: "600",
+        color: "#09090B",
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    helperRow: {
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 2,
+        marginBottom: 10,
+    },
+    rememberRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    checkbox: {
+        width: 16,
+        height: 16,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: "#999999",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FFFFFF",
+    },
+    checkboxChecked: {
+        backgroundColor: "#FFFFFF",
+    },
+    rememberText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#09090B",
     },
 });
