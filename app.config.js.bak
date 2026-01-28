@@ -1,10 +1,5 @@
-import 'dotenv/config';
-
 export default ({ config }) => ({
   ...config,
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
   plugins: [
     ...(config.plugins ?? []),
     './plugins/withMapboxMaven',
@@ -23,6 +18,6 @@ export default ({ config }) => ({
   },
   extra: {
     ...config.extra,
-    MAPBOX_TOKEN: process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+    MAPBOX_TOKEN: "pk.eyJ1IjoianNnY2l0eSIsImEiOiJjbWJ6YjRmOWUwY2E1Mm9xeHJkbGY4a3V5In0.xH1_hbHZbdGtO6yamCy87w",
   },
 });

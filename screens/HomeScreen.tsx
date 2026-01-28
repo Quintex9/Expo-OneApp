@@ -113,7 +113,7 @@ export default function HomeScreen() {
   );
 
   const sectionList = [
-    { title: "Open near you", data: openNearYou },
+    { title: "Open near you.", data: openNearYou },
     { title: "Trending", data: trending },
     { title: "Top rated", data: topRated },
   ];

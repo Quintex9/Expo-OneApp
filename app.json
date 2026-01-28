@@ -58,7 +58,7 @@
     },
     "owner": "extynt",
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/3c9074e6-f845-4fe9-b080-690c626b77c0"
