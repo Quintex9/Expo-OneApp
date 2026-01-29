@@ -10,6 +10,7 @@ const DUMMY_BRANCH: BranchData = {
   distance: "1.7 km",
   hours: "9:00 - 21:00",
   discount: "20% discount on first entry",
+  offers: ["20% discount on first entry", "1 Free entry for friend"],
   moreCount: 2,
   address: "Chrenovská 16, Nitra",
   phone: "+421903776925",

@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { DiscoverCategory, BranchData, PlanId } from "../lib/interfaces";
 import BranchCard from "../components/BranchCard";
@@ -54,6 +55,7 @@ export default function OnboardingScreen() {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { getBranches } = useDataSource();
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -63,7 +65,13 @@ export default function OnboardingScreen() {
 
   const step = STEPS[stepIndex];
   const progress = ((stepIndex + 1) / TOTAL_STEPS) * 100;
-  const branchCardWidth = Math.max(280, Math.min(340, width - 48));
+  const horizontalPadding = Math.min(24, Math.max(16, Math.round(width * 0.06)));
+  const contentMaxWidth = 520;
+  const contentWidth = Math.min(width - horizontalPadding * 2, contentMaxWidth);
+  const branchCardWidth = Math.max(240, Math.min(340, contentWidth));
+  const titleFontSize = Math.min(28, Math.max(24, Math.round(width * 0.07)));
+  const subtitleFontSize = Math.min(15, Math.max(13, Math.round(width * 0.038)));
+  const gridGap = Math.min(16, Math.max(10, Math.round(contentWidth * 0.04)));
   const canContinue = step !== "services" || selectedCategories.size > 0;
 
   const selectedCategoriesArray = Array.from(selectedCategories);
@@ -138,10 +146,17 @@ export default function OnboardingScreen() {
 
   /* ---------- UI ---------- */
 
+  const sectionStyle = { width: "100%", maxWidth: contentMaxWidth, alignSelf: "center" as const };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* PROGRESS */}
-      <View style={styles.progressContainer}>
+      <View
+        style={[
+          styles.progressContainer,
+          { paddingHorizontal: horizontalPadding, paddingTop: Math.max(16, insets.top + 8) },
+        ]}
+      >
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
@@ -152,23 +167,37 @@ export default function OnboardingScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: horizontalPadding, paddingBottom: insets.bottom + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* ---------- SERVICES STEP ---------- */}
         {step === "services" && (
-          <View>
-            <Text style={styles.title}>{t("onboardingTitle")}</Text>
-            <Text style={styles.subtitle}>{t("onboardingSubtitle")}</Text>
+          <View style={sectionStyle}>
+            <Text style={[styles.title, { fontSize: titleFontSize }]}>{t("onboardingTitle")}</Text>
+            <Text
+              style={[
+                styles.subtitle,
+                { fontSize: subtitleFontSize, lineHeight: Math.round(subtitleFontSize * 1.45) },
+              ]}
+            >
+              {t("onboardingSubtitle")}
+            </Text>
 
-            <View style={styles.categoriesContainer}>
+            <View style={[styles.categoriesContainer, { gap: gridGap }]}>
               {CATEGORIES.map((category) => {
                 const isSelected = selectedCategories.has(category);
 
                 return (
                   <TouchableOpacity
                     key={category}
-                    style={[styles.categoryCard, isSelected && styles.categoryCardSelected]}
+                    style={[
+                      styles.categoryCard,
+                      { borderRadius: 16 },
+                      isSelected && styles.categoryCardSelected,
+                    ]}
                     onPress={() => toggleCategory(category)}
                   >
                     <Ionicons
@@ -213,9 +242,14 @@ export default function OnboardingScreen() {
 
         {/* ---------- BRANCHES STEP ---------- */}
         {step === "branches" && (
-          <View>
-            <Text style={styles.title}>{t("onboardingBranchesTitle")}</Text>
-            <Text style={styles.subtitle}>
+          <View style={sectionStyle}>
+            <Text style={[styles.title, { fontSize: titleFontSize }]}>{t("onboardingBranchesTitle")}</Text>
+            <Text
+              style={[
+                styles.subtitle,
+                { fontSize: subtitleFontSize, lineHeight: Math.round(subtitleFontSize * 1.45) },
+              ]}
+            >
               {t("onboardingBranchesSubtitle", {
                 count: branches.length,
                 categories: categoriesText,
@@ -252,9 +286,18 @@ export default function OnboardingScreen() {
 
         {/* ---------- SUBSCRIPTION STEP ---------- */}
         {step === "subscription" && (
-          <View>
-            <Text style={styles.title}>{t("onboardingSubscriptionTitle")}</Text>
-            <Text style={styles.subtitle}>{t("onboardingSubscriptionSubtitle")}</Text>
+          <View style={sectionStyle}>
+            <Text style={[styles.title, { fontSize: titleFontSize }]}>
+              {t("onboardingSubscriptionTitle")}
+            </Text>
+            <Text
+              style={[
+                styles.subtitle,
+                { fontSize: subtitleFontSize, lineHeight: Math.round(subtitleFontSize * 1.45) },
+              ]}
+            >
+              {t("onboardingSubscriptionSubtitle")}
+            </Text>
 
             {SUBSCRIPTION_PLANS.map((plan) => (
               <SelectableCard
@@ -275,7 +318,12 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       {/* ---------- BOTTOM NAV ---------- */}
-      <View style={styles.bottomContainer}>
+      <View
+        style={[
+          styles.bottomContainer,
+          { paddingHorizontal: horizontalPadding, paddingBottom: Math.max(12, insets.bottom + 8) },
+        ]}
+      >
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={styles.skipText}>
             {step === "subscription" ? t("skip") : t("back")}
@@ -299,13 +347,10 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
     flex: 1,
     backgroundColor: "#fff",
   },
   progressContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
     paddingBottom: 10,
   },
   progressBar: {
@@ -328,8 +373,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
     paddingTop: 20,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -346,11 +391,13 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "space-between",
     marginBottom: 24,
   },
   categoryCard: {
-    width: "47%",
+    flexBasis: "48%",
+    minWidth: 140,
+    maxWidth: 220,
     aspectRatio: 1.2,
     borderWidth: 2,
     borderColor: "#eee",

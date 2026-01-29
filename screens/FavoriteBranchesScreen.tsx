@@ -26,6 +26,7 @@ export default function FavoriteBranchesScreen() {
                     distance="1.7 km"
                     hours="9:00 - 21:00"
                     discount="20% discount on first entry"
+                    offers={["20% discount on first entry", "1 Free entry for friend"]}
                     moreCount={2}
 
                     address="Chrenovská 16, Nitra"
@@ -44,6 +45,7 @@ export default function FavoriteBranchesScreen() {
                     distance="1.7 km"
                     hours="9:00 - 21:00"
                     discount="20% discount on first entry"
+                    offers={["20% discount on first entry", "1 Free entry for friend"]}
                     moreCount={3}
                     address="Trieda Andreja Hlinku 3, Nitra"
                     phone="+421 911 222 333"
@@ -61,6 +63,7 @@ export default function FavoriteBranchesScreen() {
                     distance="1.7 km"
                     hours="9:00 - 21:00"
                     discount="20% discount on first entry"
+                    offers={["20% discount on first entry", "1 Free entry for friend"]}
                     moreCount={5}
                     address="Mostná 42, Nitra"
                     phone="+421 904 555 666"

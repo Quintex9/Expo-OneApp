@@ -63,6 +63,7 @@ export default function FeedScreen() {
                         hours="9:00 - 21:00"
                         category="Fitness"
                         discount="20% discount on first entry"
+                        offers={["20% discount on first entry", "1 Free entry for friend"]}
                     />
                 </View>
             </ImageBackground>

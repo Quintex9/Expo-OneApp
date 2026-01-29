@@ -42,6 +42,8 @@ export type BranchData = {
   hours: string;
   category?: string;
   discount?: string;
+  offers?: string[];
+  badgeVariant?: "more" | "all";
   moreCount?: number;
   address?: string;
   phone?: string;
@@ -51,6 +53,7 @@ export type BranchData = {
 
 export interface BranchCardProps extends BranchData {
   onPress?: (branch: BranchData) => void;
+  cardPaddingBottom?: number;
 }
 
 export interface DiscoverMapMarker {
@@ -216,4 +219,3 @@ export interface DiscoverBranchOverlayProps {
   branchCardWidth: number;
   t: (key: string) => string;
 }
-

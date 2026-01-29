@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   Platform,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BranchCardProps, BranchData } from "../lib/interfaces";
@@ -33,7 +34,10 @@ function BranchCard(props: BranchCardProps) {
     hours,
     category,
     discount,
+    offers,
     moreCount,
+    badgeVariant,
+    cardPaddingBottom,
     address,
     phone,
     email,
@@ -50,18 +54,61 @@ function BranchCard(props: BranchCardProps) {
    * Minimum 80px, maximum 96px, inak 20% šírky obrazovky
    * useMemo zabezpečí, že sa prepočíta len keď sa zmení width
    */
-  const imageSize = useMemo(
-    () => Math.min(96, Math.max(80, Math.floor(width * 0.2))),
-    [width]
+  const scale = useMemo(() => Math.min(1, Math.max(0.82, width / 393)), [width]);
+  const imageSize = useMemo(() => Math.round(80 * scale), [scale]);
+  const cardHeight = useMemo(() => Math.round(112 * scale), [scale]);
+  const cardPadding = useMemo(() => Math.round(16 * scale), [scale]);
+  const baseCardPaddingBottom = useMemo(
+    () => (typeof cardPaddingBottom === "number" ? cardPaddingBottom : 6),
+    [cardPaddingBottom]
   );
+  const cardPaddingBottomScaled = useMemo(
+    () => Math.round(baseCardPaddingBottom * scale),
+    [baseCardPaddingBottom, scale]
+  );
+  const cardRadius = useMemo(() => Math.round(14 * scale), [scale]);
+  const imageRadius = useMemo(() => Math.round(6 * scale), [scale]);
+  const titleSize = useMemo(() => Math.round(14 * scale), [scale]);
+  const metaSize = useMemo(() => Math.round(12 * scale), [scale]);
+  const badgeFontSize = useMemo(() => Math.round(9 * scale), [scale]);
+  const badgePaddingH = useMemo(() => Math.round(12 * scale), [scale]);
+  const badgePaddingV = useMemo(() => Math.round(4 * scale), [scale]);
+  const badgeGap = useMemo(() => Math.round(8 * scale), [scale]);
+
+  const resolvedOffers = useMemo(() => {
+    if (offers && offers.length > 0) return offers;
+    return discount ? [discount] : [];
+  }, [offers, discount]);
+  const resolvedMoreCount = useMemo(() => {
+    if (typeof moreCount === "number") return moreCount;
+    return Math.max(0, resolvedOffers.length - (resolvedOffers.length > 0 ? 1 : 0));
+  }, [moreCount, resolvedOffers.length]);
+  const useMoreVariant = badgeVariant === "more";
 
   /**
    * Štýl pre obrázok - kombinujeme základný štýl s dynamickou veľkosťou
    * useMemo zabezpečí, že sa nevytvára nový objekt pri každom renderi
    */
   const imageStyle = useMemo(
-    () => [styles.branchImage, { width: imageSize, height: imageSize }],
-    [imageSize]
+    () => [
+      styles.branchImage,
+      { width: imageSize, height: imageSize, borderRadius: imageRadius, marginRight: cardPadding },
+    ],
+    [imageSize, imageRadius, cardPadding]
+  );
+
+  const cardStyle = useMemo(
+    () => [
+      styles.branchCard,
+      {
+        height: cardHeight,
+        paddingHorizontal: cardPadding,
+        paddingTop: cardPadding,
+        paddingBottom: cardPaddingBottomScaled,
+        borderRadius: cardRadius,
+      },
+    ],
+    [cardHeight, cardPadding, cardPaddingBottomScaled, cardRadius]
   );
 
   /**
@@ -79,7 +126,8 @@ function BranchCard(props: BranchCardProps) {
       hours,
       category,
       discount,
-      moreCount,
+      offers,
+      moreCount: props.moreCount,
       address,
       phone,
       email,
@@ -97,40 +145,69 @@ function BranchCard(props: BranchCardProps) {
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={handlePress}
-      style={styles.branchCard}
+      style={cardStyle}
     >
       {/* Obrázok pobočky */}
       <Image source={image} style={imageStyle} resizeMode="cover" />
 
       {/* Obsah karty */}
       <View style={styles.branchContent}>
-        {/* Názov */}
-        <Text style={styles.branchTitle}>{title}</Text>
+        <View style={styles.topContent}>
+          {/* Title */}
+          <Text style={[styles.branchTitle, { fontSize: titleSize }]} numberOfLines={1}>
+            {title}
+          </Text>
 
-        {/* Riadok s metadátami: hodnotenie, vzdialenosť, hodiny */}
-        <View style={styles.metaRow}>
-          <Ionicons name="star" size={14} color="#F5A623" />
-          <Text style={styles.metaText}>{rating}</Text>
-
-          <Ionicons name="location-outline" size={14} />
-          <Text style={styles.metaText}>{distance}</Text>
-
-          <Ionicons name="time-outline" size={14} />
-          <Text style={styles.metaText}>{hours}</Text>
+          {/* Meta row */}
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="star" size={Math.round(13 * scale)} color="#FFD000" />
+              <Text style={[styles.metaText, { fontSize: metaSize }]}>{rating}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="location-outline" size={Math.round(13 * scale)} color="#7C7C7C" />
+              <Text style={[styles.metaText, { fontSize: metaSize }]}>{distance}</Text>
+            </View>
+            <View style={styles.metaItemLast}>
+              <Ionicons name="time-outline" size={Math.round(13 * scale)} color="#7C7C7C" />
+              <Text style={[styles.metaText, { fontSize: metaSize }]}>{hours}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Spodný riadok: zľava a počet ďalších ponúk */}
-        {(discount || moreCount) && (
-          <View style={styles.bottomRow}>
-            {discount && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{discount}</Text>
-              </View>
-            )}
-            {moreCount && (
-              <Text style={styles.moreText}>+{moreCount} more</Text>
-            )}
-          </View>
+        {/* Offers row */}
+        {resolvedOffers.length > 0 && (
+          useMoreVariant ? (
+            <View style={[styles.badgeRow, { gap: badgeGap }]}>
+              {resolvedOffers[0] ? (
+                <View style={[styles.badge, { paddingHorizontal: badgePaddingH, paddingVertical: badgePaddingV }]}>
+                  <Text style={[styles.badgeText, { fontSize: badgeFontSize }]} numberOfLines={1}>
+                    {resolvedOffers[0]}
+                  </Text>
+                </View>
+              ) : null}
+              {resolvedMoreCount > 0 ? (
+                <Text style={[styles.moreText, { fontSize: metaSize }]}>+ {resolvedMoreCount} more</Text>
+              ) : null}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.badgeRow, { gap: badgeGap }]}
+            >
+              {resolvedOffers.map((offer, index) => (
+                <View
+                  key={`${offer}-${index}`}
+                  style={[styles.badge, { paddingHorizontal: badgePaddingH, paddingVertical: badgePaddingV }]}
+                >
+                  <Text style={[styles.badgeText, { fontSize: badgeFontSize }]} numberOfLines={1}>
+                    {offer}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )
         )}
       </View>
     </TouchableOpacity>
@@ -146,20 +223,18 @@ const styles = StyleSheet.create({
   branchCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: "#E4E4E7",
     // Tieň - rôzny pre web a native
     ...Platform.select({
-      web: { boxShadow: "0 6px 10px rgba(0, 0, 0, 0.1)" },
+      web: { boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)" },
       default: {
         shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 6,  // Android tieň
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 3,  // Android tieň
       },
     }),
     width: "100%",
@@ -167,66 +242,74 @@ const styles = StyleSheet.create({
 
   // Obrázok pobočky
   branchImage: {
-    borderRadius: 14,
-    marginRight: 14,
+    borderRadius: 6,
   },
 
   // Obsahová časť (pravá strana)
   branchContent: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "space-between",
+  },
+  topContent: {
+    flexShrink: 1,
   },
 
   // Názov pobočky
   branchTitle: {
-    fontSize: 17,
     fontWeight: "700",
     marginBottom: 6,
-    color: "#111",
+    color: "#000",
   },
 
   // Riadok s metadátami (hviezdičky, vzdialenosť, čas)
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginBottom: 10,
-    flexWrap: "wrap",
+    marginBottom: 8,
+    flexWrap: "nowrap",
   },
 
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingRight: 6,
+    marginRight: 6,
+    borderRightWidth: 0.8,
+    borderRightColor: "#7C7C7C",
+  },
+  metaItemLast: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
   // Text metadát
   metaText: {
-    fontSize: 12,
-    color: "#4B5563",
-    marginRight: 8,
+    color: "#7C7C7C",
   },
 
   // Spodný riadok (zľava, +X more)
-  bottomRow: {
+  badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flexWrap: "nowrap",
+    paddingRight: 4,
   },
 
   // Badge so zľavou (oranžový)
   badge: {
     backgroundColor: "#EB8100",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
+    borderRadius: 9999,
   },
 
   // Text v badge
   badgeText: {
     color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
+  },
+  moreText: {
+    color: "#000000",
+    fontWeight: "500",
   },
 
   // Text "+X more"
-  moreText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
 });

@@ -18,22 +18,29 @@ import { useDataSource } from "../lib/data/useDataSource";
 import type { DiscoverMapMarker, DiscoverCategory } from "../lib/interfaces";
 
 // Skeleton pre BranchCard - zobrazuje sa počas načítavania
-function SkeletonBranchCard() {
+function SkeletonBranchCard({ scale, cardPadding }: { scale: number; cardPadding: number }) {
+  const imageSize = Math.round(80 * scale);
+  const cardHeight = Math.round(112 * scale);
+  const cardRadius = Math.round(14 * scale);
+  const gap = Math.round(8 * scale);
+  const metaHeight = Math.round(14 * scale);
+  const badgeHeight = Math.round(19 * scale);
+
   return (
-    <View style={skeletonStyles.card}>
+    <View style={[skeletonStyles.card, { height: cardHeight, padding: cardPadding, borderRadius: cardRadius }]}>
       {/* Skeleton obrázka */}
-      <Skeleton width={88} height={88} borderRadius={14} />
+      <Skeleton width={imageSize} height={imageSize} borderRadius={Math.round(6 * scale)} />
       {/* Skeleton obsahu */}
-      <View style={skeletonStyles.content}>
-        <Skeleton width="70%" height={18} borderRadius={4} />
-        <View style={skeletonStyles.metaRow}>
-          <Skeleton width={50} height={14} borderRadius={4} />
-          <Skeleton width={60} height={14} borderRadius={4} />
-          <Skeleton width={70} height={14} borderRadius={4} />
+      <View style={[skeletonStyles.content, { marginLeft: cardPadding, gap }]}>
+        <Skeleton width="70%" height={Math.round(14 * scale)} borderRadius={4} />
+        <View style={[skeletonStyles.metaRow, { gap }]}>
+          <Skeleton width={Math.round(40 * scale)} height={metaHeight} borderRadius={4} />
+          <Skeleton width={Math.round(50 * scale)} height={metaHeight} borderRadius={4} />
+          <Skeleton width={Math.round(70 * scale)} height={metaHeight} borderRadius={4} />
         </View>
-        <View style={skeletonStyles.bottomRow}>
-          <Skeleton width={140} height={28} borderRadius={14} />
-          <Skeleton width={50} height={14} borderRadius={4} />
+        <View style={[skeletonStyles.bottomRow, { marginTop: Math.round(4 * scale) }]}>
+          <Skeleton width={Math.round(140 * scale)} height={badgeHeight} borderRadius={999} />
+          <Skeleton width={Math.round(50 * scale)} height={metaHeight} borderRadius={4} />
         </View>
       </View>
     </View>
@@ -45,27 +52,21 @@ const skeletonStyles = StyleSheet.create({
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: "#E4E4E7",
   },
   content: {
     flex: 1,
-    marginLeft: 14,
     justifyContent: "center",
-    gap: 8,
   },
   metaRow: {
     flexDirection: "row",
-    gap: 8,
   },
   bottomRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginTop: 4,
+    justifyContent: "space-between",
   },
 });
 
@@ -115,14 +116,13 @@ interface NearbyBranch {
   hours: string;
   category: DiscoverCategory;
   discount?: string;
+  offers?: string[];
   moreCount?: number;
 }
 
 // Fallback poloha - centrum Nitry
 const NITRA_CENTER: [number, number] = [18.091, 48.3069];
 
-// Výška jednej BranchCard vrátane marginu (126px karta + 16px margin)
-const CARD_HEIGHT = 142;
 const DEG_TO_RAD = Math.PI / 180;
 
 // Možnosti triedenia
@@ -134,19 +134,24 @@ export default function DiscoverListScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { t } = useTranslation();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const dataSource = useDataSource();
 
   // Stav pre sort dropdown
   const [sortOption, setSortOption] = useState<SortOption>("Trending");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
 
+  const scale = useMemo(() => Math.min(1, Math.max(0.82, screenWidth / 393)), [screenWidth]);
+  const cardHeight = Math.round(112 * scale);
+  const cardPadding = Math.round(16 * scale);
+  const cardHeightWithMargin = cardHeight + 16;
+
   // Výpočet počtu skeleton kariet podľa výšky obrazovky
   const skeletonCount = useMemo(() => {
     const headerHeight = insets.top + 76;
     const availableHeight = screenHeight - headerHeight;
-    return Math.ceil(availableHeight / CARD_HEIGHT);
-  }, [screenHeight, insets.top]);
+    return Math.ceil(availableHeight / cardHeightWithMargin);
+  }, [screenHeight, insets.top, cardHeightWithMargin]);
 
   // Získame userCoord z route params alebo použijeme fallback
   const userLocation: [number, number] = route.params?.userCoord ?? NITRA_CENTER;
@@ -215,6 +220,7 @@ export default function DiscoverListScreen() {
           hours: "9:00 - 21:00",
           category: marker.category as DiscoverCategory,
           discount: "20% discount on first entry",
+          offers: ["20% discount on first entry", "1 Free entry for friend"],
           moreCount: 1,
         });
       }
@@ -235,11 +241,11 @@ export default function DiscoverListScreen() {
   // To umožňuje preskočiť výpočet rozloženia a zlepšuje plynulosť skrolovania
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
-      length: CARD_HEIGHT,
-      offset: CARD_HEIGHT * index,
+      length: cardHeightWithMargin,
+      offset: cardHeightWithMargin * index,
       index,
     }),
-    []
+    [cardHeightWithMargin]
   );
 
   // Render funkcia pre FlatList (memoizovaná)
@@ -253,6 +259,7 @@ export default function DiscoverListScreen() {
         hours={item.hours}
         category={item.category}
         discount={item.discount}
+        offers={item.offers}
         moreCount={item.moreCount}
       />
     ),
@@ -343,7 +350,7 @@ export default function DiscoverListScreen() {
         <View style={styles.skeletonContainer}>
           <Skeleton width={120} height={14} borderRadius={4} style={{ marginBottom: 12 }} />
           {Array.from({ length: skeletonCount }).map((_, index) => (
-            <SkeletonBranchCard key={index} />
+            <SkeletonBranchCard key={index} scale={scale} cardPadding={cardPadding} />
           ))}
         </View>
       ) : nearbyBranches.length === 0 ? (

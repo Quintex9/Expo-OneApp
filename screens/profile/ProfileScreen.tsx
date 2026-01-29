@@ -7,7 +7,6 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
-  Platform,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,12 +21,14 @@ import BranchCard from "../../components/BranchCard";
 export default function ProfileScreen() {
   type SubscriptionType = "starter" | "medium" | "gold" | "none";
 
-  const subscription: SubscriptionType = "gold" as SubscriptionType;
+  const subscription: SubscriptionType = "none" as SubscriptionType;
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { signOut, user } = useAuth();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const contentPadding = 16;
+  const topPadding = Math.max(12, insets.top + 8);
 
   const [menuOpen, setMenuOpen] = useState(false);
   
@@ -71,25 +72,18 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={[styles.header, { marginTop: insets.top + 8 }]}>
-        <View style={styles.headerLeft}>
-          <View style={styles.avatar} />
-          <Text style={styles.name}>{userName}</Text>
-        </View>
-
-        {/* HAMBURGER BUTTON */}
-        <TouchableOpacity
-          onPress={() => setMenuOpen(!menuOpen)}
-          style={styles.iconButton}
-        >
-          <Ionicons name="menu" size={18} color="#111" />
-        </TouchableOpacity>
-      </View>
-
       {/* DROPDOWN MENU */}
       {menuOpen && (
-        <View style={[styles.dropdown, { top: insets.top + 56, width: Math.min(240, screenWidth - 40) }]}>
+        <View
+          style={[
+            styles.dropdown,
+            {
+              top: topPadding + 56,
+              right: contentPadding,
+              width: Math.min(240, screenWidth - contentPadding * 2),
+            },
+          ]}
+        >
           <DropdownItem
             icon="person-outline"
             label={t("userAccount")}
@@ -146,18 +140,41 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* STATS */}
-      <View style={styles.cardsRow}>
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>{t("saved")}</Text>
-          <Text style={styles.cardValue}>15 €</Text>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: topPadding, paddingHorizontal: contentPadding },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.avatar} />
+            <Text style={styles.name}>{userName}</Text>
+          </View>
+
+          {/* HAMBURGER BUTTON */}
+          <TouchableOpacity
+            onPress={() => setMenuOpen(!menuOpen)}
+            style={styles.iconButton}
+          >
+            <Ionicons name="menu" size={18} color="#111" />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={{ flex: 1 }}
-          onPress={() => navigation.navigate("SubscriptionActivation")}
-        >
-          <View style={styles.card}>
+        {/* STATS */}
+        <View style={styles.cardsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.cardLabel}>{t("saved")}</Text>
+            <Text style={styles.cardValue}>0 €</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => navigation.navigate("SubscriptionActivation")}
+            activeOpacity={0.85}
+          >
             <Text style={styles.cardLabel}>
               {subscription === "none"
                 ? t("inactiveSubscription")
@@ -169,75 +186,78 @@ export default function ProfileScreen() {
                 : subscription.charAt(0).toUpperCase() +
                   subscription.slice(1)}
             </Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
+        </View>
 
-      {/* FAVORITE BRANCHES HEADER */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{t("favoriteBranches")}</Text>
+        {/* FAVORITE BRANCHES HEADER */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t("favoriteBranches")}</Text>
 
-        {/* FILTER BUTTON */}
-        <TouchableOpacity
-          onPress={() => console.log("filter pressed")}
-          style={styles.iconButton}
-        >
-          <Ionicons name="options-outline" size={18} color="#111" />
-        </TouchableOpacity>
-      </View>
+          {/* FILTER BUTTON */}
+          <TouchableOpacity
+            onPress={() => console.log("filter pressed")}
+            style={styles.iconButton}
+          >
+            <Ionicons name="options-outline" size={18} color="#111" />
+          </TouchableOpacity>
+        </View>
 
-      {/* FAVORITE BRANCHES LIST */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        <BranchCard
-          title="365 GYM Nitra"
-          image={require("../../assets/365.jpg")}
-          rating={4.6}
-          distance="1.7 km"
-          hours="9:00 - 21:00"
-          discount="20% discount on first entry"
-          moreCount={2}
-          address="Chrenovská 16, Nitra"
-          phone="+421 903 776 925"
-          email="info@365gym.sk"
-          website="https://365gym.sk"
-          onPress={(branch) =>
-            navigation.navigate("BusinessDetailScreen", { branch })
-          }
-        />
+        {/* FAVORITE BRANCHES LIST */}
+        <View style={styles.branchesList}>
+          <BranchCard
+            title="365 GYM Nitra"
+            image={require("../../assets/365.jpg")}
+            rating={4.6}
+            distance="1.7 km"
+            hours="9:00 - 21:00"
+            discount="20% discount on first entry"
+            offers={["20% discount on first entry", "1 Free entry for friend"]}
+            moreCount={2}
+            address="Chrenovská 16, Nitra"
+            phone="+421 903 776 925"
+            email="info@365gym.sk"
+            website="https://365gym.sk"
+            onPress={(branch) =>
+              navigation.navigate("BusinessDetailScreen", { branch })
+            }
+          />
 
-        <BranchCard
-          title="RED ROYAL GYM"
-          image={require("../../assets/royal.jpg")}
-          rating={4.6}
-          distance="1.7 km"
-          hours="9:00 - 21:00"
-          discount="20% discount on first entry"
-          moreCount={3}
-          address="Trieda Andreja Hlinku 3, Nitra"
-          phone="+421 911 222 333"
-          email="info@redroyal.sk"
-          website="https://redroyal.sk"
-          onPress={(branch) =>
-            navigation.navigate("BusinessDetailScreen", { branch })
-          }
-        />
+          <BranchCard
+            title="RED ROYAL GYM"
+            image={require("../../assets/royal.jpg")}
+            rating={4.6}
+            distance="1.7 km"
+            hours="9:00 - 21:00"
+            discount="20% discount on first entry"
+            offers={["20% discount on first entry", "1 Free entry for friend"]}
+            moreCount={3}
+            address="Trieda Andreja Hlinku 3, Nitra"
+            phone="+421 911 222 333"
+            email="info@redroyal.sk"
+            website="https://redroyal.sk"
+            onPress={(branch) =>
+              navigation.navigate("BusinessDetailScreen", { branch })
+            }
+          />
 
-        <BranchCard
-          title="GYM KLUB"
-          image={require("../../assets/klub.jpg")}
-          rating={4.6}
-          distance="1.7 km"
-          hours="9:00 - 21:00"
-          discount="20% discount on first entry"
-          moreCount={5}
-          address="Mostná 42, Nitra"
-          phone="+421 904 555 666"
-          email="kontakt@gymklub.sk"
-          website="https://gymklub.sk"
-          onPress={(branch) =>
-            navigation.navigate("BusinessDetailScreen", { branch })
-          }
-        />
+          <BranchCard
+            title="GYM KLUB"
+            image={require("../../assets/klub.jpg")}
+            rating={4.6}
+            distance="1.7 km"
+            hours="9:00 - 21:00"
+            discount="20% discount on first entry"
+            offers={["20% discount on first entry", "1 Free entry for friend"]}
+            moreCount={5}
+            address="Mostná 42, Nitra"
+            phone="+421 904 555 666"
+            email="kontakt@gymklub.sk"
+            website="https://gymklub.sk"
+            onPress={(branch) =>
+              navigation.navigate("BusinessDetailScreen", { branch })
+            }
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -273,64 +293,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 20,
-    paddingTop: 10,
+  },
+  content: {
+    paddingBottom: 24,
   },
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 16,
   },
 
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#ddd",
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    backgroundColor: "#D9D9D9",
   },
 
   name: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#000",
   },
 
   iconButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#F1F1F3", // veľmi jemný outline
+    borderColor: "#E4E4E7",
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)" }
-      : {
-          shadowColor: "#000",
-          shadowOpacity: 0.03,
-          shadowOffset: { width: 0, height: 1 },
-          shadowRadius: 2,
-          elevation: 1,
-        }),
   },
 
   dropdown: {
     position: "absolute",
-    top: 90,
-    right: 20,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#eee",
-    width: 200,
+    borderColor: "#E4E4E7",
     zIndex: 100,
     paddingVertical: 6,
   },
@@ -355,31 +365,38 @@ const styles = StyleSheet.create({
 
   cardsRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
+    flexWrap: "wrap",
+    gap: 14,
+    rowGap: 14,
+    marginBottom: 20,
   },
 
-  card: {
-    flex: 1,
+  statCard: {
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 160,
     backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 22,
-    minHeight: 90,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 101,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#E4E4E7",
+    justifyContent: "space-between",
   },
 
   cardLabel: {
-    fontSize: 12,
-    color: "#888",
-    marginBottom: 6,
+    fontSize: 11,
+    lineHeight: 13,
+    color: "rgba(0, 0, 0, 0.5)",
+    fontWeight: "500",
+    textTransform: "uppercase",
   },
 
   cardValue: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#000",
   },
 
   sectionHeader: {
@@ -391,6 +408,10 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "700",
+    color: "#000",
+  },
+  branchesList: {
+    paddingBottom: 24,
   },
 });

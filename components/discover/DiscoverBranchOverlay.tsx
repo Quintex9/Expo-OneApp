@@ -37,6 +37,7 @@ function DiscoverBranchOverlay({
   const { width: screenWidth } = useWindowDimensions();
   const pageWidth = screenWidth;  // každá "stránka" má šírku obrazovky
   const navigation = useNavigation<any>();
+  const discoverCardBottomPadding = 14;
 
   // === MEMOIZOVANÉ ŠTÝLY ===
   // Tieto štýly závisia od props, takže ich memoizujeme
@@ -90,6 +91,8 @@ function DiscoverBranchOverlay({
           <View style={cardContainerStyle}>
             <BranchCard
               {...item}
+              badgeVariant="more"
+              cardPaddingBottom={discoverCardBottomPadding}
               onPress={() => {
                 navigation.navigate("BusinessDetailScreen", { branch: branchData });
               }}
