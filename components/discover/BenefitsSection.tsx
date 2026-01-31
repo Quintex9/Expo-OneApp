@@ -1,42 +1,43 @@
-import React, { memo } from "react";
+﻿import React, { memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   onActivate: () => void;
 };
 
-// memo() zabraňuje zbytočným renderom ak sa props nezmenia
-export const BenefitsSection = memo(function BenefitsSection({ onActivate }: Props) {
-  return (
-    <View>
-      {/* BENEFIT 1 - Activated */}
-      <View style={styles.card}>
-        <Text style={styles.title}>20% discount on first entry</Text>
-        <Text style={styles.text}>
-          Get 20% off your first visit to the fitness center and save on your first workout.
-        </Text>
+type BenefitStatus = "activated" | "available" | "locked" | "expired";
 
-        <TouchableOpacity style={styles.disabledBtn} disabled>
-          <Text style={styles.disabledText}>Activated</Text>
-        </TouchableOpacity>
-      </View>
+type Benefit = {
+  id: string;
+  title: string;
+  description: string;
+  status: BenefitStatus;
+};
 
-      {/* BENEFIT 2 - Active */}
-      <View style={[styles.card, styles.cardSpacing]}>
-        <Text style={styles.title}>1 + 1 protein shake</Text>
-        <Text style={styles.text}>
-          Buy one protein shake and get a second one for free after your workout.
-        </Text>
+const DUMMY_BENEFITS: Benefit[] = [
+  { id: "benefit-1", title: "benefit1Title", description: "benefit1Desc", status: "activated" },
+  { id: "benefit-2", title: "benefit2Title", description: "benefit2Desc", status: "available" },
+  { id: "benefit-3", title: "benefit3Title", description: "benefit3Desc", status: "available" },
+  { id: "benefit-4", title: "benefit4Title", description: "benefit4Desc", status: "available" },
+  { id: "benefit-5", title: "benefit5Title", description: "benefit5Desc", status: "available" },
+  { id: "benefit-6", title: "benefit6Title", description: "benefit6Desc", status: "locked" },
+  { id: "benefit-7", title: "benefit7Title", description: "benefit7Desc", status: "available" },
+  { id: "benefit-8", title: "benefit8Title", description: "benefit8Desc", status: "available" },
+  { id: "benefit-9", title: "benefit9Title", description: "benefit9Desc", status: "expired" },
+];
 
-        <TouchableOpacity style={styles.activeBtn} onPress={onActivate}>
-          <Text style={styles.activeText}>Activate Benefit</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-});
+const CTA_LABEL_KEYS: Record<BenefitStatus, string> = {
+  activated: "statusActivated",
+  available: "statusActivateBenefit",
+  locked: "statusUpgradeToUnlock",
+  expired: "statusExpired",
+};
 
 const styles = StyleSheet.create({
+  list: {
+    paddingBottom: 10,
+  },
   card: {
     borderRadius: 20,
     borderWidth: 0.5,
@@ -89,4 +90,35 @@ const styles = StyleSheet.create({
     color: "#FAFAFA",
     textAlign: "center",
   },
+});
+
+// memo() zabranuje zbytocnym renderom ak sa props nezmenia
+export const BenefitsSection = memo(function BenefitsSection({ onActivate }: Props) {
+  const { t } = useTranslation();
+  
+  return (
+    <View style={styles.list}>
+      {DUMMY_BENEFITS.map((benefit, index) => {
+        const isActive = benefit.status === "available";
+        const isDisabled = benefit.status !== "available";
+
+        return (
+          <View key={benefit.id} style={[styles.card, index > 0 && styles.cardSpacing]}>
+            <Text style={styles.title}>{t(benefit.title)}</Text>
+            <Text style={styles.text}>{t(benefit.description)}</Text>
+
+            <TouchableOpacity
+              style={isActive ? styles.activeBtn : styles.disabledBtn}
+              onPress={isActive ? onActivate : undefined}
+              disabled={isDisabled}
+            >
+              <Text style={isActive ? styles.activeText : styles.disabledText}>
+                {t(CTA_LABEL_KEYS[benefit.status])}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </View>
+  );
 });

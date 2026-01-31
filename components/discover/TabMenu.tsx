@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   items: string[];
@@ -11,6 +12,8 @@ type Props = {
 
 // memo() zabraňuje zbytočným renderom ak sa props nezmenia
 export const TabMenu = memo(function TabMenu({ items, active, onChange, width }: Props) {
+  const { t } = useTranslation();
+  
   return (
     <View style={styles.container}>
       {items.map((x) => {
@@ -26,7 +29,7 @@ export const TabMenu = memo(function TabMenu({ items, active, onChange, width }:
             ]}
         >
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-              {x}
+              {t(`tab_${x}`)}
             </Text>
         </TouchableOpacity>
         );

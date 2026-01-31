@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Im
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BottomSheet from "@gorhom/bottom-sheet";
+import { useTranslation } from "react-i18next";
 
 import { HeroCarousel } from "../components/discover/HeroCarousel";
 import { TabMenu } from "../components/discover/TabMenu";
@@ -20,15 +21,27 @@ export default function BusinessDetailScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const { user } = useAuth();
+    const { t } = useTranslation();
     const branchParam = route.params?.branch;
     const branch = normalizeBranch(branchParam ?? {});
 
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
 
+    type TabKey = "news" | "benefits" | "info" | "reviews";
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [activeTab, setActiveTab] =
-        useState<"News" | "Benefits" | "Info" | "Reviews">("News");
+        useState<TabKey>("benefits");
+
+    const scrollViewRef = useRef<ScrollView>(null);
+    const lastScrollY = useRef(0);
+    const prevScrollY = useRef(0);
+    const scrollDirection = useRef<"up" | "down" | null>(null);
+    const isStickyRef = useRef(false);
+    const [isSticky, setIsSticky] = useState(false);
+    const scrollPositionsRef = useRef(new Map<string, number>());
+    const prevBranchKey = useRef<string | null>(null);
+    const prevTabKey = useRef<string | null>(null);
 
     const sheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["15%", "35%"], []);
@@ -38,11 +51,10 @@ export default function BusinessDetailScreen() {
         () => Math.min(360, Math.max(240, Math.round(width * 0.7))),
         [width]
     );
+    const menuGap = 10;
+    const snapThreshold = 24;
     const sidePadding = 15;
-    const menuTop = useMemo(() => heroHeight + 10, [heroHeight]);
-    const sectionTop = useMemo(() => menuTop + 70, [menuTop]);
-
-    const menu = useMemo(() => ["News", "Benefits", "Info", "Reviews"], []);
+    const menu = useMemo<TabKey[]>(() => ["news", "benefits", "info", "reviews"], []);
 
     const menuItemWidth = useMemo(
         () => Math.min(88, Math.floor((width - sidePadding * 2 - menu.length * 5) / menu.length)),
@@ -56,24 +68,36 @@ export default function BusinessDetailScreen() {
     );
 
     const menuWrapperStyle = useMemo(
-        () => [styles.menuWrapper, { top: menuTop, left: sidePadding, right: sidePadding }],
-        [menuTop]
+        () => [styles.menuWrapper, { paddingHorizontal: sidePadding }],
+        [sidePadding]
     );
 
-    const scrollViewStyle = useMemo(
-        () => ({
-            position: "absolute" as const,
-            top: sectionTop,
-            left: sidePadding,
-            right: sidePadding,
-            bottom: 0,
-        }),
-        [sectionTop]
+    const scrollContentStyle = useMemo(
+        () => [styles.scrollContent, { paddingBottom: insets.bottom + 2 }],
+        [insets.bottom]
+    );
+
+    const sectionWrapperStyle = useMemo(
+        () => [styles.sectionWrapper, { paddingHorizontal: sidePadding }],
+        [sidePadding]
     );
 
     const qrButtonStyle = useMemo(
         () => [styles.qrButton, { bottom: insets.bottom + 20 }],
         [insets.bottom]
+    );
+
+    const snapOffset = useMemo(
+        () => heroHeight + menuGap,
+        [heroHeight, menuGap]
+    );
+    const branchKey = useMemo(
+        () => String(branch?.id ?? branch?.title ?? "unknown"),
+        [branch?.id, branch?.title]
+    );
+    const positionKey = useCallback(
+        (key: string, tab: string) => `${key}:${tab}`,
+        []
     );
 
     const safeBranch = branch ?? {
@@ -98,25 +122,23 @@ export default function BusinessDetailScreen() {
             id: "1",
             name: "Martin Kováč",
             rating: 5,
-            text:
-                "Excellent facilities and very professional staff. The personal trainers are knowledgeable and motivating.",
+            text: t("reviewText1"),
             daysAgo: 2,
         },
         {
             id: "2",
             name: "Peter Horváth",
             rating: 4,
-            text:
-                "Great gym overall. Equipment is top-notch and staff is friendly. Only downside is it can get crowded during peak hours.",
+            text: t("reviewText2"),
             daysAgo: 5,
         },
-    ], []);
+    ], [t]);
 
     // Memoizované handlery - nevytvárajú sa nanovo pri každom rendereri
     const handleBack = useCallback(() => navigation.goBack(), [navigation]);
     
     const handleTabChange = useCallback(
-        (val: string) => setActiveTab(val as any),
+        (val: string) => setActiveTab(val as TabKey),
         []
     );
 
@@ -141,6 +163,73 @@ export default function BusinessDetailScreen() {
         [navigation]
     );
 
+    const handleSnap = useCallback(() => {
+        if (snapOffset <= 0) return;
+        const y = lastScrollY.current;
+        const direction = scrollDirection.current;
+        if (y > 0 && y < snapOffset) {
+            const snapTo = direction === "up" ? 0 : (y >= snapThreshold ? snapOffset : 0);
+            if (Math.abs(y - snapTo) > 1) {
+                scrollViewRef.current?.scrollTo({ y: snapTo, animated: true });
+            }
+        }
+    }, [snapOffset, snapThreshold]);
+
+    const setStickyFromOffset = useCallback((y: number) => {
+        const shouldStick = y >= snapOffset - 1;
+        if (shouldStick !== isStickyRef.current) {
+            isStickyRef.current = shouldStick;
+            setIsSticky(shouldStick);
+        }
+    }, [snapOffset]);
+
+    const handleScroll = useCallback((event: any) => {
+        const y = event.nativeEvent.contentOffset.y;
+        lastScrollY.current = y;
+
+        if (y > prevScrollY.current) {
+            scrollDirection.current = "down";
+        } else if (y < prevScrollY.current) {
+            scrollDirection.current = "up";
+        }
+        prevScrollY.current = y;
+
+        setStickyFromOffset(y);
+    }, [setStickyFromOffset]);
+
+    const restoreScroll = useCallback((offset: number) => {
+        lastScrollY.current = offset;
+        prevScrollY.current = offset;
+        scrollDirection.current = null;
+        setStickyFromOffset(offset);
+        requestAnimationFrame(() => {
+            scrollViewRef.current?.scrollTo({ y: offset, animated: false });
+        });
+    }, [setStickyFromOffset]);
+
+    React.useEffect(() => {
+        const previousBranch = prevBranchKey.current;
+        const previousTab = prevTabKey.current;
+        const sameBranch = previousBranch === branchKey;
+
+        if (previousBranch && previousTab && (previousBranch !== branchKey || previousTab !== activeTab)) {
+            scrollPositionsRef.current.set(
+                positionKey(previousBranch, previousTab),
+                lastScrollY.current
+            );
+        }
+
+        const savedOffset = scrollPositionsRef.current.get(positionKey(branchKey, activeTab)) ?? 0;
+        const keepSticky = sameBranch
+            ? lastScrollY.current >= snapOffset - 1
+            : savedOffset >= snapOffset - 1;
+        const targetOffset = keepSticky ? Math.max(savedOffset, snapOffset) : savedOffset;
+
+        prevBranchKey.current = branchKey;
+        prevTabKey.current = activeTab;
+        restoreScroll(targetOffset);
+    }, [branchKey, activeTab, positionKey, restoreScroll, snapOffset]);
+
     // Memoizované dáta pre InfoSection
     const hoursData = useMemo(() => [
         { day: "Monday", time: safeBranch.hours },
@@ -154,56 +243,62 @@ export default function BusinessDetailScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
-            {/* HERO */}
-            <View style={heroContainerStyle}>
-                <HeroCarousel
-                    data={images}
-                    height={heroHeight}
-                    width={width}
-                    index={carouselIndex}
-                    onIndexChange={setCarouselIndex}
-                />
-
-                <HeroActions
-                    topInset={insets.top}
-                    onBack={handleBack}
-                />
-
-                <HeroInfo
-                    title={safeBranch.title}
-                    rating={safeBranch.rating}
-                    ratingCount={reviews.length}
-                    distance={safeBranch.distance}
-                    hours={safeBranch.hours}
-                    category={safeBranch.category}
-                />
-            </View>
-
-            {/* TAB MENU */}
-            <View style={menuWrapperStyle}>
-                <TabMenu
-                    items={menu}
-                    active={activeTab}
-                    onChange={handleTabChange}
-                    width={menuItemWidth}
-                />
-            </View>
-
             {/* CONTENT */}
             <ScrollView
-                style={scrollViewStyle}
-                contentContainerStyle={styles.scrollContent}
+                ref={scrollViewRef}
+                style={styles.scrollView}
+                contentContainerStyle={scrollContentStyle}
                 showsVerticalScrollIndicator={false}
+                stickyHeaderIndices={[1]}
+                scrollEventThrottle={16}
+                onScroll={handleScroll}
+                onScrollEndDrag={handleSnap}
+                onMomentumScrollEnd={handleSnap}
             >
-                {activeTab === "News" && (
+                <View style={[heroContainerStyle, { marginBottom: menuGap }]}>
+                    <HeroCarousel
+                        data={images}
+                        height={heroHeight}
+                        width={width}
+                        index={carouselIndex}
+                        onIndexChange={setCarouselIndex}
+                    />
+
+                    <HeroActions
+                        topInset={insets.top}
+                        onBack={handleBack}
+                    />
+
+                    <HeroInfo
+                        title={safeBranch.title}
+                        rating={safeBranch.rating}
+                        ratingCount={reviews.length}
+                        distance={safeBranch.distance}
+                        hours={safeBranch.hours}
+                        category={safeBranch.category}
+                    />
+                </View>
+
+                <View style={menuWrapperStyle}>
+                    {isSticky && <View style={{ height: insets.top }} />}
+                    <TabMenu
+                        items={menu}
+                        active={activeTab}
+                        onChange={handleTabChange}
+                        width={menuItemWidth}
+                    />
+                </View>
+
+                <View style={sectionWrapperStyle}>
+                {activeTab === "news" && (
                     <NewsSection title={safeBranch.title} />
                 )}
 
-                {activeTab === "Benefits" && (
+                {activeTab === "benefits" && (
                     <BenefitsSection onActivate={handleActivateBenefit} />
                 )}
 
-                {activeTab === "Info" && (
+                {activeTab === "info" && (
                     <InfoSection
                         hours={hoursData}
                         address={safeBranch.address ?? ""}
@@ -213,7 +308,7 @@ export default function BusinessDetailScreen() {
                     />
                 )}
 
-                {activeTab === "Reviews" && (
+                {activeTab === "reviews" && (
                     <ReviewsSection
                         rating={safeBranch.rating}
                         total={reviews.length}
@@ -221,10 +316,11 @@ export default function BusinessDetailScreen() {
                     />
                 )}
 
+                </View>
             </ScrollView>
 
             {/* BOTTOM SHEET - len pre neprihlásených */}
-            {activeTab === "Benefits" && !user && (
+            {activeTab === "benefits" && !user && (
                 <BenefitsBottomSheet
                     sheetRef={sheetRef}
                     snapPoints={snapPoints}
@@ -250,10 +346,18 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
     },
     menuWrapper: {
-        position: "absolute",
+        paddingTop: 10,
+        paddingBottom: 12,
+        backgroundColor: "#fff",
+    },
+    scrollView: {
+        flex: 1,
     },
     scrollContent: {
-        paddingBottom: 140,
+        paddingBottom: 0,
+    },
+    sectionWrapper: {
+        paddingTop: 12,
     },
     qrButton: {
         position: "absolute",

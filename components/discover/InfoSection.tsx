@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Linking, Platform, InteractionManager, Activity
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import Mapbox, { Camera, MapView, PointAnnotation } from "@rnmapbox/maps";
+import { useTranslation } from "react-i18next";
 
 type Props = {
     hours: {
@@ -42,6 +43,8 @@ export const InfoSection = memo(function InfoSection({
     website,
     coordinates,
 }: Props) {
+    const { t } = useTranslation();
+    
     // Odložené renderovanie mapy - počká kým skončia animácie/interakcie
     const [mapReady, setMapReady] = useState(false);
 
@@ -74,7 +77,7 @@ export const InfoSection = memo(function InfoSection({
         <View style={styles.container}>
             {/* OPENING HOURS */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Opening hours</Text>
+                <Text style={styles.cardTitle}>{t("openingHours")}</Text>
 
                 {hours.map((item) => {
                     const today = isToday(item.day);
@@ -82,7 +85,7 @@ export const InfoSection = memo(function InfoSection({
                     return (
                         <View key={item.day} style={styles.row}>
                             <Text style={[styles.day, today && styles.today]}>
-                                {item.day}
+                                {t(item.day)}
                             </Text>
                             <Text style={[styles.time, today && styles.todayTime]}>
                                 {item.time}
@@ -92,14 +95,13 @@ export const InfoSection = memo(function InfoSection({
                 })}
 
                 <Text style={styles.note}>
-                    * During holidays, opening hours may vary. For more information,
-                    please contact the venue.
+                    {t("holidayNote")}
                 </Text>
             </View>
 
             {/* CONTACT */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Contact</Text>
+                <Text style={styles.cardTitle}>{t("contact")}</Text>
 
                 <View style={styles.contactRow}>
                     <Ionicons name="home-outline" size={20} color="#9B9B9B" />
@@ -168,14 +170,14 @@ export const InfoSection = memo(function InfoSection({
                     </MapView>
                 ) : (
                     <View style={[styles.map, styles.mapPlaceholder]}>
-                        <Text style={styles.mapPlaceholderText}>Mapa nie je dostupná na webe</Text>
+                        <Text style={styles.mapPlaceholderText}>{t("mapNotAvailable")}</Text>
                     </View>
                 )}
 
                 {/* Navigate button overlay */}
                 <TouchableOpacity style={styles.navigateBtn} onPress={handleNavigate}>
                     <Ionicons name="navigate" size={14} color="#FAFAFA" />
-                    <Text style={styles.navigateText}>Navigate</Text>
+                    <Text style={styles.navigateText}>{t("navigate")}</Text>
                 </TouchableOpacity>
             </View>
         </View>

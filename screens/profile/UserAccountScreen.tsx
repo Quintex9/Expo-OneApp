@@ -27,22 +27,22 @@ export default function UserAccountScreen() {
 
   // Načítame aktuálne údaje z emailu
   const initialName = extractNameFromEmail(user?.email);
-  const [firstName, setFirstName] = useState(initialName?.firstName || "");
-  const [lastName, setLastName] = useState(initialName?.lastName || "");
+  const [fullName, setFullName] = useState(
+    [initialName?.firstName, initialName?.lastName].filter(Boolean).join(" ")
+  );
   const [email, setEmail] = useState(user?.email || "");
   const [loading, setLoading] = useState(false);
 
   // Aktualizujeme state keď sa zmení user
   useEffect(() => {
     const name = extractNameFromEmail(user?.email);
-    setFirstName(name?.firstName || "");
-    setLastName(name?.lastName || "");
+    setFullName([name?.firstName, name?.lastName].filter(Boolean).join(" "));
     setEmail(user?.email || "");
   }, [user]);
 
   const handleSave = async () => {
     // Validácia
-    if (!firstName.trim()) {
+    if (!fullName.trim()) {
       Alert.alert(t("error") || "Error", t("firstNameRequired") || "First name is required");
       return;
     }
@@ -111,12 +111,14 @@ export default function UserAccountScreen() {
           Alert.alert(
             t("emailChange") || "Email Change",
             t("emailChangeMessage") || "Email change requested. Please check your new email for confirmation link.",
-            [{ text: "OK" }]
+            [{ text: t("ok") }]
           );
         }
       }
 
       // Uložíme meno do user metadata (vždy, aj keď sa email nezmenil)
+      const [firstName, ...lastParts] = fullName.trim().split(" ");
+      const lastName = lastParts.join(" ");
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           first_name: firstName.trim(),
@@ -142,7 +144,7 @@ export default function UserAccountScreen() {
           : (t("profileUpdated") || "Profile updated successfully"),
         [
           {
-            text: "OK",
+            text: t("ok"),
             onPress: () => navigation.goBack(),
           },
         ]
@@ -159,7 +161,7 @@ export default function UserAccountScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -167,48 +169,39 @@ export default function UserAccountScreen() {
       >
         {/* CONTENT */}
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 140 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
         >
           {/* HEADER */}
-          <View style={styles.header}>
+          <View style={[styles.header, { marginTop: insets.top + 6 }]}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} />
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.title}>{t("userAccount")}</Text>
           </View>
 
-          {/* FIRST NAME */}
-          <Text style={styles.label}>{t("firstName") || "First Name"}</Text>
+          {/* FULL NAME */}
+          <Text style={styles.label}>{t("fullName") || "Full Name"}</Text>
           <TextInput
-            value={firstName}
-            onChangeText={setFirstName}
+            value={fullName}
+            onChangeText={setFullName}
             editable={!loading}
-            style={[styles.input, !loading && styles.inputEditable]}
-            placeholder={t("firstName") || "First Name"}
-          />
-
-          {/* LAST NAME */}
-          <Text style={styles.label}>{t("lastName") || "Last Name"}</Text>
-          <TextInput
-            value={lastName}
-            onChangeText={setLastName}
-            editable={!loading}
-            style={[styles.input, !loading && styles.inputEditable]}
-            placeholder={t("lastName") || "Last Name"}
+            style={styles.input}
+            placeholder={t("fullName") || "Full Name"}
           />
 
           {/* EMAIL */}
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{t("email")}</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
             editable={!loading}
             keyboardType="email-address"
             autoCapitalize="none"
-            style={[styles.input, !loading && styles.inputEditable]}
-            placeholder="email@example.com"
+            style={styles.input}
+            placeholder={t("emailPlaceholder")}
           />
         </ScrollView>
 
@@ -233,7 +226,6 @@ export default function UserAccountScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 20,
     flex: 1,
     backgroundColor: "#fff",
   },
@@ -242,43 +234,39 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 30,
-    marginBottom: 30,
+    marginBottom: 18,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-
-  label: {
-    fontSize: 13,
-    color: "#888",
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-
-  input: {
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    paddingHorizontal: 16,
-    fontSize: 15,
-    marginBottom: 20,
-    backgroundColor: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#000",
   },
 
-  inputEditable: {
-    borderColor: "#000",
+  label: {
+    fontSize: 14,
+    color: "#09090B",
+    marginBottom: 6,
+  },
+
+  input: {
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    fontSize: 14,
+    marginBottom: 20,
+    backgroundColor: "#fff",
+    color: "#09090B",
   },
 
   saveButtonDisabled: {
@@ -294,15 +282,15 @@ const styles = StyleSheet.create({
 
   saveButton: {
     backgroundColor: "#000",
-    height: 52,
-    borderRadius: 26,
+    height: 48,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
 
   saveText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#FAFAFA",
+    fontSize: 18,
+    fontWeight: "700",
   },
 });

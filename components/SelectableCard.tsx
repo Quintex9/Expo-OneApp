@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+﻿import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-import type { PlanId, SelectableCardProps } from "../lib/interfaces";
+import type { SelectableCardProps } from "../lib/interfaces";
 
 export default function SelectableCard({
   id,
@@ -20,28 +20,26 @@ export default function SelectableCard({
       <Wrapper
         style={[styles.card, selected && styles.selectedCard]}
         {...(selected && {
-          colors: ["#FFA726", "#FFFFFF"],
+          colors: ["#EB8100", "#FFF5E8"],
           start: { x: 0, y: 0 },
           end: { x: 1, y: 0 },
         })}
       >
-        <View style={styles.row}>
-          <Text style={[styles.cardTitle, selected && styles.selectedTitle]}>
-            {title}
+        <View style={styles.topRow}>
+          <View style={styles.titleRow}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            {popular && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{t("popular")}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.price}>
+            {price} € <Text style={styles.per}>/ {t("month")}</Text>
           </Text>
-
-          {popular && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{t("popular")}</Text>
-            </View>
-          )}
         </View>
 
-        <Text style={styles.price}>
-          {price} € <Text style={styles.per}>/ {t("month")}</Text>
-        </Text>
-
-        <Text style={styles.desc}>{description}</Text>
+        <Text style={styles.desc} numberOfLines={3}>{description}</Text>
       </Wrapper>
     </TouchableOpacity>
   );
@@ -49,36 +47,70 @@ export default function SelectableCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    minHeight: 101,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingTop: 16,
+    paddingBottom: 14,
+    marginBottom: 16,
     backgroundColor: "#fff",
-  },
-  selectedCard: {
-    borderWidth: 0,
     ...(Platform.OS === "web"
-      ? { boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)" }
+      ? { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)" }
       : {
           shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
+          shadowOpacity: 0.2,
+          shadowRadius: 10,
           shadowOffset: { width: 0, height: 4 },
-          elevation: 5,
+          elevation: 6,
         }),
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 8 },
-  cardTitle: { fontSize: 16, fontWeight: "600" },
-  selectedTitle: { fontSize: 18, fontWeight: "700" },
-  price: { fontSize: 15, marginVertical: 4, fontWeight: "500" },
-  per: { fontSize: 13, color: "#444" },
-  desc: { fontSize: 13, color: "#666" },
+  selectedCard: {
+    borderWidth: 0.5,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#000",
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+  },
+  per: {
+    fontSize: 12,
+    color: "#000",
+    fontWeight: "500",
+  },
+  desc: {
+    fontSize: 10,
+    color: "rgba(0, 0, 0, 0.5)",
+    lineHeight: 12,
+    marginTop: 8,
+  },
   badge: {
     backgroundColor: "#000",
-    borderRadius: 10,
+    borderRadius: 9999,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "600",
+  },
 });

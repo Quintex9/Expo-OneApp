@@ -1,17 +1,17 @@
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/AuthContext";
 
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
-  const { signOut, user } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -21,7 +21,6 @@ export default function SettingsScreen() {
         {
           text: t("cancel") || "Cancel",
           style: "cancel",
-          onPress: () => setMenuOpen(false),
         },
         {
           text: t("logOut") || "Logout",
@@ -29,7 +28,6 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               await signOut();
-              setMenuOpen(false);
               // Presmerovanie na Login screen
               navigation.reset({
                 index: 0,
@@ -51,9 +49,9 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { marginTop: insets.top + 6 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} />
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.title}>{t("settings")}</Text>
       </View>
@@ -85,8 +83,8 @@ export default function SettingsScreen() {
       </View>
 
       {/* LOG OUT */}
-      <TouchableOpacity style={styles.logout} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={18} color="#666" />
+      <TouchableOpacity style={[styles.logout, { marginBottom: insets.bottom + 12 }]} onPress={handleLogout}>
+        <Ionicons name="log-out-outline" size={20} color="rgba(0, 0, 0, 0.6)" />
         <Text style={styles.logoutText}>{t("logOut")}</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -119,54 +117,63 @@ function Divider() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 40,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#000",
   },
   sectionTitle: {
-    fontSize: 13,
-    color: "#888",
+    fontSize: 14,
+    color: "rgba(0, 0, 0, 0.5)",
     marginBottom: 8,
-    marginTop: 16,
+    marginTop: 12,
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#eee",
-    overflow: "hidden",
+    borderRadius: 20,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.2,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
+        }),
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
   },
   itemLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   itemText: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#000",
   },
   divider: {
     height: 1,
-    backgroundColor: "#eee",
-    marginLeft: 16,
+    backgroundColor: "#E4E4E7",
+    marginVertical: 16,
   },
   logout: {
     marginTop: "auto",
@@ -174,11 +181,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   logoutText: {
-    fontSize: 15,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: 16,
+    color: "rgba(0, 0, 0, 0.6)",
+    fontWeight: "700",
   },
 });

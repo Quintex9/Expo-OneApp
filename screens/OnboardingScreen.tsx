@@ -229,7 +229,7 @@ export default function OnboardingScreen() {
                     <View style={styles.servicesRow}>
                       {CATEGORY_SERVICES[category].map((service) => (
                         <View key={service} style={styles.serviceTag}>
-                          <Text style={styles.serviceTagText}>{service}</Text>
+                          <Text style={styles.serviceTagText}>{t(service)}</Text>
                         </View>
                       ))}
                     </View>
@@ -303,7 +303,7 @@ export default function OnboardingScreen() {
               <SelectableCard
                 key={plan.id}
                 id={plan.id}
-                title={plan.title}
+                title={t(plan.id)}
                 price={plan.price}
                 description={t(`${plan.id}Desc`)}
                 popular={plan.popular}

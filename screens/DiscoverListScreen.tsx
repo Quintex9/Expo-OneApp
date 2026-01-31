@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import BranchCard from "../components/BranchCard";
 import { Skeleton } from "../components/Skeleton";
 import { useDataSource } from "../lib/data/useDataSource";
+import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPanel";
 import type { DiscoverMapMarker, DiscoverCategory } from "../lib/interfaces";
 
 // Skeleton pre BranchCard - zobrazuje sa počas načítavania
@@ -126,8 +127,12 @@ const NITRA_CENTER: [number, number] = [18.091, 48.3069];
 const DEG_TO_RAD = Math.PI / 180;
 
 // Možnosti triedenia
-const SORT_OPTIONS = ["Trending", "Top rated", "Open near you"] as const;
+const SORT_OPTIONS = ["trending", "topRated", "openNearYou"] as const;
 type SortOption = typeof SORT_OPTIONS[number];
+
+// Filter options
+const FILTER_OPTIONS: DiscoverCategory[] = ["Fitness", "Gastro", "Relax", "Beauty"];
+const SUBCATEGORIES = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
 
 export default function DiscoverListScreen() {
   const insets = useSafeAreaInsets();
@@ -138,8 +143,27 @@ export default function DiscoverListScreen() {
   const dataSource = useDataSource();
 
   // Stav pre sort dropdown
-  const [sortOption, setSortOption] = useState<SortOption>("Trending");
+  const [sortOption, setSortOption] = useState<SortOption>("trending");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+
+  // Stav pre bočný filter
+  const [sideFilterOpen, setSideFilterOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<Set<string>>(new Set());
+  const [rating, setRating] = useState<Set<string>>(new Set());
+  const [appliedRatings, setAppliedRatings] = useState<Set<string>>(new Set());
+  const [sub, setSub] = useState<Set<string>>(new Set());
+
+  const toggleSubcategory = useCallback((s: string) => {
+    setSub((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) {
+        next.delete(s);
+      } else {
+        next.add(s);
+      }
+      return next;
+    });
+  }, []);
 
   const scale = useMemo(() => Math.min(1, Math.max(0.82, screenWidth / 393)), [screenWidth]);
   const cardHeight = Math.round(112 * scale);
@@ -178,18 +202,15 @@ export default function DiscoverListScreen() {
 
   // Filtrovanie a zoradenie pobočiek do 2km
   // Používame bounding box filter a predpočítané konštanty pre rýchlejšie výpočty
-  const nearbyBranches = useMemo<NearbyBranch[]>(() => {
+  const allBranches = useMemo<NearbyBranch[]>(() => {
     if (!userLocation || markers.length === 0) return [];
 
     const [userLng, userLat] = userLocation;
-    const MAX_DIST_KM = 2;
     
     // Konštanty pre rýchly pred-filter
     const LAT_DEGREE_KM = 111; 
-    const MAX_LAT_DIFF = MAX_DIST_KM / LAT_DEGREE_KM;
     // Longitude stupeň sa skracuje s kosínusom šírky
     const userLatRad = userLat * DEG_TO_RAD;
-    const MAX_LNG_DIFF = MAX_DIST_KM / (LAT_DEGREE_KM * Math.cos(userLatRad));
 
     const results: NearbyBranch[] = [];
 
@@ -198,44 +219,59 @@ export default function DiscoverListScreen() {
 
       const mCoord = marker.coord;
       
-      // 1. Rýchly Bounding Box filter (Lat)
-      const latDiff = Math.abs(mCoord.lat - userLat);
-      if (latDiff > MAX_LAT_DIFF) continue;
-
-      // 2. Rýchly Bounding Box filter (Lng)
-      const lngDiff = Math.abs(mCoord.lng - userLng);
-      if (lngDiff > MAX_LNG_DIFF) continue;
-
-      // 3. Presný výpočet len pre tie, čo prešli boxom
+      // Vypočítame vzdialenosť pre každú pobočku (pre sorting aj display)
       const distanceKm = getDistanceKm(userLat, userLng, mCoord.lat, mCoord.lng);
 
-      if (distanceKm <= MAX_DIST_KM) {
-        results.push({
-          id: marker.id,
-          title: marker.title || formatTitle(marker.id),
-          image: CATEGORY_IMAGES[marker.category as DiscoverCategory] || CATEGORY_IMAGES.Fitness,
-          rating: marker.rating,
-          distance: `${distanceKm.toFixed(1)} km`,
-          distanceKm,
-          hours: "9:00 - 21:00",
-          category: marker.category as DiscoverCategory,
-          discount: "20% discount on first entry",
-          offers: ["20% discount on first entry", "1 Free entry for friend"],
-          moreCount: 1,
-        });
-      }
+      results.push({
+        id: marker.id,
+        title: marker.title || formatTitle(marker.id),
+        image: CATEGORY_IMAGES[marker.category as DiscoverCategory] || CATEGORY_IMAGES.Fitness,
+        rating: marker.rating,
+        distance: `${distanceKm.toFixed(1)} km`,
+        distanceKm,
+        hours: "9:00 - 21:00",
+        category: marker.category as DiscoverCategory,
+        discount: "20% discount on first entry",
+        offers: ["20% discount on first entry", "1 Free entry for friend"],
+        moreCount: 1,
+      });
     }
 
-    // Triedenie podľa vybranej možnosti
-    switch (sortOption) {
-      case "Top rated":
-        return results.sort((a, b) => b.rating - a.rating);
-      case "Open near you":
-      case "Trending":
-      default:
-        return results.sort((a, b) => a.distanceKm - b.distanceKm);
+    return results;
+  }, [userLocation, markers]);
+
+  const visibleBranches = useMemo<NearbyBranch[]>(() => {
+    if (allBranches.length === 0) return [];
+
+    // Najprv aplikujeme filtre
+    let filtered = allBranches;
+
+    // Filter podľa kategórie
+    if (appliedFilters.size > 0) {
+      filtered = filtered.filter((item) => appliedFilters.has(item.category));
     }
-  }, [userLocation, markers, sortOption]);
+
+    // Filter podľa ratingu
+    if (appliedRatings.size > 0) {
+      const minRating = Math.min(...Array.from(appliedRatings).map(Number));
+      filtered = filtered.filter((item) => item.rating >= minRating);
+    }
+
+    // Potom triedime
+    switch (sortOption) {
+      case "openNearYou": {
+        const MAX_DIST_KM = 2;
+        return filtered
+          .filter((item) => item.distanceKm <= MAX_DIST_KM)
+          .sort((a, b) => a.distanceKm - b.distanceKm);
+      }
+      case "topRated":
+        return [...filtered].sort((a, b) => b.rating - a.rating);
+      case "trending":
+      default:
+        return filtered;
+    }
+  }, [allBranches, sortOption, appliedFilters, appliedRatings]);
 
   // Definujeme presnú výšku položiek pre FlatList
   // To umožňuje preskočiť výpočet rozloženia a zlepšuje plynulosť skrolovania
@@ -271,6 +307,22 @@ export default function DiscoverListScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Bočný filter panel */}
+      <DiscoverSideFilterPanel
+        visible={sideFilterOpen}
+        onOpen={() => setSideFilterOpen(true)}
+        onClose={() => setSideFilterOpen(false)}
+        filterOptions={FILTER_OPTIONS}
+        appliedFilters={appliedFilters}
+        setAppliedFilters={setAppliedFilters}
+        rating={rating}
+        setRating={setRating}
+        setAppliedRatings={setAppliedRatings}
+        subcategories={SUBCATEGORIES}
+        sub={sub}
+        toggleSubcategory={toggleSubcategory}
+      />
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.card}>
@@ -281,7 +333,7 @@ export default function DiscoverListScreen() {
               resizeMode="contain"
             />
             <Text style={styles.rowTextBold} numberOfLines={1}>
-              Your Location
+              {t("yourLocation")}
             </Text>
             <Image
               source={require("../images/options.png")}
@@ -297,7 +349,7 @@ export default function DiscoverListScreen() {
           activeOpacity={0.85}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -308,9 +360,9 @@ export default function DiscoverListScreen() {
           activeOpacity={0.85}
           onPress={() => setSortDropdownOpen(!sortDropdownOpen)}
         >
-          <Text style={styles.sortText}>{sortOption}</Text>
+          <Text style={styles.sortText}>{t(sortOption)}</Text>
           <Image
-            source={require("../images/options.png")}
+            source={require("../images/arrow_b.png")}
             style={[styles.sortCaret, sortDropdownOpen && styles.sortCaretOpen]}
             resizeMode="contain"
           />
@@ -337,7 +389,7 @@ export default function DiscoverListScreen() {
                     sortOption === option && styles.sortMenuTextActive,
                   ]}
                 >
-                  {option}
+                  {t(option)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -353,13 +405,17 @@ export default function DiscoverListScreen() {
             <SkeletonBranchCard key={index} scale={scale} cardPadding={cardPadding} />
           ))}
         </View>
-      ) : nearbyBranches.length === 0 ? (
+      ) : visibleBranches.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No places found within 2 km</Text>
+          <Text style={styles.emptyText}>
+            {sortOption === "openNearYou"
+              ? t("noPlacesFoundWithin", { distance: "2 km" })
+              : t("noPlacesFound")}
+          </Text>
         </View>
       ) : (
         <FlatList
-          data={nearbyBranches}
+          data={visibleBranches}
           renderItem={renderBranchItem}
           keyExtractor={keyExtractor}
           getItemLayout={getItemLayout}
@@ -436,7 +492,7 @@ const styles = StyleSheet.create({
   sortCaret: {
     width: 16,
     height: 16,
-    opacity: 0.5,
+    opacity: 1,
   },
   sortCaretOpen: {
     transform: [{ rotate: "180deg" }],

@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import BottomSheet from "@gorhom/bottom-sheet";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet>;
@@ -14,6 +15,8 @@ export function BenefitsBottomSheet({
   snapPoints,
   onLogin,
 }: Props) {
+  const { t } = useTranslation();
+  
   return (
     <BottomSheet
       ref={sheetRef}
@@ -28,21 +31,21 @@ export function BenefitsBottomSheet({
         />
 
         <Text style={styles.title}>
-          Sign in to activate this benefit
+          {t("signInToActivate")}
         </Text>
 
         <Text style={styles.subtitle}>
-          You need an account to redeem and track your benefits
+          {t("needAccountForBenefits")}
         </Text>
 
         {/* SIGN IN */}
         <TouchableOpacity style={styles.loginBtn} onPress={onLogin}>
-          <Text style={styles.loginText}>Sign in</Text>
+          <Text style={styles.loginText}>{t("signIn")}</Text>
         </TouchableOpacity>
 
         {/* NO THANKS */}
         <TouchableOpacity onPress={() => sheetRef.current?.close()}>
-          <Text style={styles.noThanks}>No thanks</Text>
+          <Text style={styles.noThanks}>{t("noThanks")}</Text>
         </TouchableOpacity>
       </View>
     </BottomSheet>

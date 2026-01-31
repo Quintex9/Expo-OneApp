@@ -4,10 +4,12 @@ import QRCode from "react-native-qrcode-svg";
 import { useAuth } from "../lib/AuthContext";
 import { extractNameFromEmail } from "../lib/utils/userUtils";
 import { useDynamicQRCode } from "../lib/hooks/useDynamicQRCode";
+import { useTranslation } from "react-i18next";
 
 export default function QRScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const qrPadding = 20;
   const qrMaxSize = 325;
   const qrSize = Math.max(
@@ -17,7 +19,7 @@ export default function QRScreen() {
   const { token } = useDynamicQRCode({ userId: user?.id });
 
   const userName = extractNameFromEmail(user?.email);
-  const firstName = userName?.firstName || "User";
+  const firstName = userName?.firstName || t("user");
   const lastName = userName?.lastName || "";
   const fullName = lastName ? `${firstName} ${lastName}` : firstName;
   const userId = user?.id || "N/A";
@@ -27,7 +29,9 @@ export default function QRScreen() {
       <View style={styles.containerItems}>
         <Image source={require("../images/photo.png")} style={styles.image} />
         <Text style={styles.containerTextTop}>{fullName}</Text>
-        <Text style={styles.containerTextBottom}>ID: {userId.substring(0, 8)}</Text>
+        <Text style={styles.containerTextBottom}>
+          {t("idLabel", { id: userId.substring(0, 8) })}
+        </Text>
       </View>
 
       <View style={[styles.containerQr, { padding: qrPadding }]}>

@@ -57,11 +57,11 @@ function DiscoverSearchSheet({
       <View style={styles.searchSheetHeader}>
         <TouchableOpacity style={styles.searchLocationChip} activeOpacity={0.9}>
           <Image source={require("../../images/pin.png")} style={styles.searchLocationIcon} />
-          <Text style={styles.searchLocationText}>Your Location</Text>
+          <Text style={styles.searchLocationText}>{t("yourLocation")}</Text>
           <Image source={require("../../images/options.png")} style={styles.searchLocationCaret} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onSheetChange(-1)} activeOpacity={0.8}>
-          <Text style={styles.searchCancelText}>Cancel</Text>
+          <Text style={styles.searchCancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
       </View>
 

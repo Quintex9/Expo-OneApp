@@ -35,7 +35,8 @@ function DiscoverBranchOverlay({
 }: DiscoverBranchOverlayProps) {
   
   const { width: screenWidth } = useWindowDimensions();
-  const pageWidth = screenWidth;  // každá "stránka" má šírku obrazovky
+  const cardGap = Math.min(20, Math.max(12, Math.round(screenWidth * 0.04)));
+  const sideInset = Math.max(0, Math.floor((screenWidth - branchCardWidth) / 2));
   const navigation = useNavigation<any>();
   const discoverCardBottomPadding = 14;
 
@@ -55,15 +56,9 @@ function DiscoverBranchOverlay({
   );
 
   // Štýl pre "stránku" v carousel
-  const pageStyle = useMemo(
-    () => [overlayStyles.page, { width: pageWidth }],
-    [pageWidth]
-  );
-
-  // Pozície pre snap (pre plynulé scrollovanie po stránkach)
-  const snapOffsets = useMemo(
-    () => branches.map((_, index) => index * pageWidth),
-    [branches.length, pageWidth]
+  const listContentStyle = useMemo(
+    () => [overlayStyles.listContent, { paddingHorizontal: sideInset }],
+    [sideInset]
   );
 
   // === MEMOIZOVANÉ FUNKCIE PRE FLATLIST ===
@@ -87,21 +82,19 @@ function DiscoverBranchOverlay({
       const { onPress: _onPress, ...branchData } = item;
       
       return (
-        <View style={pageStyle}>
-          <View style={cardContainerStyle}>
-            <BranchCard
-              {...item}
-              badgeVariant="more"
-              cardPaddingBottom={discoverCardBottomPadding}
-              onPress={() => {
-                navigation.navigate("BusinessDetailScreen", { branch: branchData });
-              }}
-            />
-          </View>
+        <View style={cardContainerStyle}>
+          <BranchCard
+            {...item}
+            badgeVariant="more"
+            cardPaddingBottom={discoverCardBottomPadding}
+            onPress={() => {
+              navigation.navigate("BusinessDetailScreen", { branch: branchData });
+            }}
+          />
         </View>
       );
     },
-    [pageStyle, cardContainerStyle, navigation]
+    [cardContainerStyle, navigation]
   );
 
   // === HANDLERY ===
@@ -142,8 +135,9 @@ function DiscoverBranchOverlay({
         renderItem={renderItem}
         horizontal
         showsHorizontalScrollIndicator={false}
-        pagingEnabled                    // scrolluje po celých "stránkach"
-        snapToOffsets={snapOffsets}      // pozície pre snap
+        contentContainerStyle={listContentStyle}
+        ItemSeparatorComponent={() => <View style={{ width: cardGap }} />}
+        snapToInterval={branchCardWidth + cardGap}
         snapToAlignment="start"
         decelerationRate="fast"          // rýchle zastavenie
         bounces={false}                  // bez bounce efektu na krajoch
@@ -154,8 +148,8 @@ function DiscoverBranchOverlay({
         removeClippedSubviews={true}     // odstráň položky mimo obrazovky
         // getItemLayout umožňuje okamžitý skok na položku (nemusíme merať)
         getItemLayout={(_, index) => ({
-          length: pageWidth,
-          offset: pageWidth * index,
+          length: branchCardWidth + cardGap,
+          offset: (branchCardWidth + cardGap) * index,
           index,
         })}
       />
@@ -168,8 +162,7 @@ export default memo(DiscoverBranchOverlay);
 
 // Lokálne štýly pre overlay
 const overlayStyles = StyleSheet.create({
-  page: {
+  listContent: {
     paddingVertical: 7,
-    alignItems: "center",
   },
 });

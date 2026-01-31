@@ -92,13 +92,20 @@ export default function HomeScreen() {
     [branches]
   );
 
-  const cardGap = useMemo(() => {
-    return Math.min(27, Math.max(16, Math.floor((screenWidth - 32) * 0.08)));
-  }, [screenWidth]);
-  const cardWidth = useMemo(() => {
-    const availableWidth = screenWidth - 32;
-    return Math.min(207, Math.max(170, Math.floor(availableWidth * 0.55)));
-  }, [screenWidth]);
+  const sidePadding = 16;
+  const availableWidth = useMemo(() => screenWidth - sidePadding * 2, [screenWidth]);
+  const cardGap = useMemo(
+    () => Math.min(27, Math.max(18, Math.floor(availableWidth * 0.07))),
+    [availableWidth]
+  );
+  const cardWidth = useMemo(
+    () => Math.min(230, Math.max(200, Math.floor(availableWidth * 0.58))),
+    [availableWidth]
+  );
+  const peekWidth = useMemo(
+    () => Math.max(0, availableWidth - cardWidth - cardGap),
+    [availableWidth, cardWidth, cardGap]
+  );
 
   const renderService = useCallback(
     ({ item }: { item: BranchData }) => {
@@ -113,20 +120,23 @@ export default function HomeScreen() {
   );
 
   const sectionList = [
-    { title: "Open near you.", data: openNearYou },
-    { title: "Trending", data: trending },
-    { title: "Top rated", data: topRated },
+    { title: t("openNearYou"), data: openNearYou },
+    { title: t("trending"), data: trending },
+    { title: t("topRated"), data: topRated },
   ];
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.containerContent, { paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[
+        styles.containerContent,
+        { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
+      ]}
     >
-      <View style={[styles.topRow, { marginTop: insets.top + 8 }]}>
+      <View style={styles.topRow}>
         <TouchableOpacity style={styles.locationChip} activeOpacity={0.9}>
           <Image source={require("../images/pin.png")} style={styles.locationIcon} />
-          <Text style={styles.locationText}>Your Location</Text>
+          <Text style={styles.locationText}>{t("yourLocation")}</Text>
           <Image source={require("../images/options.png")} style={styles.locationCaret} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.searchButton} activeOpacity={0.9}>
@@ -138,7 +148,7 @@ export default function HomeScreen() {
         <View key={section.title} style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <Text style={styles.sectionMore}>Show more</Text>
+            <Text style={styles.sectionMore}>{t("showMore")}</Text>
           </View>
           <FlatList
             data={section.data}
@@ -146,8 +156,11 @@ export default function HomeScreen() {
             keyExtractor={keyExtractor}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.servicesRow}
+            contentContainerStyle={[styles.servicesRow, { paddingRight: sidePadding + peekWidth }]}
             ItemSeparatorComponent={() => <View style={{ width: cardGap }} />}
+            snapToInterval={cardWidth + cardGap}
+            snapToAlignment="start"
+            decelerationRate="fast"
             getItemLayout={(_, index) => ({
               length: cardWidth + cardGap,
               offset: index * (cardWidth + cardGap),
@@ -178,33 +191,41 @@ const styles = StyleSheet.create({
   locationChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
     paddingHorizontal: 12,
-    height: 36,
-    borderRadius: 18,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E6E6E6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  locationIcon: { width: 14, height: 14, resizeMode: "contain" },
+  locationIcon: { width: 18, height: 18, resizeMode: "contain" },
   locationText: { fontSize: 14, fontWeight: "600", color: "#111" },
-  locationCaret: { width: 14, height: 14, opacity: 0.7, resizeMode: "contain" },
+  locationCaret: { width: 16, height: 16, opacity: 0.7, resizeMode: "contain" },
   searchButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 10,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  searchIcon: { width: 16, height: 16, resizeMode: "contain" },
+  searchIcon: { width: 18, height: 18, resizeMode: "contain" },
   section: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 16,
-    gap: 16,
+    gap: 12,
   },
   sectionHeader: {
     flexDirection: "row",

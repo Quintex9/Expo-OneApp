@@ -2,7 +2,7 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ActivityIndicator, StatusBar, View, Platform, Text, TextInput } from "react-native";
+import { ActivityIndicator, StatusBar, View, Platform, Text, TextInput, StyleSheet } from "react-native";
 
 import Tabs from "./components/Tabs";
 import SubscriptionActivationScreen from "./screens/profile/SubscriptionActivationScreen";
@@ -51,30 +51,40 @@ if (typeof global.TextDecoder === "undefined") {
 const Stack = createNativeStackNavigator();
 
 // Globálne nastavenie Inter fontu pre všetky Text a TextInput komponenty
+let defaultFontsPatched = false;
 const setDefaultFonts = () => {
-  const oldTextRender = (Text as any).render;
-  (Text as any).render = function (...args: any[]) {
-    const origin = oldTextRender.call(this, ...args);
-    return {
-      ...origin,
-      props: {
-        ...origin.props,
-        style: [{ fontFamily: "Inter_400Regular" }, origin.props.style],
-      },
+  if (defaultFontsPatched) {
+    return;
+  }
+  defaultFontsPatched = true;
+
+  const mergeDefaultFont = (style: any) => {
+    const resolved = StyleSheet.flatten(style) || {};
+    if (resolved.fontFamily) {
+      return resolved;
+    }
+    return { ...resolved, fontFamily: "Inter_400Regular" };
+  };
+
+  const patchRender = (Component: any) => {
+    if (!Component?.render) {
+      return;
+    }
+    const oldRender = Component.render;
+    Component.render = function (...args: any[]) {
+      const origin = oldRender.call(this, ...args);
+      if (!React.isValidElement(origin)) {
+        return origin;
+      }
+      const element = origin as React.ReactElement<any>;
+      return React.cloneElement(element, {
+        style: mergeDefaultFont(element.props?.style),
+      });
     };
   };
 
-  const oldTextInputRender = (TextInput as any).render;
-  (TextInput as any).render = function (...args: any[]) {
-    const origin = oldTextInputRender.call(this, ...args);
-    return {
-      ...origin,
-      props: {
-        ...origin.props,
-        style: [{ fontFamily: "Inter_400Regular" }, origin.props.style],
-      },
-    };
-  };
+  patchRender(Text as any);
+  patchRender(TextInput as any);
 };
 
 export default function App() {

@@ -11,6 +11,7 @@ import {
   PanResponder,
   Image,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   visible: boolean;
@@ -70,7 +71,7 @@ const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
 };
 
 // Discover options (zatiaľ nič nerobia)
-const DISCOVER_OPTIONS = ["Top rated", "Trending", "Top 10", "Open near you"];
+const DISCOVER_OPTIONS = ["topRated", "trending", "top10", "openNearYou"];
 
 export default function DiscoverSideFilterPanel({
   visible,
@@ -86,6 +87,7 @@ export default function DiscoverSideFilterPanel({
   sub,
   toggleSubcategory,
 }: Props) {
+  const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const PANEL_WIDTH = 326;
 
@@ -313,7 +315,7 @@ export default function DiscoverSideFilterPanel({
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Filter</Text>
+            <Text style={styles.headerTitle}>{t("filter")}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={closePanel}>
               <Image
                 source={require("../../images/plus.png")}
@@ -329,7 +331,7 @@ export default function DiscoverSideFilterPanel({
           >
             {/* Categories */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Categories</Text>
+              <Text style={styles.sectionTitle}>{t("categories")}</Text>
               <View style={styles.chipsGrid}>
                 {filterOptions.map((cat, index) => {
                   const isActive = appliedFilters.has(cat);
@@ -357,7 +359,7 @@ export default function DiscoverSideFilterPanel({
                       <Text style={styles.chipContent}>
                         <Text>{emoji} </Text>
                         <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                          {cat}
+                          {t(cat)}
                         </Text>
                       </Text>
                     </TouchableOpacity>
@@ -372,7 +374,9 @@ export default function DiscoverSideFilterPanel({
                 CATEGORY_SUBCATEGORIES[category] || CATEGORY_SUBCATEGORIES.Gastro;
               return (
                 <View style={styles.sectionSub} key={`sub-${category}`}>
-                  <Text style={styles.sectionTitle}>Subcategories {category}</Text>
+                  <Text style={styles.sectionTitle}>
+                    {t("subcategoriesFor", { category: t(category) })}
+                  </Text>
                   <View style={styles.chipsGrid}>
                     {currentSubcategories.map((s, index) => {
                       const isActive = sub.has(s);
@@ -390,7 +394,7 @@ export default function DiscoverSideFilterPanel({
                           <Text style={styles.chipContent}>
                             <Text>{emoji} </Text>
                             <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                              {s}
+                              {t(s)}
                             </Text>
                           </Text>
                         </TouchableOpacity>

@@ -26,9 +26,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
           const name = String(route.name);
           const lbl = String(label);
 
-          if (name === "QR") return "qr";
+          if (name === "QR" || lbl === "QR") return "qr";
           if (name === "Feed" || lbl === "Feed") return "feed";
-          if (name === "Home" || lbl === "Home") return "home";
+          if (name === "Home" || name === "Domov" || lbl === "Home" || lbl === "Domov") return "home";
 
           if (
             name === "Discover" ||
@@ -60,7 +60,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
             w: require("../images/menu/feed_w.png"),
           },
           home: {
-            b: require("../images/home.png"),
+            b: require("../images/home_b.png"),
             w: require("../images/home.png"),
           },
           discover: {

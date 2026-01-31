@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 type Review = {
   id: string;
@@ -22,6 +23,8 @@ type Props = {
 };
 
 export function ReviewsSection({ rating, total, reviews }: Props) {
+  const { t } = useTranslation();
+  
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -43,7 +46,7 @@ export function ReviewsSection({ rating, total, reviews }: Props) {
           </View>
 
           <Text style={styles.count}>
-            {total} ratings • {reviews.length} reviews
+            {total} {t("ratings")} • {reviews.length} {t("reviews")}
           </Text>
         </View>
 
@@ -80,7 +83,7 @@ export function ReviewsSection({ rating, total, reviews }: Props) {
               </View>
             </View>
 
-            <Text style={styles.time}>{r.daysAgo} days ago</Text>
+            <Text style={styles.time}>{t("daysAgo", { count: r.daysAgo })}</Text>
           </View>
 
           <Text style={styles.text}>{r.text}</Text>
@@ -93,7 +96,7 @@ export function ReviewsSection({ rating, total, reviews }: Props) {
 
             <TouchableOpacity style={styles.action}>
               <Ionicons name="chatbubble-outline" size={16} />
-              <Text style={styles.actionText}>Reply</Text>
+              <Text style={styles.actionText}>{t("reply")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -101,7 +104,7 @@ export function ReviewsSection({ rating, total, reviews }: Props) {
 
       {/* LOAD MORE */}
       <TouchableOpacity style={styles.loadMore}>
-        <Text style={styles.loadMoreText}>Load More Reviews</Text>
+        <Text style={styles.loadMoreText}>{t("loadMoreReviews")}</Text>
       </TouchableOpacity>
     </View>
   );

@@ -63,7 +63,7 @@ export default function DiscoverTopControls({
                   key={`${opt.label}-${index}`}
                   style={styles.menuRow}
                   onPress={() => {
-                    if (opt.label === "All Addresses") {
+                    if (opt.label === "allAddresses") {
                       setOpen(false);
                       navigation.navigate("SavedLocations");
                       return;

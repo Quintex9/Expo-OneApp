@@ -1,7 +1,10 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
+import { useTranslation } from "react-i18next";
 
 export function NewsSection({ title }: { title: string }) {
+  const { t } = useTranslation();
+  
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -27,7 +30,7 @@ export function NewsSection({ title }: { title: string }) {
 
       <Text style={{ marginTop: 8 }}>
         <Text style={{ fontWeight: "700" }}>{title} </Text>
-        New flavors of protein shakes! Come workout and buy one and get the second one for free
+        {t("newsPostText")}
       </Text>
     </View>
   );

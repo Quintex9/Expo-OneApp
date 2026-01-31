@@ -120,7 +120,7 @@ export default function DiscoverScreen() {
   const [location, setLocation] = useState<Location[]>([
     { image: require("../images/home.png"), label: "home" },
     { image: require("../images/business.png"), label: "business" },
-    { image: require("../images/list.png"), label: "All Addresses" },
+    { image: require("../images/list.png"), label: "allAddresses" },
     { image: require("../images/pin.png"), label: "nitra", coord: NITRA_CENTER },
   ]);
   const [option, setOption] = useState<string>("yourLocation");
@@ -302,10 +302,10 @@ export default function DiscoverScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
         <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>Nepodarilo sa načítať dáta</Text>
+          <Text style={errorStyles.title}>{t("dataLoadFailed")}</Text>
           <Text style={errorStyles.message}>{error}</Text>
           <TouchableOpacity style={errorStyles.button} onPress={refetch}>
-            <Text style={errorStyles.buttonText}>Skúsiť znova</Text>
+            <Text style={errorStyles.buttonText}>{t("tryAgain")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

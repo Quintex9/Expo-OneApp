@@ -145,7 +145,7 @@ export default function DiscoverFilterSheet({
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Rating</Text>
+              <Text style={styles.filterSectionTitle}>{t("rating")}</Text>
               <View style={styles.filterChips}>
                 {ratingOptions.map((value) => {
                   const active = rating.has(value);
@@ -183,7 +183,7 @@ export default function DiscoverFilterSheet({
               }}
               activeOpacity={0.9}
             >
-              <Text style={styles.filterApplyText}>Filter ({count})</Text>
+              <Text style={styles.filterApplyText}>{t("applyFilters", { count })}</Text>
             </TouchableOpacity>
           </View>
         </View>

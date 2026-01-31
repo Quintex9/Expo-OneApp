@@ -5,10 +5,14 @@ import {
     StyleSheet,
     TouchableOpacity,
     SafeAreaView,
+    Image,
+    Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationActionsModal from "../../components/LocationActionModal";
+import { useTranslation } from "react-i18next";
 
 const MOCK_LOCATIONS = [
     { id: "1", title: "Hlavná 12", city: "Nitra" },
@@ -20,44 +24,46 @@ const MOCK_LOCATIONS = [
 export default function SavedLocationsScreen() {
     const navigation = useNavigation<any>();
     const [selected, setSelected] = useState<any>(null);
+    const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* HEADER */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={22} />
-                </TouchableOpacity>
-                <Text style={styles.title}>Saved locations</Text>
-            </View>
+            <View style={styles.content}>
+                {/* HEADER */}
+                <View style={[styles.header, { marginTop: insets.top + 6 }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back" size={24} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>{t("savedLocations")}</Text>
+                </View>
 
-            {/* CARD */}
-            <View style={styles.card}>
-                {MOCK_LOCATIONS.map((item, index) => (
-                    <View
-                        key={item.id}
-                        style={[
-                            styles.row,
-                            index !== MOCK_LOCATIONS.length - 1 && styles.divider,
-                        ]}
-                    >
-                        <Ionicons name="location-outline" size={28} />
+                {/* CARD */}
+                <View style={styles.card}>
+                    {MOCK_LOCATIONS.map((item, index) => (
+                        <View
+                            key={item.id}
+                            style={[
+                                styles.row,
+                                index !== MOCK_LOCATIONS.length - 1 && styles.divider,
+                            ]}
+                        >
+                            <Image source={require("../../images/pin.png")} style={styles.pinIcon} />
 
-                        <View style={styles.textWrap}>
-                            <Text style={styles.address}>{item.title}</Text>
-                            <Text style={styles.city}>{item.city}</Text>
+                            <View style={styles.textWrap}>
+                                <Text style={styles.address}>{item.title}</Text>
+                                <Text style={styles.city}>{item.city}</Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.ellipsisButton}
+                                onPress={() => setSelected(item)}
+                            >
+                                <Image source={require("../../images/dots.png")} style={styles.dotsIcon} />
+                            </TouchableOpacity>
                         </View>
-
-                        <TouchableOpacity style={styles.ellipsisButton} onPress={() => setSelected(item)}>
-                            <Ionicons
-                                name="ellipsis-horizontal"
-                                size={16}
-                                color="#71717A"
-                            />
-                        </TouchableOpacity>
-
-                    </View>
-                ))}
+                    ))}
+                </View>
             </View>
 
             {selected && (
@@ -82,40 +88,55 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#fff",
-        padding: 20,
+        paddingHorizontal: 16,
+    },
+    content: {
+        width: "100%",
+        maxWidth: 420,
+        alignSelf: "center",
     },
 
     header: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        marginTop: 20,
-        marginBottom: 24,
+        marginBottom: 20,
     },
 
     title: {
-        fontSize: 18,
-        fontWeight: "600",
+        fontSize: 22,
+        fontWeight: "700",
+        color: "#000",
     },
 
     card: {
         backgroundColor: "#fff",
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "#EEE",
+        borderRadius: 20,
+        borderWidth: 0.5,
+        borderColor: "#E4E4E7",
+        paddingVertical: 22,
         paddingHorizontal: 16,
+        ...(Platform.OS === "web"
+            ? { boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)" }
+            : {
+                shadowColor: "#000",
+                shadowOpacity: 0.2,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
+            }),
     },
 
     row: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 16,
-        gap: 12,
+        paddingVertical: 12,
+        gap: 10,
     },
 
     divider: {
         borderBottomWidth: 1,
-        borderBottomColor: "#EEE",
+        borderBottomColor: "#E4E4E7",
     },
 
     textWrap: {
@@ -124,7 +145,8 @@ const styles = StyleSheet.create({
 
     address: {
         fontSize: 14,
-        fontWeight: "800",
+        fontWeight: "500",
+        color: "#000",
     },
 
     city: {
@@ -133,14 +155,25 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     ellipsisButton: {
-        width: 22,
-        height: 22,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: "#71717A",
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 1.8,
+        borderColor: "rgba(0, 0, 0, 0.5)",
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#fff",
+    },
+    pinIcon: {
+        width: 23,
+        height: 23,
+        resizeMode: "contain",
+    },
+    dotsIcon: {
+        width: 10,
+        height: 10,
+        resizeMode: "contain",
+        tintColor: "rgba(0, 0, 0, 0.5)",
     },
 
 });

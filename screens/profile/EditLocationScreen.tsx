@@ -9,14 +9,16 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 
 export default function EditLocationScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { location } = route.params;
+  const { t } = useTranslation();
 
   const [street, setStreet] = useState(location.title);
-  const [name, setName] = useState("Alexandra's apartment");
+  const [name, setName] = useState(t("locationNameExample"));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,17 +27,17 @@ export default function EditLocationScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} />
         </TouchableOpacity>
-        <Text style={styles.title}>Edit location</Text>
+        <Text style={styles.title}>{t("editLocationTitle")}</Text>
       </View>
 
       {/* INPUTS */}
       <View style={styles.input}>
-        <Text style={styles.label}>Country</Text>
-        <Text style={styles.value}>Slovakia</Text>
+        <Text style={styles.label}>{t("country")}</Text>
+        <Text style={styles.value}>{t("slovakia")}</Text>
       </View>
 
       <View style={styles.input}>
-        <Text style={styles.label}>Street name and number</Text>
+        <Text style={styles.label}>{t("streetNameAndNumber")}</Text>
         <TextInput
           value={street}
           onChangeText={setStreet}
@@ -44,7 +46,7 @@ export default function EditLocationScreen() {
       </View>
 
       <View style={styles.input}>
-        <Text style={styles.label}>Name</Text>
+        <Text style={styles.label}>{t("name")}</Text>
         <TextInput
           value={name}
           onChangeText={setName}
@@ -53,13 +55,13 @@ export default function EditLocationScreen() {
       </View>
 
       <View style={styles.input}>
-        <Text style={styles.label}>Type</Text>
-        <Text style={styles.value}>Friend home</Text>
+        <Text style={styles.label}>{t("type")}</Text>
+        <Text style={styles.value}>{t("friendHome")}</Text>
       </View>
 
       {/* SAVE */}
       <TouchableOpacity style={styles.saveBtn}>
-        <Text style={styles.saveText}>Save</Text>
+        <Text style={styles.saveText}>{t("save")}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

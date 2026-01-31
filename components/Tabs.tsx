@@ -20,7 +20,7 @@ export default function Tabs() {
       screenOptions={{ headerShown: false }}
     >
       {/* CHRÁNENÝ - vyžaduje prihlásenie */}
-      <Tab.Screen name="QR">
+      <Tab.Screen name={t("QR")}>
         {() => (
           <ProtectedRoute>
             <QRScreen />
@@ -29,8 +29,8 @@ export default function Tabs() {
       </Tab.Screen>
 
       {/* VEREJNÉ - bez prihlásenia */}
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name={t("Feed")} component={FeedScreen} />
+      <Tab.Screen name={t("Home")} component={HomeScreen} />
       <Tab.Screen name={t("Discover")} component={DiscoverScreen} />
 
       {/* CHRÁNENÝ - vyžaduje prihlásenie */}
