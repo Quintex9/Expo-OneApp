@@ -5,7 +5,6 @@ import {
     StyleSheet,
     TouchableOpacity,
     SafeAreaView,
-    Image,
     Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,7 +47,7 @@ export default function SavedLocationsScreen() {
                                 index !== MOCK_LOCATIONS.length - 1 && styles.divider,
                             ]}
                         >
-                            <Image source={require("../../images/pin.png")} style={styles.pinIcon} />
+                            <Ionicons name="location-outline" size={22} color="#000" />
 
                             <View style={styles.textWrap}>
                                 <Text style={styles.address}>{item.title}</Text>
@@ -59,7 +58,7 @@ export default function SavedLocationsScreen() {
                                 style={styles.ellipsisButton}
                                 onPress={() => setSelected(item)}
                             >
-                                <Image source={require("../../images/dots.png")} style={styles.dotsIcon} />
+                                <Ionicons name="ellipsis-horizontal" size={12} color="rgba(0, 0, 0, 0.5)" />
                             </TouchableOpacity>
                         </View>
                     ))}
@@ -163,17 +162,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#fff",
-    },
-    pinIcon: {
-        width: 23,
-        height: 23,
-        resizeMode: "contain",
-    },
-    dotsIcon: {
-        width: 10,
-        height: 10,
-        resizeMode: "contain",
-        tintColor: "rgba(0, 0, 0, 0.5)",
     },
 
 });

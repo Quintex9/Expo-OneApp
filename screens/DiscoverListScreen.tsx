@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   Text,
-  Image,
   Platform,
   useWindowDimensions,
 } from "react-native";
@@ -12,6 +11,7 @@ import { TouchableOpacity } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import BranchCard from "../components/BranchCard";
 import { Skeleton } from "../components/Skeleton";
 import { useDataSource } from "../lib/data/useDataSource";
@@ -325,32 +325,26 @@ export default function DiscoverListScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.row} activeOpacity={0.85}>
-            <Image
-              source={require("../images/pin.png")}
-              style={styles.rowIcon}
-              resizeMode="contain"
-            />
+        <TouchableOpacity style={styles.card} activeOpacity={0.85}>
+          <Ionicons name="location-outline" size={18} color="#000" />
             <Text style={styles.rowTextBold} numberOfLines={1}>
               {t("yourLocation")}
             </Text>
-            <Image
-              source={require("../images/options.png")}
-              style={styles.caret}
-              resizeMode="contain"
-            />
+          <Ionicons name="chevron-down-outline" size={16} color="#000" style={styles.caret} />
           </TouchableOpacity>
-        </View>
 
-        {/* Cancel button - návrat späť */}
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.85} onPress={() => {}}>
+            <Ionicons name="search-outline" size={18} color="#000" />
+          </TouchableOpacity>
         <TouchableOpacity
-          style={styles.cancelBtn}
+            style={styles.headerIconButton}
           activeOpacity={0.85}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelText}>{t("cancel")}</Text>
+            <Ionicons name="map-outline" size={18} color="#000" />
         </TouchableOpacity>
+        </View>
       </View>
 
       {/* Sort dropdown */}
@@ -361,10 +355,11 @@ export default function DiscoverListScreen() {
           onPress={() => setSortDropdownOpen(!sortDropdownOpen)}
         >
           <Text style={styles.sortText}>{t(sortOption)}</Text>
-          <Image
-            source={require("../images/arrow_b.png")}
+          <Ionicons
+            name="chevron-down-outline"
+            size={16}
+            color="#000"
             style={[styles.sortCaret, sortDropdownOpen && styles.sortCaretOpen]}
-            resizeMode="contain"
           />
         </TouchableOpacity>
 
@@ -451,29 +446,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   card: {
-    backgroundColor: "white",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
-  },
-  row: {
+    width: 184,
     height: 44,
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    gap: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  rowTextBold: {
+    flex: 1,
+    fontWeight: "600",
+    fontSize: 14,
+    color: "#000",
+  },
+  caret: { opacity: 0.7 },
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  rowIcon: { width: 18, height: 18 },
-  rowTextBold: { fontWeight: "600", fontSize: 14 },
-  caret: { width: 14, height: 14, opacity: 0.5, marginLeft: 4 },
-  cancelBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   sortContainer: {
     paddingHorizontal: 16,

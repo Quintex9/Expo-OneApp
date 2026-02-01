@@ -72,6 +72,7 @@ export default function OnboardingScreen() {
   const titleFontSize = Math.min(28, Math.max(24, Math.round(width * 0.07)));
   const subtitleFontSize = Math.min(15, Math.max(13, Math.round(width * 0.038)));
   const gridGap = Math.min(16, Math.max(10, Math.round(contentWidth * 0.04)));
+  const categoryCardWidth = (contentWidth - gridGap) / 2;
   const canContinue = step !== "services" || selectedCategories.size > 0;
 
   const selectedCategoriesArray = Array.from(selectedCategories);
@@ -195,14 +196,14 @@ export default function OnboardingScreen() {
                     key={category}
                     style={[
                       styles.categoryCard,
-                      { borderRadius: 16 },
+                      { width: categoryCardWidth, height: categoryCardWidth * 0.85 },
                       isSelected && styles.categoryCardSelected,
                     ]}
                     onPress={() => toggleCategory(category)}
                   >
                     <Ionicons
                       name={CATEGORY_ICONS[category]}
-                      size={48}
+                      size={40}
                       color={isSelected ? "#f57c00" : "#666"}
                     />
 
@@ -212,7 +213,7 @@ export default function OnboardingScreen() {
 
                     {isSelected && (
                       <View style={styles.checkmark}>
-                        <Ionicons name="checkmark" size={20} color="#fff" />
+                        <Ionicons name="checkmark" size={18} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -391,18 +392,13 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
     marginBottom: 24,
   },
   categoryCard: {
-    flexBasis: "48%",
-    minWidth: 140,
-    maxWidth: 220,
-    aspectRatio: 1.2,
     borderWidth: 2,
     borderColor: "#eee",
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",

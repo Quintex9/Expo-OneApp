@@ -133,12 +133,12 @@ export default function HomeScreen() {
     () => (
       <View style={styles.topRow}>
         <TouchableOpacity style={styles.locationChip} activeOpacity={0.9}>
-          <Image source={require("../images/pin.png")} style={styles.locationIcon} />
+          <Ionicons name="location-outline" size={18} color="#000" />
           <Text style={styles.locationText}>{t("yourLocation")}</Text>
-          <Image source={require("../images/options.png")} style={styles.locationCaret} />
+          <Ionicons name="chevron-down-outline" size={16} color="#000" style={{ opacity: 0.7 }} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.searchButton} activeOpacity={0.9}>
-          <Image source={require("../images/search.png")} style={styles.searchIcon} />
+          <Ionicons name="search-outline" size={20} color="#000" />
         </TouchableOpacity>
       </View>
     ),
@@ -168,7 +168,7 @@ export default function HomeScreen() {
             onPress={() => handleShowMore(item.key, item.title)}
             activeOpacity={0.7}
           >
-            <Text style={styles.sectionMore}>{t("showMore")}</Text>
+          <Text style={styles.sectionMore}>{t("showMore")}</Text>
           </TouchableOpacity>
         </View>
         <FlatList
@@ -248,22 +248,29 @@ const styles = StyleSheet.create({
   locationChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 12,
+    justifyContent: "space-between",
+    gap: 4,
+    width: 184,
     height: 44,
-    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E6E6E6",
+    borderRadius: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  locationIcon: { width: 18, height: 18, resizeMode: "contain" },
-  locationText: { fontSize: 14, fontWeight: "600", color: "#111" },
-  locationCaret: { width: 16, height: 16, opacity: 0.7, resizeMode: "contain" },
+  locationText: {
+    flex: 1,
+    minWidth: 0,
+    marginHorizontal: 4,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111",
+  },
   searchButton: {
     width: 42,
     height: 42,
@@ -277,7 +284,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  searchIcon: { width: 18, height: 18, resizeMode: "contain" },
   section: {
     paddingHorizontal: 16,
     paddingTop: 12,

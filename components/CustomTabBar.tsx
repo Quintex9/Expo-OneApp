@@ -1,4 +1,15 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+type TabIconName = "cards" | "feed" | "home" | "discover" | "profile";
+
+const TAB_ICONS: Record<TabIconName, keyof typeof Ionicons.glyphMap> = {
+  cards: "card-outline",
+  feed: "play-circle-outline",
+  home: "home-outline",
+  discover: "location-outline",
+  profile: "person-outline",
+};
 
 export default function CustomTabBar({ state, descriptors, navigation }: any) {
   const focusedOptions = descriptors[state.routes[state.index].key]?.options;
@@ -20,61 +31,43 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
 
         const isFocused = state.index === index;
 
-        // Ikony z images/menu (b = black, w = white)
-        const getTabKey = () => {
-          // route.name je niekedy preložený, tak používame aj label
-          const name = String(route.name);
-          const lbl = String(label);
+        // Map route name to icon key
+        const getTabKey = (): TabIconName | null => {
+          const name = String(route.name).toLowerCase();
+          const lbl = String(label).toLowerCase();
 
-          if (name === "QR" || lbl === "QR") return "qr";
-          if (name === "Feed" || lbl === "Feed") return "feed";
-          if (name === "Home" || name === "Domov" || lbl === "Home" || lbl === "Domov") return "home";
+          // Cards tab (previously QR)
+          if (name === "cards" || name === "karty" || lbl === "cards" || lbl === "karty") return "cards";
+          
+          // Feed tab
+          if (name === "feed" || lbl === "feed") return "feed";
+          
+          // Home tab
+          if (name === "home" || name === "domov" || lbl === "home" || lbl === "domov") return "home";
 
+          // Discover tab
           if (
-            name === "Discover" ||
-            name === "Objavte" ||
-            name === "Objevit" ||
-            lbl === "Discover" ||
-            lbl === "Objavte" ||
-            lbl === "Objevit"
+            name === "discover" ||
+            name === "objavte" ||
+            name === "objevit" ||
+            lbl === "discover" ||
+            lbl === "objavte" ||
+            lbl === "objevit"
           ) return "discover";
 
+          // Profile tab
           if (
-            name === "Profile" ||
-            name === "Profil" ||
-            lbl === "Profile" ||
-            lbl === "Profil"
+            name === "profile" ||
+            name === "profil" ||
+            lbl === "profile" ||
+            lbl === "profil"
           ) return "profile";
 
           return null;
         };
 
         const tabKey = getTabKey();
-        const sources = {
-          qr: {
-            b: require("../images/menu/scanQR_b.png"),
-            w: require("../images/menu/scanQR_w.png"),
-          },
-          feed: {
-            b: require("../images/menu/feed_b.png"),
-            w: require("../images/menu/feed_w.png"),
-          },
-          home: {
-            b: require("../images/home_b.png"),
-            w: require("../images/home.png"),
-          },
-          discover: {
-            b: require("../images/menu/pin_b.png"),
-            w: require("../images/menu/pin_w.png"),
-          },
-          profile: {
-            b: require("../images/menu/user_b.png"),
-            w: require("../images/menu/user_w.png"),
-          },
-        } as const;
-
-        const iconSource =
-          tabKey ? (isFocused ? sources[tabKey].b : sources[tabKey].w) : null;
+        const iconName = tabKey ? TAB_ICONS[tabKey] : "help-circle-outline";
 
         const onPress = () => {
           navigation.navigate(route.name);
@@ -86,7 +79,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: any) {
             onPress={onPress}
             style={styles.tabButton}
           >
-            {iconSource ? <Image source={iconSource} style={styles.icon} /> : null}
+            <Ionicons
+              name={iconName}
+              size={24}
+              color={isFocused ? "#000" : "#999"}
+            />
             <Text style={[styles.label, isFocused && styles.labelFocused]}>
               {label}
             </Text>
@@ -111,18 +108,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  icon: {
-    width: 20,
-    height: 20,
-    resizeMode: "contain",
-  },
   label: {
     fontSize: 12,
     color: "#999",
     marginTop: 4,
   },
   labelFocused: {
-    color: "black",
+    color: "#000",
     fontWeight: "600",
   },
 });

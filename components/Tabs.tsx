@@ -20,7 +20,7 @@ export default function Tabs() {
       screenOptions={{ headerShown: false }}
     >
       {/* CHRÁNENÝ - vyžaduje prihlásenie */}
-      <Tab.Screen name={t("QR")}>
+      <Tab.Screen name={t("Cards")}>
         {() => (
           <ProtectedRoute>
             <QRScreen />

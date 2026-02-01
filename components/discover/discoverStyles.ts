@@ -13,8 +13,9 @@ export const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexWrap: "nowrap",
+    justifyContent: "flex-start",
+    alignItems: "center",
     zIndex: 10,
   },
   branchOverlay: {

@@ -1,18 +1,100 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, useWindowDimensions, ScrollView } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TouchableWithoutFeedback,
+  useWindowDimensions,
+  ScrollView,
+  Animated,
+} from "react-native";
+import QRCode from "react-native-qrcode-svg";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { colors } from "../lib/theme";
 
 export default function BenefitsScreen() {
-  const [ActualTab, setActualTab] = useState<"Activated" | "Claimed">("Activated");
-  const [QRcode, setQRCode] = useState<boolean>(false);
+  const [actualTab, setActualTab] = useState<"Activated" | "Claimed">("Activated");
+  const [qrVisible, setQrVisible] = useState(false);
+  const [qrTimer, setQrTimer] = useState(600); // 10 minutes in seconds
+  const [lastClickedBenefitId, setLastClickedBenefitId] = useState<string | null>(null);
   const { width: screenWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const qrPadding = 24;
-  const qrSize = Math.max(200, Math.floor(Math.min(320, screenWidth - 32 - qrPadding * 2)));
-
   const { t } = useTranslation();
+  const navigation = useNavigation();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const qrPadding = 32;
+  const qrSize = Math.max(180, Math.floor(Math.min(280, screenWidth - 64 - qrPadding * 2)));
+
+  // QR Timer countdown
+  useEffect(() => {
+    if (qrVisible && qrTimer > 0) {
+      const interval = setInterval(() => {
+        setQrTimer((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [qrVisible, qrTimer]);
+
+  // Reset timer when modal opens
+  useEffect(() => {
+    if (qrVisible) {
+      setQrTimer(600);
+    }
+  }, [qrVisible]);
+
+  // Pulse animation for active benefit
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const benefits = useMemo(
+    () => [
+      {
+        id: "benefit-1",
+        title: t("benefit1Title"),
+        description: t("benefit1Desc"),
+        icon: "gift-outline" as const,
+        discount: "20%",
+      },
+      {
+        id: "benefit-2",
+        title: t("benefit2Title"),
+        description: t("benefit2Desc"),
+        icon: "people-outline" as const,
+        discount: "1+1",
+      },
+    ],
+    [t]
+  );
+
+  const isActivated = actualTab === "Activated";
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -20,59 +102,174 @@ export default function BenefitsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.text_benefits, { marginTop: insets.top + 16 }]}>{t("myBenefits")}</Text>
-        <View style={styles.button_group}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.title}>{t("myBenefits")}</Text>
+        </View>
 
-        <TouchableOpacity
-          onPress={() => setActualTab("Activated")} style={ActualTab === 'Activated' ? styles.button1Active : styles.button1}>
-          <Text style={ActualTab === 'Activated' ? styles.button_text : styles.button_text_inactive}>
-            {t("activated")}
-          </Text>
-        </TouchableOpacity>
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{benefits.length}</Text>
+            <Text style={styles.statLabel}>{t("active")}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>0</Text>
+            <Text style={styles.statLabel}>{t("claimed")}</Text>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          onPress={() => setActualTab("Claimed")} style={ActualTab === 'Claimed' ? styles.button2Active : styles.button2}>
-          <Text style={ActualTab === 'Claimed' ? styles.button_text : styles.button_text_inactive}>
-            {t("claimed")}
-          </Text>
-        </TouchableOpacity>
-
-      </View>
-
-        <View style={styles.text_container}>
-          <Text style={styles.text_benefits_lower}>
-            {t("textBenefitsLower")}
-          </Text>
-
-          <Text style={styles.text_normal}>
-            {t("textNormal")}
-          </Text>
-
+        {/* Segmented Control */}
+        <View style={styles.segmented}>
           <TouchableOpacity
-            onPress={() => setQRCode(true)} disabled={ActualTab === 'Claimed'} style={ActualTab === 'Activated' ? styles.button3 : styles.button3_claimed}>
-            <Text style={ActualTab === 'Activated' ? styles.button3_text : styles.button3_text_claimed}>
-              {ActualTab === 'Activated' ? t("showQR") : t("claimed")}
+            onPress={() => setActualTab("Activated")}
+            style={[styles.segmentButton, isActivated && styles.segmentButtonActive]}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={16}
+              color={isActivated ? "#FFF" : "#9CA3AF"}
+              style={styles.segmentIcon}
+            />
+            <Text style={[styles.segmentText, isActivated && styles.segmentTextActive]}>
+              {t("activated")}
             </Text>
           </TouchableOpacity>
-
-          <Modal visible={QRcode} transparent animationType='fade'>
-            <TouchableWithoutFeedback onPress={() => setQRCode(false)}>
-              <View style={styles.button_backdrop}>
-                <View style={styles.container_qr}>
-                  <QRCode
-                    value="Skuska"
-                    size={qrSize}
-                    backgroundColor="white"
-                    color="black"
-                    logoBorderRadius={5}
-                  >
-                  </QRCode>
-                </View>
-                <Text style={styles.text_hours}>09:55</Text>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
+          <TouchableOpacity
+            onPress={() => setActualTab("Claimed")}
+            style={[styles.segmentButton, !isActivated && styles.segmentButtonActive]}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="time"
+              size={16}
+              color={!isActivated ? "#FFF" : "#9CA3AF"}
+              style={styles.segmentIcon}
+            />
+            <Text style={[styles.segmentText, !isActivated && styles.segmentTextActive]}>
+              {t("claimed")}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Benefits List */}
+        <View style={styles.benefitsList}>
+          {benefits.map((benefit) => {
+            const shouldPulse = isActivated && lastClickedBenefitId === benefit.id;
+            return (
+              <Animated.View
+                key={benefit.id}
+                style={[
+                  styles.benefitCard,
+                  shouldPulse && { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                {/* Discount Badge */}
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>{benefit.discount}</Text>
+                </View>
+
+                {/* Icon */}
+                <View style={styles.benefitIconWrap}>
+                  <Ionicons name={benefit.icon} size={28} color={colors.primary} />
+                </View>
+
+                {/* Content */}
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>{benefit.title}</Text>
+                  <Text style={styles.benefitDesc}>{benefit.description}</Text>
+                </View>
+
+                {/* Action */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setLastClickedBenefitId(benefit.id);
+                    setQrVisible(true);
+                  }}
+                  disabled={!isActivated}
+                  style={[styles.primaryButton, !isActivated && styles.primaryButtonDisabled]}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name={isActivated ? "qr-code" : "checkmark-done"}
+                    size={18}
+                    color={isActivated ? "#FFF" : "#9CA3AF"}
+                    style={styles.buttonIcon}
+                  />
+                  <Text
+                    style={[styles.primaryButtonText, !isActivated && styles.primaryButtonTextDisabled]}
+                  >
+                    {isActivated ? t("showQR") : t("claimed")}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+        </View>
+
+        {/* Empty State for Claimed */}
+        {!isActivated && (
+          <View style={styles.emptyState}>
+            <Ionicons name="gift" size={48} color="#E4E4E7" />
+            <Text style={styles.emptyText}>{t("noClaimed")}</Text>
+          </View>
+        )}
+
+        {/* QR Modal */}
+        <Modal visible={qrVisible} transparent animationType="fade">
+          <TouchableWithoutFeedback onPress={() => setQrVisible(false)}>
+            <View style={styles.qrBackdrop}>
+              <TouchableWithoutFeedback>
+                <View style={styles.qrCard}>
+                  {/* Close Button */}
+                  <TouchableOpacity
+                    style={styles.qrClose}
+                    onPress={() => setQrVisible(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={24} color="#71717A" />
+                  </TouchableOpacity>
+
+                  {/* Header */}
+                  <View style={styles.qrHeader}>
+                    <Ionicons name="gift" size={24} color={colors.primary} />
+                    <Text style={styles.qrTitle}>
+                      {benefits.find(b => b.id === lastClickedBenefitId)?.title || t("benefit1Title")}
+                    </Text>
+                  </View>
+
+                  {/* QR Code */}
+                  <View style={styles.qrCodeWrap}>
+                    <QRCode
+                      value="BENEFIT-20-DISCOUNT-2024"
+                      size={qrSize}
+                      backgroundColor="white"
+                      color="#18181B"
+                    />
+                  </View>
+
+                  {/* Timer */}
+                  <View style={styles.timerWrap}>
+                    <Ionicons name="time-outline" size={18} color={qrTimer < 60 ? "#EF4444" : colors.primary} />
+                    <Text style={[styles.qrTimer, qrTimer < 60 && styles.qrTimerUrgent]}>
+                      {formatTime(qrTimer)}
+                    </Text>
+                  </View>
+
+                  {/* Instructions */}
+                  <Text style={styles.qrInstruction}>
+                    {t("qrInstruction")}
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -81,167 +278,241 @@ export default function BenefitsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   content: {
     flexGrow: 1,
-  },
-  text_benefits: {
-    fontSize: 22,
-    marginLeft: 16,
-    marginTop: 54,
-    fontFamily: "Inter_700Bold",
-  },
-  text_benefits_lower: {
-    fontSize: 15,
-    marginLeft: 16,
-    marginTop: 16,
-    fontFamily: "Inter_700Bold",
-  },
-  text_normal: {
-    fontSize: 10,
-    marginLeft: 16,
-    marginRight: 25,
-    marginTop: 10,
-    color: 'gray',
-    fontFamily: "Inter_500Medium",
-  },
-  button1: {
-    backgroundColor: 'white',
-    height: 40,
-    width: "50%",
-    borderRadius: 40,
-    justifyContent: 'center',
-    borderColor: 'white',
-    borderWidth: 1,
-  },
-  button1Active: {
-    backgroundColor: 'black',
-    height: 40,
-    width: "50%",
-    borderRadius: 40,
-    justifyContent: 'center',
-  },
-  button2: {
-    marginLeft: 5,
-    backgroundColor: 'white',
-    height: 40,
-    width: "50%",
-    borderRadius: 40,
-    justifyContent: 'center',
-    borderColor: 'white',
-    borderWidth: 1,
-  },
-  button2Active: {
-    marginLeft: 5,
-    backgroundColor: 'black',
-    height: 40,
-    width: "50%",
-    borderRadius: 40,
-    justifyContent: 'center',
-  },
-  button_group: {
-    flexDirection: 'row',
-    marginLeft: 15,
-    marginRight: 15,
-    borderWidth: 1,
-    borderColor: 'white',
-    justifyContent: 'center',
-    borderRadius: 40,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginTop: 30,
-    elevation: 2,
-    backgroundColor: 'white',
-  },
-  button_text: {
-    textAlign: 'center',
-    fontFamily: "Inter_600SemiBold",
-    color: 'white',
-    fontSize: 14,
-  },
-  button_text_inactive: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    color: 'gray',
-    fontSize: 14,
-  },
-  text_container: {
-    flexDirection: 'column',
-    marginLeft: 15,
-    marginRight: 15,
-    borderWidth: 1,
-    borderColor: 'white',
-    justifyContent: 'center',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginTop: 30,
-    elevation: 2,
-    backgroundColor: 'white',
-
-  },
-  button3: {
-    marginTop: 15,
-    marginLeft: 15,
-    marginRight: 15,
-    backgroundColor: 'black',
-    width: "93%",
-    marginBottom: 10,
-    borderRadius: 40,
-    paddingTop: 10,
-    paddingRight: 16,
-    paddingLeft: 16,
-    paddingBottom: 10,
-  },
-  button3_claimed: {
-    marginTop: 15,
-    marginLeft: 15,
-    marginRight: 15,
-    backgroundColor: '#e4e4e7',
-    width: "90%",
-    marginBottom: 10,
-    borderRadius: 40,
-    paddingTop: 10,
-    paddingRight: 16,
-    paddingLeft: 16,
-    paddingBottom: 10,
-  },
-  button3_text: {
-    color: "white",
-    textAlign: "center",
-    fontFamily: "Inter_600SemiBold",
-  },
-  button3_text_claimed: {
-    color: "gray",
-    textAlign: "center",
-    fontFamily: "Inter_600SemiBold",
-  },
-  button_backdrop: {
-    flex: 1,
-    backgroundColor: "#00000080",
-    justifyContent: "center",
-    alignItems: "center",
     paddingHorizontal: 16,
   },
-  container_qr: {
-    backgroundColor: '#FFFFFF',
-    width: "100%",
-    maxWidth: 420,
-    borderRadius: 20,
-    padding: 24,
-    elevation: 5,
-    justifyContent: "center",
+  header: {
+    flexDirection: "row",
     alignItems: "center",
-
+    gap: 12,
+    marginBottom: 20,
+    paddingTop: 8,
   },
-  text_hours: {
-    textAlign: "center",
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#000",
+  },
+  statsRow: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statNumber: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#71717A",
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: "#E4E4E7",
+    marginHorizontal: 16,
+  },
+  segmented: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+  },
+  segmentButton: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentButtonActive: {
+    backgroundColor: "#18181B",
+  },
+  segmentIcon: {
+    marginRight: 6,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#9CA3AF",
+  },
+  segmentTextActive: {
+    color: "#FFFFFF",
+  },
+  benefitsList: {
     marginTop: 16,
-
-    fontSize: 30,
-    color: "white",
-    fontFamily: "Inter_700Bold",
-
-  }
+    gap: 14,
+  },
+  benefitCard: {
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+    position: "relative",
+    overflow: "hidden",
+  },
+  discountBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderBottomLeftRadius: 16,
+  },
+  discountText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  benefitIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: "rgba(235, 129, 0, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  benefitContent: {
+    marginBottom: 16,
+  },
+  benefitTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#18181B",
+    marginBottom: 6,
+  },
+  benefitDesc: {
+    fontSize: 13,
+    color: "#71717A",
+    lineHeight: 20,
+  },
+  primaryButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#18181B",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryButtonDisabled: {
+    backgroundColor: "#F4F4F5",
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  primaryButtonTextDisabled: {
+    color: "#9CA3AF",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontWeight: "500",
+  },
+  qrBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  qrCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    padding: 28,
+    alignItems: "center",
+    position: "relative",
+  },
+  qrClose: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F4F4F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qrHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    gap: 10,
+  },
+  qrTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#18181B",
+  },
+  qrCodeWrap: {
+    padding: 20,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+  },
+  timerWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    gap: 8,
+    backgroundColor: "#FFF7ED",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  qrTimer: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  qrTimerUrgent: {
+    color: "#EF4444",
+  },
+  qrInstruction: {
+    marginTop: 16,
+    fontSize: 13,
+    color: "#71717A",
+    textAlign: "center",
+  },
 });

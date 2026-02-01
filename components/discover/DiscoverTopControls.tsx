@@ -1,7 +1,8 @@
 import React, { useMemo, useRef } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import type BottomSheet from "@gorhom/bottom-sheet";
 import { styles } from "./discoverStyles";
 import type { DiscoverTopControlsProps } from "../../lib/interfaces";
@@ -27,111 +28,181 @@ export default function DiscoverTopControls({
 }: DiscoverTopControlsProps) {
   const navigation = useNavigation<any>();
   const locationRef = useRef<BottomSheet>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const getLocationIcon = (
+    label: string,
+    isSaved?: boolean
+  ): keyof typeof Ionicons.glyphMap => {
+    if (label === "home") return "home-outline";
+    if (label === "business") return "business-outline";
+    if (label === "allAddresses") return "list-outline";
+    if (label === "yourLocation") return "location-outline";
+    if (isSaved) return "bookmark-outline";
+    return "location-outline";
+  };
   const selectedOptionLabel = useMemo(() => {
     const saved = location.find((item) => item.isSaved && item.label === option);
     return saved ? saved.label : t(option);
   }, [location, option, t]);
+  const selectedOption = useMemo(
+    () => location.find((item) => item.label === option),
+    [location, option]
+  );
+  const selectedIcon = useMemo(
+    () => getLocationIcon(option, selectedOption?.isSaved),
+    [option, selectedOption]
+  );
+  const topBarWidth = useMemo(
+    () => Math.min(screenWidth - 24, 380),
+    [screenWidth]
+  );
+  const { leftGap, rightGap, searchBarWidth } = useMemo(() => {
+    const minSearch = 120;
+    const baseGap = screenWidth < 360 ? 10 : 14;
+    const maxSearch = topBarWidth - 84 - baseGap * 2;
+    const resolvedGap =
+      maxSearch < minSearch
+        ? Math.max(0, Math.floor((topBarWidth - 84 - minSearch) / 2))
+        : baseGap;
+    const width = Math.max(0, topBarWidth - 84 - resolvedGap * 2);
+    return { leftGap: resolvedGap, rightGap: resolvedGap, searchBarWidth: width };
+  }, [screenWidth, topBarWidth]);
   return (
     <>
       <View style={[styles.dropdown_main, { top: insetsTop + 16 }]} pointerEvents="box-none">
         {open && <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />}
 
-        <View style={styles.card}>
-          {o && (
+        {/* Default mode: Location icon | Search bar | List icon */}
+        {o && !open && (
+          <View style={[localStyles.topBarRow, { width: topBarWidth }]}>
+            {/* Location button */}
             <TouchableOpacity
-              style={styles.row}
-              onPress={() => setOpen((prev) => !prev)}
+              style={localStyles.roundBtn}
               activeOpacity={0.85}
+              onPress={() => setOpen(true)}
             >
-              <Image source={require("../../images/pin.png")} style={styles.rowIcon} resizeMode="contain" />
-              <Text style={styles.rowTextBold} numberOfLines={1}>
-                {selectedOptionLabel}
-              </Text>
-
-              <Image
-                source={require("../../images/options.png")}
-                style={[styles.caret, open && styles.caretOpen]}
-                resizeMode="contain"
-              />
+              <Ionicons name={selectedIcon} size={18} color="#000" />
             </TouchableOpacity>
-          )}
 
-          {open && (
-            <View style={styles.menu}>
-              {location.map((opt, index) => (
+            {/* Search bar */}
+            <TouchableOpacity
+              style={[
+                localStyles.searchBar,
+                { width: searchBarWidth, marginLeft: leftGap, marginRight: rightGap },
+              ]}
+              activeOpacity={0.9}
+              onPress={onOpenSearch}
+            >
+              <Ionicons name="search-outline" size={16} color="#71717A" />
+              <Text style={localStyles.searchPlaceholder}>{t("searchbranches")}</Text>
+            </TouchableOpacity>
+
+            {/* List button */}
+            <TouchableOpacity
+              style={localStyles.roundBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate("DiscoverList", { userCoord })}
+            >
+              <Ionicons name="list-outline" size={18} color="#000" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Dropdown mode: Location dropdown */}
+        {open && (
+          <>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => setOpen(false)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name={selectedIcon} size={20} color="#000" style={styles.rowIcon} />
+                <Text style={styles.rowTextBold} numberOfLines={1}>
+                  {selectedOptionLabel}
+                </Text>
+
+                <Ionicons
+                  name="chevron-up-outline"
+                  size={18}
+                  color="#000"
+                  style={styles.caret}
+                />
+              </TouchableOpacity>
+
+              <View style={styles.menu}>
+                {location.map((opt, index) => {
+                  return (
+                    <TouchableOpacity
+                      key={`${opt.label}-${index}`}
+                      style={styles.menuRow}
+                      onPress={() => {
+                        if (opt.label === "allAddresses") {
+                          setOpen(false);
+                          navigation.navigate("SavedLocations");
+                          return;
+                        }
+                        setOption(opt.label);
+                        setOpen(false);
+                        if (opt.coord) {
+                          cameraRef.current?.setCamera({
+                            centerCoordinate: opt.coord,
+                            zoomLevel: 14,
+                            animationDuration: 800,
+                          });
+                        }
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons
+                        name={getLocationIcon(opt.label, opt.isSaved)}
+                        size={20}
+                        color="#000"
+                        style={styles.rowIcon}
+                      />
+                      <Text style={styles.rowText} numberOfLines={1}>
+                        {opt.isSaved ? opt.label : t(opt.label)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
                 <TouchableOpacity
-                  key={`${opt.label}-${index}`}
                   style={styles.menuRow}
                   onPress={() => {
-                    if (opt.label === "allAddresses") {
-                      setOpen(false);
-                      navigation.navigate("SavedLocations");
-                      return;
-                    }
-                    setOption(opt.label);
-                    setOpen(false);
-                    if (opt.coord) {
-                      cameraRef.current?.setCamera({
-                        centerCoordinate: opt.coord,
-                        zoomLevel: 14,
-                        animationDuration: 800,
-                      });
-                    }
+                    locationRef.current?.expand();
                   }}
                   activeOpacity={0.85}
                 >
-                  <Image source={opt.image} style={styles.rowIcon} resizeMode="contain" />
+                  <Ionicons name="add-circle-outline" size={20} color="#000" style={styles.rowIcon} />
                   <Text style={styles.rowText} numberOfLines={1}>
-                    {opt.isSaved ? opt.label : t(opt.label)}
+                    {t("addLocation")}
                   </Text>
                 </TouchableOpacity>
-              ))}
+              </View>
+            </View>
 
+            <View style={[localStyles.openActions, { top: 0 }]}>
               <TouchableOpacity
-                style={styles.menuRow}
-                onPress={() => {
-                  locationRef.current?.expand();
-                }}
+                style={localStyles.roundBtn}
                 activeOpacity={0.85}
+                onPress={() => {
+                  setOpen(false);
+                  onOpenSearch();
+                }}
               >
-                <Text style={styles.plus}>+</Text>
-                <Text style={styles.rowText} numberOfLines={1}>
-                  {t("addLocation")}
-                </Text>
+                <Ionicons name="search-outline" size={18} color="#000" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={localStyles.roundBtn}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("DiscoverList", { userCoord })}
+              >
+                <Ionicons name="list-outline" size={18} color="#000" />
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-
-        <View style={styles.actionsRow} pointerEvents="auto">
-          {/* Search button - otvorí vyhľadávací sheet */}
-          {o && (
-            <TouchableOpacity
-              style={styles.roundBtn}
-              activeOpacity={0.85}
-              onPress={() => {
-                setOpen(false);
-                onOpenSearch();
-              }}
-            >
-              <Image source={require("../../images/search.png")} style={styles.actionBtnIcon} />
-            </TouchableOpacity>
-          )}
-
-          {/* List button - presmerovanie na zoznam pobočiek */}
-          {o && (
-            <TouchableOpacity
-              style={styles.roundBtn}
-              activeOpacity={0.85}
-              onPress={() => {
-                setOpen(false);
-                navigation.navigate("DiscoverList", { userCoord });
-              }}
-            >
-              <Image source={require("../../images/list.png")} style={styles.actionBtnIcon} />
-            </TouchableOpacity>
-          )}
-        </View>
+          </>
+        )}
       </View>
 
       {/* Centrovanie button - dole vpravo */}
@@ -149,7 +220,7 @@ export default function DiscoverTopControls({
               });
             }}
           >
-            <Image source={require("../../images/navigation.png")} style={styles.actionBtnIcon} />
+            <Ionicons name="navigate-outline" size={22} color="#000" />
           </TouchableOpacity>
         </View>
       )}
@@ -164,3 +235,66 @@ export default function DiscoverTopControls({
       </>
   );
 }
+
+const localStyles = StyleSheet.create({
+  topBarRow: {
+    flexBasis: "100%",
+    alignSelf: "center",
+    justifyContent: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    height: 42,
+  },
+  roundBtn: {
+    flexGrow: 0,
+    flexShrink: 0,
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 4,
+        }),
+  },
+  searchBar: {
+    minWidth: 0,
+    height: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 4,
+        }),
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#71717A",
+  },
+  openActions: {
+    position: "absolute",
+    right: 16,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+    zIndex: 3,
+  },
+});

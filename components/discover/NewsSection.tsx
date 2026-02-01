@@ -169,8 +169,8 @@ export function NewsSection({ title, branchImage }: Props) {
     const isCommenting = commentingOn === post.id;
     const postUserComments = userComments[post.id] || [];
     const totalComments = post.comments.length + postUserComments.length;
-
-    return (
+  
+  return (
       <View style={styles.postContainer}>
         {/* Header */}
         <View style={styles.header}>
@@ -187,7 +187,7 @@ export function NewsSection({ title, branchImage }: Props) {
           <TouchableOpacity style={styles.moreButton}>
             <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
           </TouchableOpacity>
-        </View>
+      </View>
 
         {/* Image */}
         <Image source={post.image} style={styles.postImage} />
@@ -203,7 +203,7 @@ export function NewsSection({ title, branchImage }: Props) {
               name={isLiked ? "heart" : "heart-outline"} 
               size={24} 
               color={isLiked ? "#EB8100" : "#000"} 
-            />
+      />
             <Text style={[styles.actionCount, isLiked && styles.actionCountActive]}>
               {likeCount}
             </Text>
@@ -235,7 +235,7 @@ export function NewsSection({ title, branchImage }: Props) {
             <Text style={styles.captionBold}>{title} </Text>
             {t(post.textKey)}
           </Text>
-        </View>
+      </View>
 
         {/* View all comments link */}
         {totalComments > 0 && !showComments && (
@@ -281,8 +281,8 @@ export function NewsSection({ title, branchImage }: Props) {
                         .map((n) => n[0])
                         .join("")
                         .toUpperCase()}
-                    </Text>
-                  </View>
+      </Text>
+    </View>
                   <View style={styles.commentNameContainer}>
                     <Text style={styles.commentName}>{comment.name}</Text>
                     <Text style={styles.commentTime}>{comment.timeAgo}</Text>
@@ -322,7 +322,7 @@ export function NewsSection({ title, branchImage }: Props) {
           </View>
         )}
       </View>
-    );
+  );
   }, [
     branchImage,
     commentText,

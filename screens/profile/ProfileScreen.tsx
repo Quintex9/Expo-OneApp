@@ -103,6 +103,15 @@ export default function ProfileScreen() {
           />
 
           <DropdownItem
+            icon="gift-outline"
+            label={t("Benefits")}
+            onPress={() => {
+              setMenuOpen(false);
+              navigation.navigate("Benefits");
+            }}
+          />
+
+          <DropdownItem
             icon="bookmark-outline"
             label={t("savedLocations")}
             onPress={() => {

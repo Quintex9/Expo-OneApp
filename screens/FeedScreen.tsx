@@ -3,6 +3,7 @@ import { View, StyleSheet, ImageBackground, Image, Text, TouchableOpacity, Platf
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import BranchCard from "../components/BranchCard";
 
@@ -137,46 +138,46 @@ const ReelItemComponent = memo(
         // Overlay content (shared between image and video)
         const OverlayContent = (
             <>
-                {/* Top bar - posunuta pod notch */}
-                <View style={[styles.topBar, { marginTop: insetsTop + 16 }]}>
-                    <View style={styles.card}>
-                        <TouchableOpacity style={styles.row} activeOpacity={0.85}>
-                            <Image source={require("../images/pin.png")} style={styles.rowIcon} resizeMode="contain" />
-                            <Text style={styles.rowTextBold} numberOfLines={1}>
+                    {/* Top bar - posunuta pod notch */}
+                    <View style={[styles.topBar, { marginTop: insetsTop + 16 }]}>
+                        <View style={styles.card}>
+                            <TouchableOpacity style={styles.row} activeOpacity={0.85}>
+                                <Ionicons name="location-outline" size={18} color="#000" />
+                                <Text style={styles.rowTextBold} numberOfLines={1}>
                                 {t("yourLocation")}
-                            </Text>
-                            <Image source={require("../images/options.png")} style={styles.caret} resizeMode="contain" />
+                                </Text>
+                                <Ionicons name="chevron-down-outline" size={16} color="#000" style={styles.caret} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Like/Share buttons */}
+                    <View style={[styles.actionsColumn, { bottom: actionsBottom }]}>
+                        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
+                            <Ionicons name="heart-outline" size={32} color="#fff" />
+                        <Text style={styles.actionLabel}>{t("like")}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
+                            <Ionicons name="share-social-outline" size={32} color="#fff" />
+                        <Text style={styles.actionLabel}>{t("share")}</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
 
-                {/* Like/Share buttons */}
-                <View style={[styles.actionsColumn, { bottom: actionsBottom }]}>
-                    <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
-                        <Image source={require("../images/feed/heart.png")} style={styles.actionIcon} resizeMode="contain" />
-                        <Text style={styles.actionLabel}>{t("like")}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
-                        <Image source={require("../images/feed/share.png")} style={styles.actionIcon} resizeMode="contain" />
-                        <Text style={styles.actionLabel}>{t("share")}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Branch card */}
-                <View
-                    style={[
-                        styles.branchCardWrap,
+                    {/* Branch card */}
+                    <View
+                        style={[
+                            styles.branchCardWrap,
                         { marginBottom: 16 },
-                    ]}
-                >
-                    <BranchCard
-                        title={item.branch.title}
-                        image={item.branch.image}
-                        rating={item.branch.rating}
-                        distance={item.branch.distance}
-                        hours={item.branch.hours}
-                        category={item.branch.category}
+                        ]}
+                    >
+                        <BranchCard
+                            title={item.branch.title}
+                            image={item.branch.image}
+                            rating={item.branch.rating}
+                            distance={item.branch.distance}
+                            hours={item.branch.hours}
+                            category={item.branch.category}
                         offers={translatedOffers}
                         badgePosition="inline"
                         badgeInlineOffset={16}
@@ -329,9 +330,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 10,
     },
-    rowIcon: { width: 18, height: 18 },
     rowTextBold: { flex: 1, fontWeight: "700" },
-    caret: { width: 16, height: 16, opacity: 0.7 },
+    caret: { opacity: 0.7 },
     actionsColumn: {
         position: "absolute",
         right: 16,
@@ -341,10 +341,6 @@ const styles = StyleSheet.create({
     actionBtn: {
         alignItems: "center",
         gap: 4,
-    },
-    actionIcon: {
-        width: 32,
-        height: 32,
     },
     actionLabel: {
         fontSize: 12,

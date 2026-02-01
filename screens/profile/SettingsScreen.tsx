@@ -72,6 +72,16 @@ export default function SettingsScreen() {
         />
       </View>
 
+      {/* BENEFITS */}
+      <Text style={styles.sectionTitle}>{t("Benefits")}</Text>
+      <View style={styles.card}>
+        <SettingsItem
+          icon="gift-outline"
+          label={t("myBenefits")}
+          onPress={() => navigation.navigate("Benefits")}
+        />
+      </View>
+
       {/* NASTAVENIA */}
       <Text style={styles.sectionTitle}>{t("appSettings")}</Text>
       <View style={styles.card}>

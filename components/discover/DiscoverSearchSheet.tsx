@@ -11,9 +11,10 @@
  */
 
 import React, { memo, useCallback } from "react";
-import { FlatList, Image, View, StyleSheet, Text } from "react-native";
+import { FlatList, View, StyleSheet, Text } from "react-native";
 import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import BranchCard from "../BranchCard";
 import { styles } from "./discoverStyles";
 import type { DiscoverSearchSheetProps, BranchCardProps } from "../../lib/interfaces";
@@ -56,9 +57,9 @@ function DiscoverSearchSheet({
       {/* Header */}
       <View style={styles.searchSheetHeader}>
         <TouchableOpacity style={styles.searchLocationChip} activeOpacity={0.9}>
-          <Image source={require("../../images/pin.png")} style={styles.searchLocationIcon} />
+          <Ionicons name="location-outline" size={18} color="#000" />
           <Text style={styles.searchLocationText}>{t("yourLocation")}</Text>
-          <Image source={require("../../images/options.png")} style={styles.searchLocationCaret} />
+          <Ionicons name="chevron-down-outline" size={16} color="#000" style={{ opacity: 0.7 }} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onSheetChange(-1)} activeOpacity={0.8}>
           <Text style={styles.searchCancelText}>{t("cancel")}</Text>
@@ -67,7 +68,7 @@ function DiscoverSearchSheet({
 
       {/* Vyhľadávacie pole */}
       <View style={styles.searchInputWrapper}>
-        <Image source={require("../../images/search.png")} style={styles.searchIcon} />
+        <Ionicons name="search-outline" size={18} color="#9CA3AF" style={styles.searchIcon} />
         <TextInput
           value={text}
           onChangeText={setText}
@@ -81,7 +82,7 @@ function DiscoverSearchSheet({
             style={styles.searchClearButton}
             activeOpacity={0.8}
           >
-            <Image source={require("../../images/searchclose.png")} style={styles.searchClearIcon} />
+            <Ionicons name="close-circle" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         )}
       </View>

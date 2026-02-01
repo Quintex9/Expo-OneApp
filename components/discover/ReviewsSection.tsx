@@ -154,38 +154,38 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
               {/* CUSTOMER ROW */}
               <View style={styles.customerRow}>
                 <View style={styles.customerProfile}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {r.name
-                        .split(" ")
-                        .map((n) => n[0])
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {r.name
+                  .split(" ")
+                  .map((n) => n[0])
                         .join("")
                         .toUpperCase()}
-                    </Text>
-                  </View>
+              </Text>
+            </View>
                   <View style={styles.nameContainer}>
-                    <Text style={styles.name}>{r.name}</Text>
+              <Text style={styles.name}>{r.name}</Text>
                     <Text style={styles.time}>{t("daysAgo", { count: r.daysAgo })}</Text>
                   </View>
                 </View>
 
-                <View style={styles.reviewStars}>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Ionicons
-                      key={i}
+              <View style={styles.reviewStars}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Ionicons
+                    key={i}
                       name="star"
                       size={13}
                       color={i <= r.rating ? "#FFD000" : "rgba(0,0,0,0.3)"}
-                    />
-                  ))}
-                </View>
+                  />
+                ))}
               </View>
+            </View>
 
               {/* REVIEW TEXT */}
-              <Text style={styles.text}>{r.text}</Text>
+          <Text style={styles.text}>{r.text}</Text>
 
               {/* ACTIONS */}
-              <View style={styles.actions}>
+          <View style={styles.actions}>
                 <TouchableOpacity 
                   style={styles.action}
                   onPress={() => handleLike(r.id)}
@@ -199,7 +199,7 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
                   <Text style={[styles.actionText, isLiked && styles.actionTextActive]}>
                     {likeCount}
                   </Text>
-                </TouchableOpacity>
+            </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={styles.action}
@@ -214,7 +214,7 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
                   <Text style={[styles.actionText, isReplying && styles.actionTextActive]}>
                     {commentCount}
                   </Text>
-                </TouchableOpacity>
+            </TouchableOpacity>
               </View>
 
               {/* COMMENTS */}
@@ -235,9 +235,9 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
                           </Text>
                         </View>
                         <Text style={styles.commentText}>{comment.text}</Text>
-                      </View>
-                    </View>
-                  ))}
+          </View>
+        </View>
+      ))}
                 </View>
               )}
 
@@ -276,8 +276,8 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
       {/* LOAD MORE */}
       {hasMore && (
         <TouchableOpacity style={styles.loadMore} onPress={handleLoadMore}>
-          <Text style={styles.loadMoreText}>{t("loadMoreReviews")}</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadMoreText}>{t("loadMoreReviews")}</Text>
+      </TouchableOpacity>
       )}
 
       {/* ADD REVIEW MODAL */}
@@ -293,16 +293,11 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderRadius: 20,
+    padding: 16,
     borderWidth: 0.5,
     borderColor: "#E4E4E7",
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
   },
 
   header: {
