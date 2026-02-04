@@ -279,5 +279,14 @@
   "offer_firstMonthFree": "First month free",
   "offer_personalTrainer": "Personal trainer session",
   "offer_discount25Weekend": "25% weekend discount",
-  "offer_freeTowel": "Free towel service"
+  "offer_freeTowel": "Free towel service",
+  "yourCards": "Your Cards",
+  "addNewCard": "Add New Card",
+  "nearestToYou": "Nearest To You",
+  "search": "Search",
+  "showAll": "Show All",
+  "allCards": "All Cards ({{count}})",
+  "alphabetically": "Alphabetically",
+  "fromLatest": "From the latest",
+  "custom": "Custom"
 }

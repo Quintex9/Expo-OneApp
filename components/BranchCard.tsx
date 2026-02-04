@@ -40,6 +40,7 @@ function BranchCard(props: BranchCardProps) {
     cardPaddingBottom,
     badgePosition,
     badgeInlineOffset,
+    badgeRowOffset,
     address,
     phone,
     email,
@@ -70,9 +71,10 @@ function BranchCard(props: BranchCardProps) {
   );
   const cardRadius = useMemo(() => Math.round(14 * scale), [scale]);
   const imageRadius = useMemo(() => Math.round(6 * scale), [scale]);
-  const titleSize = useMemo(() => Math.round(14 * scale), [scale]);
-  const metaSize = useMemo(() => Math.round(12 * scale), [scale]);
-  const badgeFontSize = useMemo(() => Math.round(9 * scale), [scale]);
+  const fontBoost = 1;
+  const titleSize = useMemo(() => Math.round(14 * scale) + fontBoost, [scale]);
+  const metaSize = useMemo(() => Math.round(12 * scale) + fontBoost, [scale]);
+  const badgeFontSize = useMemo(() => Math.round(10 * scale) + fontBoost, [scale]);
   const badgePaddingH = useMemo(() => Math.round(12 * scale), [scale]);
   const badgePaddingV = useMemo(() => Math.round(4 * scale), [scale]);
   const badgeGap = useMemo(() => Math.round(8 * scale), [scale]);
@@ -80,6 +82,10 @@ function BranchCard(props: BranchCardProps) {
     if (typeof badgeInlineOffset !== "number") return null;
     return Math.round(badgeInlineOffset * scale);
   }, [badgeInlineOffset, scale]);
+  const badgeRowOffsetScaled = useMemo(() => {
+    if (typeof badgeRowOffset !== "number") return null;
+    return Math.round(badgeRowOffset * scale);
+  }, [badgeRowOffset, scale]);
 
   const resolvedOffers = useMemo(() => {
     if (offers && offers.length > 0) return offers;
@@ -189,12 +195,13 @@ function BranchCard(props: BranchCardProps) {
               { gap: badgeGap },
               inlineBadges && styles.badgeRowInline,
               inlineBadges && badgeInlineOffsetScaled !== null && { marginTop: badgeInlineOffsetScaled },
+              !inlineBadges && badgeRowOffsetScaled !== null && { marginTop: badgeRowOffsetScaled },
             ]}
           >
             {resolvedOffers[0] ? (
               <View style={[styles.badge, { paddingHorizontal: badgePaddingH, paddingVertical: badgePaddingV }]}>
                 <Text style={[styles.badgeText, { fontSize: badgeFontSize }]} numberOfLines={1}>
-                  {resolvedOffers[0]}
+                  {t(resolvedOffers[0])}
                 </Text>
               </View>
             ) : null}

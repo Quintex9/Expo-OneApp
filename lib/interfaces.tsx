@@ -56,6 +56,7 @@ export interface BranchCardProps extends BranchData {
   cardPaddingBottom?: number;
   badgePosition?: "bottom" | "inline";
   badgeInlineOffset?: number;
+  badgeRowOffset?: number;
 }
 
 export interface DiscoverMapMarker {

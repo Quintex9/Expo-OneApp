@@ -77,6 +77,7 @@ export default function ShowMoreScreen() {
         phone={item.phone}
         email={item.email}
         website={item.website}
+        badgeRowOffset={-4}
       />
     </View>
   );

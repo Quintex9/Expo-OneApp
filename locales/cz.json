@@ -278,5 +278,14 @@
   "offer_firstMonthFree": "První měsíc zdarma",
   "offer_personalTrainer": "Trénink s osobním trenérem",
   "offer_discount25Weekend": "25% víkendová sleva",
-  "offer_freeTowel": "Ručník zdarma"
+  "offer_freeTowel": "Ručník zdarma",
+  "yourCards": "Vaše karty",
+  "addNewCard": "Přidat novou kartu",
+  "nearestToYou": "Nejbližší k vám",
+  "search": "Hledat",
+  "showAll": "Zobrazit vše",
+  "allCards": "Všechny karty ({{count}})",
+  "alphabetically": "Abecedně",
+  "fromLatest": "Od nejnovějších",
+  "custom": "Vlastní"
 }

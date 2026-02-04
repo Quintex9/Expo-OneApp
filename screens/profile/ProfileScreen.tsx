@@ -222,6 +222,7 @@ export default function ProfileScreen() {
             discount={t("offer_discount20")}
             offers={[t("offer_discount20"), t("offer_freeEntryFriend")]}
             moreCount={2}
+            badgeRowOffset={-4}
             address="Chrenovská 16, Nitra"
             phone="+421 903 776 925"
             email="info@365gym.sk"
@@ -240,6 +241,7 @@ export default function ProfileScreen() {
             discount={t("offer_discount15Today")}
             offers={[t("offer_discount15Today"), t("offer_twoForOne")]}
             moreCount={3}
+            badgeRowOffset={-4}
             address="Trieda Andreja Hlinku 3, Nitra"
             phone="+421 911 222 333"
             email="info@redroyal.sk"
@@ -258,6 +260,7 @@ export default function ProfileScreen() {
             discount={t("offer_firstMonthFree")}
             offers={[t("offer_firstMonthFree"), t("offer_personalTrainer")]}
             moreCount={5}
+            badgeRowOffset={-4}
             address="Mostná 42, Nitra"
             phone="+421 904 555 666"
             email="kontakt@gymklub.sk"

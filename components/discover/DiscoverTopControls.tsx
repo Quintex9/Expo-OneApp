@@ -53,7 +53,7 @@ export default function DiscoverTopControls({
     [option, selectedOption]
   );
   const topBarWidth = useMemo(
-    () => Math.min(screenWidth - 24, 380),
+    () => Math.max(0, screenWidth - 32),
     [screenWidth]
   );
   const { leftGap, rightGap, searchBarWidth } = useMemo(() => {
@@ -64,8 +64,10 @@ export default function DiscoverTopControls({
       maxSearch < minSearch
         ? Math.max(0, Math.floor((topBarWidth - 84 - minSearch) / 2))
         : baseGap;
-    const width = Math.max(0, topBarWidth - 84 - resolvedGap * 2);
-    return { leftGap: resolvedGap, rightGap: resolvedGap, searchBarWidth: width };
+    const left = resolvedGap;
+    const right = resolvedGap;
+    const width = Math.max(0, topBarWidth - 84 - left - right);
+    return { leftGap: left, rightGap: right, searchBarWidth: width };
   }, [screenWidth, topBarWidth]);
   return (
     <>
@@ -74,37 +76,39 @@ export default function DiscoverTopControls({
 
         {/* Default mode: Location icon | Search bar | List icon */}
         {o && !open && (
-          <View style={[localStyles.topBarRow, { width: topBarWidth }]}>
-            {/* Location button */}
-            <TouchableOpacity
-              style={localStyles.roundBtn}
-              activeOpacity={0.85}
-              onPress={() => setOpen(true)}
-            >
-              <Ionicons name={selectedIcon} size={18} color="#000" />
-            </TouchableOpacity>
+          <View style={localStyles.topBarRowWrap}>
+            <View style={[localStyles.topBarRow, { width: topBarWidth }]}>
+              {/* Location button */}
+              <TouchableOpacity
+                style={localStyles.roundBtn}
+                activeOpacity={0.85}
+                onPress={() => setOpen(true)}
+              >
+                <Ionicons name={selectedIcon} size={18} color="#000" />
+              </TouchableOpacity>
 
-            {/* Search bar */}
-            <TouchableOpacity
-              style={[
-                localStyles.searchBar,
-                { width: searchBarWidth, marginLeft: leftGap, marginRight: rightGap },
-              ]}
-              activeOpacity={0.9}
-              onPress={onOpenSearch}
-            >
-              <Ionicons name="search-outline" size={16} color="#71717A" />
-              <Text style={localStyles.searchPlaceholder}>{t("searchbranches")}</Text>
-            </TouchableOpacity>
+              {/* Search bar */}
+              <TouchableOpacity
+                style={[
+                  localStyles.searchBar,
+                  { width: searchBarWidth, marginLeft: leftGap, marginRight: rightGap },
+                ]}
+                activeOpacity={0.9}
+                onPress={onOpenSearch}
+              >
+                <Ionicons name="search-outline" size={16} color="#71717A" />
+                <Text style={localStyles.searchPlaceholder}>{t("searchbranches")}</Text>
+              </TouchableOpacity>
 
-            {/* List button */}
-            <TouchableOpacity
-              style={localStyles.roundBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate("DiscoverList", { userCoord })}
-            >
-              <Ionicons name="list-outline" size={18} color="#000" />
-            </TouchableOpacity>
+              {/* List button */}
+              <TouchableOpacity
+                style={localStyles.roundBtn}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate("DiscoverList", { userCoord })}
+              >
+                <Ionicons name="list-outline" size={18} color="#000" />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -237,6 +241,10 @@ export default function DiscoverTopControls({
 }
 
 const localStyles = StyleSheet.create({
+  topBarRowWrap: {
+    width: "100%",
+    alignItems: "center",
+  },
   topBarRow: {
     flexBasis: "100%",
     alignSelf: "center",

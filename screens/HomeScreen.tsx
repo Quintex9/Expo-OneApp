@@ -100,10 +100,6 @@ export default function HomeScreen() {
     () => Math.min(230, Math.max(200, Math.floor(availableWidth * 0.58))),
     [availableWidth]
   );
-  const peekWidth = useMemo(
-    () => Math.max(0, availableWidth - cardWidth - cardGap),
-    [availableWidth, cardWidth, cardGap]
-  );
 
   const renderService = useCallback(
     ({ item }: { item: BranchData }) => {
@@ -177,7 +173,7 @@ export default function HomeScreen() {
           keyExtractor={keyExtractor}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.servicesRow, { paddingRight: sidePadding + peekWidth }]}
+          contentContainerStyle={styles.servicesRow}
           ItemSeparatorComponent={sectionItemSeparator}
           snapToInterval={cardWidth + cardGap}
           snapToAlignment="start"
@@ -199,7 +195,6 @@ export default function HomeScreen() {
       cardWidth,
       handleShowMore,
       keyExtractor,
-      peekWidth,
       renderService,
       sectionItemSeparator,
       sidePadding,
@@ -301,12 +296,12 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
   sectionMore: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: "#7C7C7C",
   },
   servicesRow: {
-    paddingRight: 16,
+    paddingRight: 0,
   },
   serviceCard: {
     gap: 6,
@@ -355,7 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EB8100",
   },
   serviceBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
     color: "#FFFFFF",
   },

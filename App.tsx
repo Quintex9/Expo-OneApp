@@ -22,6 +22,8 @@ import EditLocationScreen from "./screens/profile/EditLocationScreen";
 import DiscoverScreen from "./screens/DiscoverScreen";
 import DiscoverListScreen from "./screens/DiscoverListScreen";
 import ShowMoreScreen from "./screens/ShowMoreScreen";
+import QRScreen from "./screens/QRScreen";
+import LoyaltyCardDetailScreen from "./screens/LoyaltyCardDetailScreen";
 
 import { TextEncoder, TextDecoder } from "text-encoding";
 import { useFonts } from "expo-font";
@@ -180,6 +182,18 @@ export default function App() {
               <Stack.Screen name="DiscoverList" component={DiscoverListScreen} />
               <Stack.Screen name="ShowMore" component={ShowMoreScreen} />
               <Stack.Screen name="EditLocation" component={EditLocationScreen}/>
+              <Stack.Screen 
+                name="QRModal" 
+                component={QRScreen}
+                options={{ 
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom'
+                }}
+              />
+              <Stack.Screen 
+                name="LoyaltyCardDetail" 
+                component={LoyaltyCardDetailScreen}
+              />
             </Stack.Navigator>
           </NavigationContainer>
         </AuthProvider>

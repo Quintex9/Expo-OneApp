@@ -297,6 +297,7 @@ export default function DiscoverListScreen() {
         discount={item.discount}
         offers={item.offers}
         moreCount={item.moreCount}
+        badgeRowOffset={-4}
       />
     ),
     []

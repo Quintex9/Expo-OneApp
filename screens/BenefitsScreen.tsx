@@ -28,6 +28,8 @@ export default function BenefitsScreen() {
   const navigation = useNavigation();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const horizontalPadding = Math.min(24, Math.max(16, Math.round(screenWidth * 0.06)));
+  const contentMaxWidth = 560;
   const qrPadding = 32;
   const qrSize = Math.max(180, Math.floor(Math.min(280, screenWidth - 64 - qrPadding * 2)));
 
@@ -97,128 +99,137 @@ export default function BenefitsScreen() {
   const isActivated = actualTab === "Activated";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom", "left", "right"]}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t("myBenefits")}</Text>
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{benefits.length}</Text>
-            <Text style={styles.statLabel}>{t("active")}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>{t("claimed")}</Text>
-          </View>
-        </View>
-
-        {/* Segmented Control */}
-        <View style={styles.segmented}>
-          <TouchableOpacity
-            onPress={() => setActualTab("Activated")}
-            style={[styles.segmentButton, isActivated && styles.segmentButtonActive]}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={16}
-              color={isActivated ? "#FFF" : "#9CA3AF"}
-              style={styles.segmentIcon}
-            />
-            <Text style={[styles.segmentText, isActivated && styles.segmentTextActive]}>
-              {t("activated")}
+        <View
+          style={[
+            styles.contentInner,
+            { maxWidth: contentMaxWidth, paddingHorizontal: horizontalPadding },
+          ]}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
+            </TouchableOpacity>
+            <Text style={styles.title} numberOfLines={1}>
+              {t("myBenefits")}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActualTab("Claimed")}
-            style={[styles.segmentButton, !isActivated && styles.segmentButtonActive]}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name="time"
-              size={16}
-              color={!isActivated ? "#FFF" : "#9CA3AF"}
-              style={styles.segmentIcon}
-            />
-            <Text style={[styles.segmentText, !isActivated && styles.segmentTextActive]}>
-              {t("claimed")}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
 
-        {/* Benefits List */}
-        <View style={styles.benefitsList}>
-          {benefits.map((benefit) => {
-            const shouldPulse = isActivated && lastClickedBenefitId === benefit.id;
-            return (
-              <Animated.View
-                key={benefit.id}
-                style={[
-                  styles.benefitCard,
-                  shouldPulse && { transform: [{ scale: pulseAnim }] },
-                ]}
-              >
-                {/* Discount Badge */}
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>{benefit.discount}</Text>
-                </View>
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{benefits.length}</Text>
+              <Text style={styles.statLabel}>{t("active")}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statLabel}>{t("claimed")}</Text>
+            </View>
+          </View>
 
-                {/* Icon */}
-                <View style={styles.benefitIconWrap}>
-                  <Ionicons name={benefit.icon} size={28} color={colors.primary} />
-                </View>
+          {/* Segmented Control */}
+          <View style={styles.segmented}>
+            <TouchableOpacity
+              onPress={() => setActualTab("Activated")}
+              style={[styles.segmentButton, isActivated && styles.segmentButtonActive]}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={isActivated ? "#FFF" : "#9CA3AF"}
+                style={styles.segmentIcon}
+              />
+              <Text style={[styles.segmentText, isActivated && styles.segmentTextActive]} numberOfLines={1}>
+                {t("activated")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActualTab("Claimed")}
+              style={[styles.segmentButton, !isActivated && styles.segmentButtonActive]}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="time"
+                size={16}
+                color={!isActivated ? "#FFF" : "#9CA3AF"}
+                style={styles.segmentIcon}
+              />
+              <Text style={[styles.segmentText, !isActivated && styles.segmentTextActive]} numberOfLines={1}>
+                {t("claimed")}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-                {/* Content */}
-                <View style={styles.benefitContent}>
-                  <Text style={styles.benefitTitle}>{benefit.title}</Text>
-                  <Text style={styles.benefitDesc}>{benefit.description}</Text>
-                </View>
-
-                {/* Action */}
-                <TouchableOpacity
-                  onPress={() => {
-                    setLastClickedBenefitId(benefit.id);
-                    setQrVisible(true);
-                  }}
-                  disabled={!isActivated}
-                  style={[styles.primaryButton, !isActivated && styles.primaryButtonDisabled]}
-                  activeOpacity={0.85}
+          {/* Benefits List */}
+          <View style={styles.benefitsList}>
+            {benefits.map((benefit) => {
+              const shouldPulse = isActivated && lastClickedBenefitId === benefit.id;
+              return (
+                <Animated.View
+                  key={benefit.id}
+                  style={[
+                    styles.benefitCard,
+                    shouldPulse && { transform: [{ scale: pulseAnim }] },
+                  ]}
                 >
-                  <Ionicons
-                    name={isActivated ? "qr-code" : "checkmark-done"}
-                    size={18}
-                    color={isActivated ? "#FFF" : "#9CA3AF"}
-                    style={styles.buttonIcon}
-                  />
-                  <Text
-                    style={[styles.primaryButtonText, !isActivated && styles.primaryButtonTextDisabled]}
-                  >
-                    {isActivated ? t("showQR") : t("claimed")}
-                  </Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
-        </View>
+                  {/* Discount Badge */}
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountText}>{benefit.discount}</Text>
+                  </View>
 
-        {/* Empty State for Claimed */}
-        {!isActivated && (
-          <View style={styles.emptyState}>
-            <Ionicons name="gift" size={48} color="#E4E4E7" />
-            <Text style={styles.emptyText}>{t("noClaimed")}</Text>
+                  {/* Icon */}
+                  <View style={styles.benefitIconWrap}>
+                    <Ionicons name={benefit.icon} size={28} color={colors.primary} />
+                  </View>
+
+                  {/* Content */}
+                  <View style={styles.benefitContent}>
+                    <Text style={styles.benefitTitle}>{benefit.title}</Text>
+                    <Text style={styles.benefitDesc}>{benefit.description}</Text>
+                  </View>
+
+                  {/* Action */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setLastClickedBenefitId(benefit.id);
+                      setQrVisible(true);
+                    }}
+                    disabled={!isActivated}
+                    style={[styles.primaryButton, !isActivated && styles.primaryButtonDisabled]}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name={isActivated ? "qr-code" : "checkmark-done"}
+                      size={18}
+                      color={isActivated ? "#FFF" : "#9CA3AF"}
+                      style={styles.buttonIcon}
+                    />
+                    <Text
+                      style={[styles.primaryButtonText, !isActivated && styles.primaryButtonTextDisabled]}
+                    >
+                      {isActivated ? t("showQR") : t("claimed")}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
           </View>
-        )}
+
+          {/* Empty State for Claimed */}
+          {!isActivated && (
+            <View style={styles.emptyState}>
+              <Ionicons name="gift" size={48} color="#E4E4E7" />
+              <Text style={styles.emptyText}>{t("noClaimed")}</Text>
+            </View>
+          )}
+        </View>
 
         {/* QR Modal */}
         <Modal visible={qrVisible} transparent animationType="fade">
@@ -282,7 +293,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 16,
+  },
+  contentInner: {
+    width: "100%",
+    alignSelf: "center",
   },
   header: {
     flexDirection: "row",
@@ -295,6 +309,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#000",
+    flex: 1,
+    flexShrink: 1,
   },
   statsRow: {
     flexDirection: "row",
@@ -364,6 +380,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   benefitCard: {
+    width: "100%",
     padding: 20,
     borderRadius: 20,
     backgroundColor: "#FFFFFF",

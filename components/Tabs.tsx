@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import CustomTabBar from "./CustomTabBar";
 
 import HomeScreen from "../screens/HomeScreen";
-import QRScreen from "../screens/QRScreen";
+import CardsStack from "./CardsStack";
 import FeedScreen from "../screens/FeedScreen";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
@@ -23,7 +23,7 @@ export default function Tabs() {
       <Tab.Screen name={t("Cards")}>
         {() => (
           <ProtectedRoute>
-            <QRScreen />
+            <CardsStack />
           </ProtectedRoute>
         )}
       </Tab.Screen>

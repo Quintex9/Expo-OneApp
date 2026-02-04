@@ -278,5 +278,14 @@
   "offer_firstMonthFree": "Prvý mesiac zadarmo",
   "offer_personalTrainer": "Tréning s osobným trénerom",
   "offer_discount25Weekend": "25% víkendová zľava",
-  "offer_freeTowel": "Uterák zadarmo"
+  "offer_freeTowel": "Uterák zadarmo",
+  "yourCards": "Vaše karty",
+  "addNewCard": "Pridať novú kartu",
+  "nearestToYou": "Najbližšie k vám",
+  "search": "Hľadať",
+  "showAll": "Zobraziť všetko",
+  "allCards": "Všetky karty ({{count}})",
+  "alphabetically": "Abecedne",
+  "fromLatest": "Od najnovších",
+  "custom": "Vlastné"
 }

@@ -61,6 +61,8 @@ function DiscoverBranchOverlay({
     [sideInset]
   );
 
+  const initialScrollIndex = branches.length > 1 ? 1 : undefined;
+
   // === MEMOIZOVANÉ FUNKCIE PRE FLATLIST ===
 
   /**
@@ -142,6 +144,7 @@ function DiscoverBranchOverlay({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={listContentStyle}
         ItemSeparatorComponent={renderSeparator}
+        initialScrollIndex={initialScrollIndex}
         snapToInterval={branchCardWidth + cardGap}
         snapToAlignment="start"
         decelerationRate="fast"          // rýchle zastavenie
