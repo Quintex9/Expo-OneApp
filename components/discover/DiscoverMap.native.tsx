@@ -149,6 +149,19 @@ const getPixelDistanceSq = (
 const clampNumber = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
+const isFiniteCoordinate = (latitude: number, longitude: number) => {
+  return Number.isFinite(latitude) && Number.isFinite(longitude);
+};
+
+const isValidRegion = (region: Region) => {
+  return (
+    Number.isFinite(region.latitude) &&
+    Number.isFinite(region.longitude) &&
+    Number.isFinite(region.latitudeDelta) &&
+    Number.isFinite(region.longitudeDelta)
+  );
+};
+
 const getTooltipCategoryIcon = (
   category?: DiscoverMapMarker["category"]
 ): keyof typeof Ionicons.glyphMap => {
@@ -997,8 +1010,15 @@ function DiscoverMap({
 
   const handleRegionChange = useCallback(
     (region: Region) => {
+      if (!isValidRegion(region)) {
+        return;
+      }
+
       const nextCenter: [number, number] = [region.longitude, region.latitude];
       const nextZoom = regionToZoom(region);
+      if (!isFiniteCoordinate(nextCenter[1], nextCenter[0]) || !Number.isFinite(nextZoom)) {
+        return;
+      }
 
       if (!didSyncInitialRegionRef.current) {
         didSyncInitialRegionRef.current = true;
@@ -1017,9 +1037,19 @@ function DiscoverMap({
 
   const handleRegionChangeComplete = useCallback(
     (region: Region, details?: { isGesture?: boolean }) => {
+      if (!isValidRegion(region)) {
+        scheduleGestureRelease();
+        return;
+      }
+
       const isUserGesture = Boolean(details?.isGesture ?? gestureRef.current);
       const nextCenter: [number, number] = [region.longitude, region.latitude];
       const nextZoom = regionToZoom(region);
+      if (!isFiniteCoordinate(nextCenter[1], nextCenter[0]) || !Number.isFinite(nextZoom)) {
+        scheduleGestureRelease();
+        return;
+      }
+
       applyRenderCamera(nextCenter, nextZoom);
       scheduleGestureRelease();
       onCameraChanged(
@@ -1057,6 +1087,14 @@ function DiscoverMap({
   const handleMarkerPress = useCallback(
     (marker: RenderMarker) => {
       if (marker.id === USER_MARKER_ID) {
+        return;
+      }
+      if (
+        !isFiniteCoordinate(
+          marker.focusCoordinate.latitude,
+          marker.focusCoordinate.longitude
+        )
+      ) {
         return;
       }
 
@@ -1214,7 +1252,11 @@ function DiscoverMap({
         customMapStyle={Platform.OS === "android" ? GOOGLE_MAP_STYLE : undefined}
         showsPointsOfInterest={Platform.OS === "ios" ? false : undefined}
       >
-        {renderMarkers.map((marker) => (
+        {renderMarkers
+          .filter((marker) =>
+            isFiniteCoordinate(marker.coordinate.latitude, marker.coordinate.longitude)
+          )
+          .map((marker) => (
           <Marker
             key={marker.key}
             identifier={marker.key}

@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
+import { AUTH_GUARD_ENABLED } from '../lib/constants/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,6 +15,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const hasRedirected = useRef(false);
 
   useEffect(() => {
+    if (!AUTH_GUARD_ENABLED) {
+      return;
+    }
+
     if (!loading && !user && !hasRedirected.current) {
       hasRedirected.current = true;
       navigation.replace('Login');
@@ -23,8 +28,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (user) {
       hasRedirected.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading]);
+  }, [user, loading, navigation]);
+
+  // Temporary bypass for testing without login.
+  if (!AUTH_GUARD_ENABLED) {
+    return <>{children}</>;
+  }
 
   // Zobraz loading indikátor počas načítavania
   if (loading) {

@@ -12,6 +12,10 @@ type MapCameraOptions = {
 const MIN_ZOOM = 0;
 const MAX_ZOOM = 20;
 const MIN_DELTA = 0.00001;
+const MIN_LATITUDE = -85;
+const MAX_LATITUDE = 85;
+const MIN_LONGITUDE = -180;
+const MAX_LONGITUDE = 180;
 
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value));
@@ -30,6 +34,12 @@ export const zoomToRegion = (
   zoom: number,
   aspectRatio: number = getDefaultAspectRatio()
 ): Region => {
+  const longitude = Number.isFinite(center?.[0])
+    ? clamp(center[0], MIN_LONGITUDE, MAX_LONGITUDE)
+    : 0;
+  const latitude = Number.isFinite(center?.[1])
+    ? clamp(center[1], MIN_LATITUDE, MAX_LATITUDE)
+    : 0;
   const normalizedZoom = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
   const longitudeDelta = 360 / Math.pow(2, normalizedZoom);
   const safeAspectRatio =
@@ -37,8 +47,8 @@ export const zoomToRegion = (
   const latitudeDelta = longitudeDelta * safeAspectRatio;
 
   return {
-    latitude: center[1],
-    longitude: center[0],
+    latitude,
+    longitude,
     latitudeDelta: Math.max(MIN_DELTA, latitudeDelta),
     longitudeDelta: Math.max(MIN_DELTA, longitudeDelta),
   };
@@ -60,6 +70,15 @@ export const setMapCamera = (ref: MapViewRef, options: MapCameraOptions) => {
   if (!view) return;
 
   const { center, zoom, durationMs = 500, aspectRatio } = options;
+  if (
+    !Array.isArray(center) ||
+    center.length !== 2 ||
+    !Number.isFinite(center[0]) ||
+    !Number.isFinite(center[1]) ||
+    !Number.isFinite(zoom)
+  ) {
+    return;
+  }
   const region = zoomToRegion(center, zoom, aspectRatio);
   const animationDuration = durationMs > 0 ? durationMs : 0;
 

@@ -11,6 +11,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import BottomSheet from "@gorhom/bottom-sheet";
+import {
+    PanGestureHandler,
+    State,
+    type PanGestureHandlerStateChangeEvent,
+} from "react-native-gesture-handler";
 import { useTranslation } from "react-i18next";
 
 import { HeroCarousel } from "../components/discover/HeroCarousel";
@@ -24,6 +29,7 @@ import { InfoSection } from "../components/discover/InfoSection";
 import { ReviewsSection } from "../components/discover/ReviewsSection";
 import { normalizeBranch } from "../lib/data/normalizers";
 import { useAuth } from "../lib/AuthContext";
+import { AUTH_GUARD_ENABLED } from "../lib/constants/auth";
 
 export default function BusinessDetailScreen() {
     const navigation = useNavigation<any>();
@@ -307,26 +313,69 @@ export default function BusinessDetailScreen() {
         []
     );
 
+    const moveToAdjacentTab = useCallback(
+        (direction: -1 | 1) => {
+            setActiveTab((prev) => {
+                const currentIndex = menu.indexOf(prev);
+                if (currentIndex === -1) {
+                    return prev;
+                }
+                const nextIndex = currentIndex + direction;
+                if (nextIndex < 0 || nextIndex >= menu.length) {
+                    return prev;
+                }
+                return menu[nextIndex];
+            });
+        },
+        [menu]
+    );
+
+    const handleTabSwipeStateChange = useCallback(
+        (event: PanGestureHandlerStateChangeEvent) => {
+            const { state, translationX, translationY, velocityX } = event.nativeEvent;
+            if (state !== State.END) {
+                return;
+            }
+
+            // React only to intentional horizontal swipes.
+            if (Math.abs(translationX) <= Math.abs(translationY)) {
+                return;
+            }
+
+            const swipeDistance = Math.abs(translationX);
+            const swipeVelocity = Math.abs(velocityX);
+            if (swipeDistance < 40 && swipeVelocity < 450) {
+                return;
+            }
+
+            if (translationX < 0) {
+                moveToAdjacentTab(1);
+                return;
+            }
+            moveToAdjacentTab(-1);
+        },
+        [moveToAdjacentTab]
+    );
+
     const handleActivateBenefit = useCallback(() => {
-        if (user) {
+        if (!AUTH_GUARD_ENABLED || user) {
             navigation.navigate("Benefits");
-        } else {
-            sheetRef.current?.expand();
+            return;
         }
+        sheetRef.current?.expand();
     }, [user, navigation]);
 
     const handleQrPress = useCallback(() => {
-        if (user) {
+        if (!AUTH_GUARD_ENABLED || user) {
             navigation.navigate("Benefits");
-        } else {
-            navigation.navigate("Login");
+            return;
         }
+        navigation.navigate("Login");
     }, [user, navigation]);
 
-    const handleLogin = useCallback(
-        () => navigation.navigate("Login"),
-        [navigation]
-    );
+    const handleLogin = useCallback(() => {
+        navigation.navigate(AUTH_GUARD_ENABLED ? "Login" : "Benefits");
+    }, [navigation]);
 
     const handleSnap = useCallback(() => {
         if (snapOffset <= 0) return;
@@ -459,40 +508,45 @@ export default function BusinessDetailScreen() {
                     />
                 </View>
 
-                <View style={sectionWrapperStyle}>
-                {activeTab === "news" && (
-                    <NewsSection title={safeBranch.title} branchImage={safeBranch.image} />
-                )}
+                <PanGestureHandler
+                    onHandlerStateChange={handleTabSwipeStateChange}
+                    activeOffsetX={[-24, 24]}
+                    failOffsetY={[-12, 12]}
+                >
+                    <View style={sectionWrapperStyle}>
+                        {activeTab === "news" && (
+                            <NewsSection title={safeBranch.title} branchImage={safeBranch.image} />
+                        )}
 
-                {activeTab === "benefits" && (
-                    <BenefitsSection onActivate={handleActivateBenefit} />
-                )}
+                        {activeTab === "benefits" && (
+                            <BenefitsSection onActivate={handleActivateBenefit} />
+                        )}
 
-                {activeTab === "info" && (
-                    <InfoSection
-                        hours={hoursData}
-                        address={safeBranch.address ?? ""}
-                        phone={safeBranch.phone ?? ""}
-                        email={safeBranch.email ?? ""}
-                        website={safeBranch.website ?? ""}
-                    />
-                )}
+                        {activeTab === "info" && (
+                            <InfoSection
+                                hours={hoursData}
+                                address={safeBranch.address ?? ""}
+                                phone={safeBranch.phone ?? ""}
+                                email={safeBranch.email ?? ""}
+                                website={safeBranch.website ?? ""}
+                            />
+                        )}
 
-                {activeTab === "reviews" && (
-                    <ReviewsSection
-                        rating={safeBranch.rating}
-                        total={reviews.length}
-                        reviews={reviews}
-                        branchName={safeBranch.title}
-                        onAddReview={handleAddReview}
-                    />
-                )}
-
-                </View>
+                        {activeTab === "reviews" && (
+                            <ReviewsSection
+                                rating={safeBranch.rating}
+                                total={reviews.length}
+                                reviews={reviews}
+                                branchName={safeBranch.title}
+                                onAddReview={handleAddReview}
+                            />
+                        )}
+                    </View>
+                </PanGestureHandler>
             </ScrollView>
 
             {/* BOTTOM SHEET - len pre neprihlásených */}
-            {activeTab === "benefits" && !user && (
+            {AUTH_GUARD_ENABLED && activeTab === "benefits" && !user && (
                 <BenefitsBottomSheet
                     sheetRef={sheetRef}
                     snapPoints={snapPoints}

@@ -195,6 +195,14 @@ export const useDiscoverCamera = ({
    */
   const handleCameraChanged = useCallback(
     (center: [number, number], zoom: number, isUserGesture?: boolean) => {
+      if (
+        !Number.isFinite(center?.[0]) ||
+        !Number.isFinite(center?.[1]) ||
+        !Number.isFinite(zoom)
+      ) {
+        return;
+      }
+
       // Ignore short-lived programmatic map events (restore/jump), but keep gestures.
       if (!isUserGesture && Date.now() < suppressProgrammaticEventsUntil) {
         return;

@@ -142,7 +142,6 @@ const ReelItemComponent = memo(
         item,
         height,
         actionsBottom,
-        insetsTop,
         branchCardWidth,
         branchCardOffset,
         isScrolling,
@@ -151,7 +150,6 @@ const ReelItemComponent = memo(
         item: ReelItem;
         height: number;
         actionsBottom: number;
-        insetsTop: number;
         branchCardWidth: number;
         branchCardOffset: number;
         isScrolling: boolean;
@@ -270,19 +268,6 @@ const ReelItemComponent = memo(
         // Overlay content (shared between image and video)
         const OverlayContent = (
             <>
-                    {/* Top bar - posunuta pod notch */}
-                    <View style={[styles.topBar, { marginTop: insetsTop + 16 }]}>
-                        <View style={styles.card}>
-                            <TouchableOpacity style={styles.row} activeOpacity={0.85}>
-                                <Ionicons name="location-outline" size={18} color="#000" />
-                                <Text style={styles.rowTextBold} numberOfLines={1}>
-                                {t("yourLocation")}
-                                </Text>
-                                <Ionicons name="chevron-down-outline" size={16} color="#000" style={styles.caret} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
                     {/* Like/Share buttons */}
                     <View style={[styles.actionsColumn, { bottom: actionsBottom }]}>
                         {/* Like Button */}
@@ -405,6 +390,7 @@ const ReelItemComponent = memo(
 );
 
 export default function FeedScreen() {
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const { height: screenHeight, width: screenWidth } = useWindowDimensions();
     const [visibleIndex, setVisibleIndex] = React.useState(0);
@@ -521,7 +507,6 @@ export default function FeedScreen() {
                         item={item}
                         height={screenHeight}
                         actionsBottom={actionsBottom}
-                        insetsTop={insets.top}
                         branchCardWidth={branchCardWidth}
                         branchCardOffset={branchCardOffset}
                         isScrolling={isScrolling}
@@ -555,6 +540,28 @@ export default function FeedScreen() {
                 onMomentumScrollBegin={handleMomentumStart}
                 onMomentumScrollEnd={handleMomentumEnd}
             />
+
+            <View
+                pointerEvents="box-none"
+                style={[styles.staticTopBarContainer, { top: insets.top + 16 }]}
+            >
+                <View style={styles.topBar}>
+                    <View style={styles.card}>
+                        <TouchableOpacity style={styles.row} activeOpacity={0.85}>
+                            <Ionicons name="location-outline" size={18} color="#000" />
+                            <Text style={styles.rowTextBold} numberOfLines={1}>
+                                {t("yourLocation")}
+                            </Text>
+                            <Ionicons
+                                name="chevron-down-outline"
+                                size={16}
+                                color="#000"
+                                style={styles.caret}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
         </View>
     );
 }
@@ -584,6 +591,12 @@ const styles = StyleSheet.create({
     videoOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: "space-between",
+    },
+    staticTopBarContainer: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        zIndex: 10,
     },
     topBar: {
         flexDirection: "row",

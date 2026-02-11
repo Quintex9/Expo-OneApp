@@ -207,10 +207,6 @@ export default function CardsScreen() {
     navigation.navigate("CardsUserQR");
   }, [navigation]);
 
-  const handleShowAllNearby = useCallback(() => {
-    // TODO: Navigate to dedicated "show all" screens
-  }, []);
-
   const handleShowAllYourCards = useCallback(() => {
     navigation.navigate("CardsAdd");
   }, [navigation]);
@@ -270,9 +266,6 @@ export default function CardsScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t("nearestToYou")}</Text>
-          <TouchableOpacity onPress={handleShowAllNearby} activeOpacity={0.7}>
-            <Text style={styles.showAll}>{t("showAll")}</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -319,6 +312,17 @@ export default function CardsScreen() {
     </ScrollView>
   );
 }
+
+const CARD_SURFACE_SHADOW =
+  Platform.OS === "web"
+    ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.05)" }
+    : {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+      };
 
 const styles = StyleSheet.create({
   container: {
@@ -449,6 +453,7 @@ const styles = StyleSheet.create({
   nearbyRow: {
     flexDirection: "row",
     gap: 14,
+    paddingVertical: 2,
   },
   nearbyCard: {
     height: 118,
@@ -458,15 +463,7 @@ const styles = StyleSheet.create({
     borderColor: "#E4E4E7",
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.05)" }
-      : {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 2,
-        }),
+    ...CARD_SURFACE_SHADOW,
   },
   cardsGrid: {
     flexDirection: "row",
@@ -480,15 +477,7 @@ const styles = StyleSheet.create({
     borderColor: "#E4E4E7",
     alignItems: "center",
     justifyContent: "center",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.05)" }
-      : {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 2,
-        }),
+    ...CARD_SURFACE_SHADOW,
   },
   loyaltyCardEmpty: {
     backgroundColor: "#FFFFFF",

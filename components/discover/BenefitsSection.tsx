@@ -1,5 +1,13 @@
-﻿import React, { memo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { memo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Image,
+  type ImageSourcePropType,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 
 type Props = {
@@ -13,18 +21,73 @@ type Benefit = {
   title: string;
   description: string;
   status: BenefitStatus;
+  image: ImageSourcePropType;
 };
 
 const DUMMY_BENEFITS: Benefit[] = [
-  { id: "benefit-1", title: "benefit1Title", description: "benefit1Desc", status: "activated" },
-  { id: "benefit-2", title: "benefit2Title", description: "benefit2Desc", status: "available" },
-  { id: "benefit-3", title: "benefit3Title", description: "benefit3Desc", status: "available" },
-  { id: "benefit-4", title: "benefit4Title", description: "benefit4Desc", status: "available" },
-  { id: "benefit-5", title: "benefit5Title", description: "benefit5Desc", status: "available" },
-  { id: "benefit-6", title: "benefit6Title", description: "benefit6Desc", status: "locked" },
-  { id: "benefit-7", title: "benefit7Title", description: "benefit7Desc", status: "available" },
-  { id: "benefit-8", title: "benefit8Title", description: "benefit8Desc", status: "available" },
-  { id: "benefit-9", title: "benefit9Title", description: "benefit9Desc", status: "expired" },
+  {
+    id: "benefit-1",
+    title: "benefit1Title",
+    description: "benefit1Desc",
+    status: "activated",
+    image: require("../../assets/benefits/benefit_1.png"),
+  },
+  {
+    id: "benefit-2",
+    title: "benefit2Title",
+    description: "benefit2Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_2.png"),
+  },
+  {
+    id: "benefit-3",
+    title: "benefit3Title",
+    description: "benefit3Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_3.png"),
+  },
+  {
+    id: "benefit-4",
+    title: "benefit4Title",
+    description: "benefit4Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_4.png"),
+  },
+  {
+    id: "benefit-5",
+    title: "benefit5Title",
+    description: "benefit5Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_5.png"),
+  },
+  {
+    id: "benefit-6",
+    title: "benefit6Title",
+    description: "benefit6Desc",
+    status: "locked",
+    image: require("../../assets/benefits/benefit_6.png"),
+  },
+  {
+    id: "benefit-7",
+    title: "benefit7Title",
+    description: "benefit7Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_7.png"),
+  },
+  {
+    id: "benefit-8",
+    title: "benefit8Title",
+    description: "benefit8Desc",
+    status: "available",
+    image: require("../../assets/benefits/benefit_8.png"),
+  },
+  {
+    id: "benefit-9",
+    title: "benefit9Title",
+    description: "benefit9Desc",
+    status: "expired",
+    image: require("../../assets/benefits/benefit_9.png"),
+  },
 ];
 
 const CTA_LABEL_KEYS: Record<BenefitStatus, string> = {
@@ -39,14 +102,52 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   card: {
+    minHeight: 144,
     borderRadius: 20,
     borderWidth: 0.5,
     borderColor: "#E4E4E7",
     padding: 16,
     backgroundColor: "#fff",
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.05)" }
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 2,
+        }),
   },
   cardSpacing: {
     marginTop: 16,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  visual: {
+    width: 104.48,
+    height: 104.48,
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#D9D9D9",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  visualImage: {
+    width: "74%",
+    height: "74%",
+  },
+  content: {
+    flex: 1,
+    marginLeft: 18.43,
+    minHeight: 104.48,
+    justifyContent: "space-between",
+  },
+  copyWrap: {
+    marginBottom: 8,
   },
   title: {
     fontFamily: "Inter_700Bold",
@@ -57,17 +158,22 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
     color: "rgba(0, 0, 0, 0.5)",
-    marginBottom: 16,
   },
-  disabledBtn: {
-    backgroundColor: "#E4E4E7",
-    height: 40,
+  btnBase: {
+    height: 32,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  disabledBtn: {
+    backgroundColor: "#E4E4E7",
+  },
+  activeBtn: {
+    backgroundColor: "#EB8100",
   },
   disabledText: {
     fontFamily: "Inter_600SemiBold",
@@ -75,13 +181,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: "#585858",
     textAlign: "center",
-  },
-  activeBtn: {
-    backgroundColor: "#EB8100",
-    height: 40,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
   },
   activeText: {
     fontFamily: "Inter_600SemiBold",
@@ -95,27 +194,40 @@ const styles = StyleSheet.create({
 // memo() zabranuje zbytocnym renderom ak sa props nezmenia
 export const BenefitsSection = memo(function BenefitsSection({ onActivate }: Props) {
   const { t } = useTranslation();
-  
+
   return (
     <View style={styles.list}>
       {DUMMY_BENEFITS.map((benefit, index) => {
-        const isActive = benefit.status === "available";
+        const isAvailable = benefit.status === "available";
         const isDisabled = benefit.status !== "available";
+        const buttonStyle = isAvailable ? styles.activeBtn : styles.disabledBtn;
+        const buttonTextStyle = isAvailable ? styles.activeText : styles.disabledText;
 
         return (
           <View key={benefit.id} style={[styles.card, index > 0 && styles.cardSpacing]}>
-            <Text style={styles.title}>{t(benefit.title)}</Text>
-            <Text style={styles.text}>{t(benefit.description)}</Text>
+            <View style={styles.cardRow}>
+              <View style={styles.visual}>
+                <Image source={benefit.image} style={styles.visualImage} resizeMode="contain" />
+              </View>
 
-            <TouchableOpacity
-              style={isActive ? styles.activeBtn : styles.disabledBtn}
-              onPress={isActive ? onActivate : undefined}
-              disabled={isDisabled}
-            >
-              <Text style={isActive ? styles.activeText : styles.disabledText}>
-                {t(CTA_LABEL_KEYS[benefit.status])}
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.content}>
+                <View style={styles.copyWrap}>
+                  <Text style={styles.title}>{t(benefit.title)}</Text>
+                  <Text style={styles.text}>{t(benefit.description)}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.btnBase, buttonStyle]}
+                  onPress={isAvailable ? onActivate : undefined}
+                  disabled={isDisabled}
+                  activeOpacity={0.85}
+                >
+                  <Text style={buttonTextStyle} numberOfLines={1}>
+                    {t(CTA_LABEL_KEYS[benefit.status])}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         );
       })}
