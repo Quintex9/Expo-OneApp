@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import SelectableCard from "../../components/SelectableCard";
 import type { PlanId } from "../../lib/interfaces";
@@ -16,7 +16,7 @@ export default function SubscriptionActivationScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top + 6 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -56,7 +56,7 @@ export default function SubscriptionActivationScreen() {
       />
 
       <TouchableOpacity
-        style={[styles.button, !selectedPlan && styles.buttonDisabled]}
+        style={[styles.button, { marginBottom: insets.bottom + 16 }, !selectedPlan && styles.buttonDisabled]}
         disabled={!selectedPlan}
         onPress={() => navigation.goBack()}
       >
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 16,
     alignItems: "center",
-    marginBottom: 16,
   },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#FAFAFA", fontSize: 18, fontWeight: "700" },

@@ -14,7 +14,12 @@ import Supercluster from "supercluster";
 import type { ImageSourcePropType, ImageURISource } from "react-native";
 import type { DiscoverMapProps, DiscoverMapMarker } from "../../lib/interfaces";
 import { styles } from "./discoverStyles";
-import { regionToZoom, setMapCamera, zoomToRegion } from "../../lib/maps/camera";
+import {
+  normalizeCenter,
+  regionToZoom,
+  setMapCamera,
+  zoomToRegion,
+} from "../../lib/maps/camera";
 import {
   BADGED_ICON_SOURCES,
   BadgedCategory,
@@ -46,6 +51,8 @@ const MULTI_ICON = require("../../images/icons/multi/multi.png");
 const CLUSTER_ID_PREFIX = "cluster:";
 const USER_MARKER_ID = "user-location";
 const USER_MARKER_COLOR = "#2563EB";
+const CLUSTER_PIN_COLOR = "#111827";
+const FILTER_CLUSTER_PIN_COLOR = "#EB8100";
 const CLUSTER_ZOOM_BUCKET_SIZE = 2;
 const VIEWPORT_PADDING_RATIO = 0.35;
 const TOOLTIP_WIDTH = 183;
@@ -91,6 +98,7 @@ type RenderMarker = {
   coordinate: { latitude: number; longitude: number };
   image?: number | ImageURISource;
   anchor?: { x: number; y: number };
+  category?: DiscoverMapMarker["category"];
   zIndex: number;
   isCluster: boolean;
   isStacked?: boolean;
@@ -105,20 +113,31 @@ type ClusterPointFeature = {
 };
 
 const toIconSource = (source?: ImageSourcePropType | null) => {
+  const isUriSource = (value: unknown): value is ImageURISource => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+    const uri = (value as ImageURISource).uri;
+    return typeof uri === "string" && uri.length > 0;
+  };
+
   if (!source) {
     return undefined;
   }
   if (typeof source === "number") {
-    return source;
+    return Number.isFinite(source) && source > 0 ? source : undefined;
   }
   if (Array.isArray(source)) {
     const first = source[0];
     if (!first) {
       return undefined;
     }
-    return typeof first === "number" ? first : first;
+    if (typeof first === "number") {
+      return Number.isFinite(first) && first > 0 ? first : undefined;
+    }
+    return isUriSource(first) ? first : undefined;
   }
-  return source;
+  return isUriSource(source) ? source : undefined;
 };
 
 const projectToWorld = (
@@ -153,6 +172,28 @@ const isFiniteCoordinate = (latitude: number, longitude: number) => {
   return Number.isFinite(latitude) && Number.isFinite(longitude);
 };
 
+const isValidMapCoordinate = (latitude: number, longitude: number) => {
+  return (
+    isFiniteCoordinate(latitude, longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+};
+
+const isValidMarkerImage = (
+  image: number | ImageURISource | undefined
+): image is number | ImageURISource => {
+  if (typeof image === "number") {
+    return Number.isFinite(image) && image > 0;
+  }
+  if (!image || typeof image !== "object") {
+    return false;
+  }
+  return typeof image.uri === "string" && image.uri.length > 0;
+};
+
 const isValidRegion = (region: Region) => {
   return (
     Number.isFinite(region.latitude) &&
@@ -177,6 +218,28 @@ const getTooltipCategoryIcon = (
     default:
       return "apps-outline";
   }
+};
+
+const CATEGORY_PIN_COLORS: Record<DiscoverMapMarker["category"], string> = {
+  Fitness: "#2563EB",
+  Gastro: "#16A34A",
+  Relax: "#0891B2",
+  Beauty: "#DB2777",
+  Multi: CLUSTER_PIN_COLOR,
+};
+
+const getDefaultPinColor = (
+  marker: RenderMarker,
+  hasActiveFilter?: boolean
+) => {
+  if (marker.isCluster) {
+    return hasActiveFilter ? FILTER_CLUSTER_PIN_COLOR : CLUSTER_PIN_COLOR;
+  }
+  if (marker.isStacked) {
+    return CLUSTER_PIN_COLOR;
+  }
+  const category = marker.category ?? "Multi";
+  return CATEGORY_PIN_COLORS[category] ?? CLUSTER_PIN_COLOR;
 };
 
 const buildClusterId = (memberIds: string[]) => {
@@ -228,17 +291,26 @@ function DiscoverMap({
   }));
 
   const applyRenderCamera = useCallback((center: [number, number], zoom: number) => {
+    const normalizedCenter = normalizeCenter(center);
     setRenderCamera((prev) => {
-      const delta = Math.hypot(center[0] - prev.center[0], center[1] - prev.center[1]);
+      const delta = Math.hypot(
+        normalizedCenter[0] - prev.center[0],
+        normalizedCenter[1] - prev.center[1]
+      );
       if (delta < 0.000001 && Math.abs(zoom - prev.zoom) < 0.0001) {
         return prev;
       }
-      return { center, zoom };
+      return { center: normalizedCenter, zoom };
     });
   }, []);
 
   const cameraCenter = renderCamera.center;
   const zoom = renderCamera.zoom;
+  const zoomRef = useRef(zoom);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const singleLayerMarkers = useMemo<
     Array<{
@@ -318,6 +390,7 @@ function DiscoverMap({
 
   const showSingleLayer = effectiveZoom >= singleModeZoom;
   const showClusterLayer = !showSingleLayer;
+  const shouldCullClustersByViewport = Platform.OS !== "ios";
 
   const clusteredFeatures = useMemo<RenderFeature[]>(() => {
     if (!showClusterLayer || filteredMarkers.length === 0) {
@@ -392,29 +465,33 @@ function DiscoverMap({
 
     index.load(pointFeatures);
 
-    const viewportRegion = zoomToRegion(cameraCenter, zoom);
-    const halfLng = Math.min(
-      179.999,
-      Math.max(0.0001, Math.abs(viewportRegion.longitudeDelta) / 2)
-    );
-    const halfLat = Math.min(
-      85,
-      Math.max(0.0001, Math.abs(viewportRegion.latitudeDelta) / 2)
-    );
-    const paddedHalfLng = Math.min(
-      179.999,
-      Math.max(0.0001, halfLng * (1 + VIEWPORT_PADDING_RATIO))
-    );
-    const paddedHalfLat = Math.min(
-      85,
-      Math.max(0.0001, halfLat * (1 + VIEWPORT_PADDING_RATIO))
-    );
-    const paddedViewport = {
-      minLng: Math.max(-180, viewportRegion.longitude - paddedHalfLng),
-      maxLng: Math.min(180, viewportRegion.longitude + paddedHalfLng),
-      minLat: Math.max(-85, viewportRegion.latitude - paddedHalfLat),
-      maxLat: Math.min(85, viewportRegion.latitude + paddedHalfLat),
-    };
+    const paddedViewport = shouldCullClustersByViewport
+      ? (() => {
+          const viewportRegion = zoomToRegion(cameraCenter, zoom);
+          const halfLng = Math.min(
+            179.999,
+            Math.max(0.0001, Math.abs(viewportRegion.longitudeDelta) / 2)
+          );
+          const halfLat = Math.min(
+            85,
+            Math.max(0.0001, Math.abs(viewportRegion.latitudeDelta) / 2)
+          );
+          const paddedHalfLng = Math.min(
+            179.999,
+            Math.max(0.0001, halfLng * (1 + VIEWPORT_PADDING_RATIO))
+          );
+          const paddedHalfLat = Math.min(
+            85,
+            Math.max(0.0001, halfLat * (1 + VIEWPORT_PADDING_RATIO))
+          );
+          return {
+            minLng: Math.max(-180, viewportRegion.longitude - paddedHalfLng),
+            maxLng: Math.min(180, viewportRegion.longitude + paddedHalfLng),
+            minLat: Math.max(-85, viewportRegion.latitude - paddedHalfLat),
+            maxLat: Math.min(85, viewportRegion.latitude + paddedHalfLat),
+          };
+        })()
+      : null;
 
     const worldBbox: [number, number, number, number] = [-180, -85, 180, 85];
     const rawClusters = index.getClusters(worldBbox, stableClusterZoom);
@@ -625,18 +702,21 @@ function DiscoverMap({
       }
     }
 
-    return buckets
-      .filter((bucket) => {
-        const lng = bucket.focus.longitude;
-        const lat = bucket.focus.latitude;
-        return !(
-          lng < paddedViewport.minLng ||
-          lng > paddedViewport.maxLng ||
-          lat < paddedViewport.minLat ||
-          lat > paddedViewport.maxLat
-        );
-      })
-      .map((bucket) => ({
+    const visibleBuckets =
+      shouldCullClustersByViewport && paddedViewport
+        ? buckets.filter((bucket) => {
+            const lng = bucket.focus.longitude;
+            const lat = bucket.focus.latitude;
+            return !(
+              lng < paddedViewport.minLng ||
+              lng > paddedViewport.maxLng ||
+              lat < paddedViewport.minLat ||
+              lat > paddedViewport.maxLat
+            );
+          })
+        : buckets;
+
+    return visibleBuckets.map((bucket) => ({
         id: buildClusterId(bucket.memberIds),
         isCluster: true,
         count: Math.min(99, Math.max(2, Math.round(bucket.countRaw))),
@@ -652,12 +732,12 @@ function DiscoverMap({
       }));
   }, [
     showClusterLayer,
+    shouldCullClustersByViewport,
     filteredMarkers,
     stableClusterZoom,
     effectiveZoom,
     forceClusterZoom,
-    cameraCenter,
-    zoom,
+    ...(shouldCullClustersByViewport ? [cameraCenter, zoom] : []),
   ]);
 
   const renderMarkers = useMemo<RenderMarker[]>(() => {
@@ -680,6 +760,7 @@ function DiscoverMap({
           id: feature.id,
           coordinate: feature.coordinates,
           image: clusterIcon,
+          category: "Multi",
           anchor: {
             x: BASE_ANCHOR_X,
             y: BASE_ANCHOR_Y,
@@ -708,6 +789,7 @@ function DiscoverMap({
             id: `stacked:${group.id}`,
             coordinate: group.coordinate,
             image: stackedIcon,
+            category: "Multi",
             anchor: {
               x: BASE_ANCHOR_X,
               y: BASE_ANCHOR_Y,
@@ -741,6 +823,7 @@ function DiscoverMap({
           id: marker.id,
           coordinate: group.coordinate,
           image,
+          category: marker.category,
           anchor: image
             ? {
                 x: ratingIcon ? BADGED_ANCHOR_X : BASE_ANCHOR_X,
@@ -755,7 +838,17 @@ function DiscoverMap({
       });
     }
 
-    return markers;
+    const seenKeys = new Set<string>();
+    return markers.filter((marker) => {
+      if (!marker.key) {
+        return false;
+      }
+      if (seenKeys.has(marker.key)) {
+        return false;
+      }
+      seenKeys.add(marker.key);
+      return true;
+    });
   }, [
     showClusterLayer,
     clusteredFeatures,
@@ -948,8 +1041,9 @@ function DiscoverMap({
         nextZoom = fallbackZoom;
       }
 
-      applyRenderCamera(nextCenter, nextZoom);
-      onCameraChanged(nextCenter, nextZoom, false);
+      const normalizedCenter = normalizeCenter(nextCenter);
+      applyRenderCamera(normalizedCenter, nextZoom);
+      onCameraChanged(normalizedCenter, nextZoom, false);
     } catch {
       // Ignore native camera read failures.
     }
@@ -1014,7 +1108,7 @@ function DiscoverMap({
         return;
       }
 
-      const nextCenter: [number, number] = [region.longitude, region.latitude];
+      const nextCenter = normalizeCenter([region.longitude, region.latitude]);
       const nextZoom = regionToZoom(region);
       if (!isFiniteCoordinate(nextCenter[1], nextCenter[0]) || !Number.isFinite(nextZoom)) {
         return;
@@ -1043,7 +1137,7 @@ function DiscoverMap({
       }
 
       const isUserGesture = Boolean(details?.isGesture ?? gestureRef.current);
-      const nextCenter: [number, number] = [region.longitude, region.latitude];
+      const nextCenter = normalizeCenter([region.longitude, region.latitude]);
       const nextZoom = regionToZoom(region);
       if (!isFiniteCoordinate(nextCenter[1], nextCenter[0]) || !Number.isFinite(nextZoom)) {
         scheduleGestureRelease();
@@ -1146,7 +1240,7 @@ function DiscoverMap({
                   marker.focusCoordinate.longitude,
                   marker.focusCoordinate.latitude,
                 ],
-                zoom,
+                zoom: zoomRef.current,
                 durationMs: STACKED_CENTER_DURATION_MS,
               });
             });
@@ -1156,7 +1250,7 @@ function DiscoverMap({
               marker.focusCoordinate.longitude,
               marker.focusCoordinate.latitude,
             ],
-            zoom,
+            zoom: zoomRef.current,
             durationMs: STACKED_CENTER_DURATION_MS,
           });
         }
@@ -1166,7 +1260,7 @@ function DiscoverMap({
       closeStackedTooltip();
 
       if (marker.isCluster) {
-        const targetZoom = Math.min(zoom + 2, 20);
+        const targetZoom = Math.min(zoomRef.current + 2, 20);
 
         setMapCamera(cameraRef, {
           center: [
@@ -1185,7 +1279,6 @@ function DiscoverMap({
       cameraRef,
       clearPendingStackedOpen,
       onMarkerPress,
-      zoom,
       selectedStackedMarkerId,
       closeStackedTooltip,
     ]
@@ -1221,6 +1314,37 @@ function DiscoverMap({
     [selectedStackedMarker, updateStackedTooltipPosition]
   );
 
+  const markerElements = useMemo(
+    () =>
+      renderMarkers
+        .filter((marker) =>
+          isValidMapCoordinate(marker.coordinate.latitude, marker.coordinate.longitude)
+        )
+        .map((marker) => {
+          const useCustomImage = isValidMarkerImage(marker.image);
+          const markerImage = useCustomImage ? marker.image : undefined;
+          const markerAnchor = useCustomImage ? marker.anchor : undefined;
+          const markerPinColor = useCustomImage
+            ? undefined
+            : getDefaultPinColor(marker, hasActiveFilter);
+
+          return (
+            <Marker
+              key={marker.key}
+              coordinate={marker.coordinate}
+              zIndex={marker.zIndex}
+              onPress={() => handleMarkerPress(marker)}
+              {...(markerImage
+                ? { image: markerImage, tracksViewChanges: false }
+                : {})}
+              {...(markerAnchor ? { anchor: markerAnchor } : {})}
+              {...(markerPinColor ? { pinColor: markerPinColor } : {})}
+            />
+          );
+        }),
+    [renderMarkers, hasActiveFilter, handleMarkerPress]
+  );
+
   if (Platform.OS === "web") {
     return (
       <View style={styles.map}>
@@ -1252,27 +1376,11 @@ function DiscoverMap({
         customMapStyle={Platform.OS === "android" ? GOOGLE_MAP_STYLE : undefined}
         showsPointsOfInterest={Platform.OS === "ios" ? false : undefined}
       >
-        {renderMarkers
-          .filter((marker) =>
-            isFiniteCoordinate(marker.coordinate.latitude, marker.coordinate.longitude)
-          )
-          .map((marker) => (
-          <Marker
-            key={marker.key}
-            identifier={marker.key}
-            coordinate={marker.coordinate}
-            image={marker.image}
-            anchor={marker.anchor}
-            zIndex={marker.zIndex}
-            tracksViewChanges={false}
-            onPress={() => handleMarkerPress(marker)}
-          />
-        ))}
+        {markerElements}
 
-        {userCoord && (
+        {userCoord && isValidMapCoordinate(userCoord[1], userCoord[0]) && (
           <Marker
             key={USER_MARKER_ID}
-            identifier={USER_MARKER_ID}
             coordinate={{ latitude: userCoord[1], longitude: userCoord[0] }}
             pinColor={USER_MARKER_COLOR}
             onPress={() => undefined}

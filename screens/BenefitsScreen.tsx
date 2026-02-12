@@ -99,7 +99,7 @@ export default function BenefitsScreen() {
   const isActivated = actualTab === "Activated";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
@@ -111,7 +111,7 @@ export default function BenefitsScreen() {
           ]}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { marginTop: insets.top + 6 }]}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
@@ -303,7 +303,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 20,
-    paddingTop: 8,
   },
   title: {
     fontSize: 22,

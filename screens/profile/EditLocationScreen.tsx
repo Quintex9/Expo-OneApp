@@ -5,25 +5,26 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EditLocationScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { location } = route.params;
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const [street, setStreet] = useState(location.title);
   const [name, setName] = useState(t("locationNameExample"));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { marginTop: insets.top + 6 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} />
         </TouchableOpacity>
@@ -60,7 +61,7 @@ export default function EditLocationScreen() {
       </View>
 
       {/* SAVE */}
-      <TouchableOpacity style={styles.saveBtn}>
+      <TouchableOpacity style={[styles.saveBtn, { marginBottom: insets.bottom + 12 }]}>
         <Text style={styles.saveText}>{t("save")}</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -71,14 +72,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginTop: 20,
     marginBottom: 24,
   },
 

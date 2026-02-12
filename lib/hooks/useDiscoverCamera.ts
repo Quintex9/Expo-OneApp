@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";
 import type { MapViewRef } from "../interfaces";
 import type MapView from "react-native-maps";
-import { regionToZoom, setMapCamera } from "../maps/camera";
+import { normalizeCenter, regionToZoom, setMapCamera } from "../maps/camera";
 
 // === GLOBÁLNY STAV ===
 // Tieto premenné sú mimo komponentu, aby sa zachovali medzi rendermi
@@ -92,7 +92,12 @@ export const useDiscoverCamera = ({
   const isUserPanningRef = useRef(false);
 
   // === STAVOVÉ PREMENNÉ ===
-  const initialCameraState = lastDiscoverCameraState ?? { center: cityCenter, zoom: 14 };
+  const initialCameraState = lastDiscoverCameraState
+    ? {
+        center: normalizeCenter(lastDiscoverCameraState.center),
+        zoom: lastDiscoverCameraState.zoom,
+      }
+    : { center: normalizeCenter(cityCenter), zoom: 14 };
   const [userCoord, setUserCoord] = useState<[number, number] | null>(null);  // poloha usera
   const [mapCenter, setMapCenter] = useState<[number, number]>(initialCameraState.center);   // stred mapy
   const [mapZoom, setMapZoom] = useState(initialCameraState.zoom);                                  // zoom level
@@ -104,14 +109,18 @@ export const useDiscoverCamera = ({
   const ZOOM_EPSILON = 0.0001;
 
   const applyCameraState = useCallback((center: [number, number], zoom: number) => {
+    const normalizedCenter = normalizeCenter(center);
     const prev = latestAppliedRef.current;
-    const delta = Math.hypot(center[0] - prev.center[0], center[1] - prev.center[1]);
+    const delta = Math.hypot(
+      normalizedCenter[0] - prev.center[0],
+      normalizedCenter[1] - prev.center[1]
+    );
     if (delta < CENTER_EPSILON && Math.abs(zoom - prev.zoom) < ZOOM_EPSILON) {
       return;
     }
-    latestAppliedRef.current = { center, zoom };
+    latestAppliedRef.current = { center: normalizedCenter, zoom };
     setMapZoom(zoom);
-    setMapCenter(center);
+    setMapCenter(normalizedCenter);
   }, []);
 
   const markUserPanning = useCallback((isUserGesture?: boolean) => {
@@ -202,6 +211,7 @@ export const useDiscoverCamera = ({
       ) {
         return;
       }
+      const normalizedCenter = normalizeCenter(center);
 
       // Ignore short-lived programmatic map events (restore/jump), but keep gestures.
       if (!isUserGesture && Date.now() < suppressProgrammaticEventsUntil) {
@@ -209,10 +219,10 @@ export const useDiscoverCamera = ({
       }
 
       // 1. Vždy uložíme pozíciu pre prípad prepnutia tabu (bez throttlingu)
-      lastDiscoverCameraState = { center, zoom };
+      lastDiscoverCameraState = { center: normalizedCenter, zoom };
 
       // 2. Uložíme ako pending update (pre prípad, že timeout ešte beží)
-      pendingUpdateRef.current = { center, zoom };
+      pendingUpdateRef.current = { center: normalizedCenter, zoom };
 
       // 3. Skontrolujeme, či môžeme aktualizovať React stav
       const now = Date.now();
@@ -222,7 +232,7 @@ export const useDiscoverCamera = ({
         // Môžeme aktualizovať okamžite
         lastUpdateTimeRef.current = now;
         pendingUpdateRef.current = null;
-        applyCameraState(center, zoom);
+        applyCameraState(normalizedCenter, zoom);
       } else {
         // Naplánujeme odloženú aktualizáciu (ak ešte nie je naplánovaná)
         if (!throttleTimeoutRef.current) {
@@ -248,8 +258,8 @@ export const useDiscoverCamera = ({
         return;
       }
       
-      const [selectedLng, selectedLat] = selectedOptionCoord;
-      const [centerLng, centerLat] = center;
+      const [selectedLng, selectedLat] = normalizeCenter(selectedOptionCoord);
+      const [centerLng, centerLat] = normalizedCenter;
       const distance = Math.hypot(selectedLng - centerLng, selectedLat - centerLat);
       
       if (distance > 0.0005 && onOptionReset) {
@@ -391,6 +401,8 @@ export const useDiscoverCamera = ({
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         return lastDiscoverCameraState;
       }
+      const numericLat = lat as number;
+      const numericLng = lng as number;
 
       const zoomFromCamera =
         typeof nativeCamera.zoom === "number" && Number.isFinite(nativeCamera.zoom)
@@ -405,11 +417,11 @@ export const useDiscoverCamera = ({
         zoom = lastDiscoverCameraState?.zoom ?? latestAppliedRef.current.zoom;
       }
 
-      const nextState = { center: [lng, lat] as [number, number], zoom };
+      const nextState = { center: normalizeCenter([numericLng, numericLat]), zoom };
       lastDiscoverCameraState = nextState;
       lastDiscoverRegionState = regionFromBounds
         ? {
-            center: regionFromBounds.center,
+            center: normalizeCenter(regionFromBounds.center),
             latitudeDelta: regionFromBounds.latitudeDelta,
             longitudeDelta: regionFromBounds.longitudeDelta,
           }
@@ -448,21 +460,23 @@ export const useDiscoverCamera = ({
     }
 
     restoreRetryRef.current = 0;
-    applyCameraState(lastDiscoverCameraState.center, lastDiscoverCameraState.zoom);
+    const normalizedLastCenter = normalizeCenter(lastDiscoverCameraState.center);
+    applyCameraState(normalizedLastCenter, lastDiscoverCameraState.zoom);
     suppressProgrammaticEventsUntil = Date.now() + 400;
     if (lastDiscoverRegionState) {
+      const normalizedRegionCenter = normalizeCenter(lastDiscoverRegionState.center);
       cameraRef.current?.animateToRegion(
         {
-          latitude: lastDiscoverRegionState.center[1],
-          longitude: lastDiscoverRegionState.center[0],
-          latitudeDelta: Math.max(0.00001, lastDiscoverRegionState.latitudeDelta),
-          longitudeDelta: Math.max(0.00001, lastDiscoverRegionState.longitudeDelta),
+          latitude: normalizedRegionCenter[1],
+          longitude: normalizedRegionCenter[0],
+          latitudeDelta: Math.max(0.00001, Math.abs(lastDiscoverRegionState.latitudeDelta)),
+          longitudeDelta: Math.max(0.00001, Math.abs(lastDiscoverRegionState.longitudeDelta)),
         },
         0
       );
     } else {
       setMapCamera(cameraRef, {
-        center: lastDiscoverCameraState.center,
+        center: normalizedLastCenter,
         zoom: lastDiscoverCameraState.zoom,
         durationMs: 0,
       });

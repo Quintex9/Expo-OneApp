@@ -1,10 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FLAGS = {
   en: String.fromCodePoint(0x1f1ec, 0x1f1e7),
@@ -24,7 +24,7 @@ export default function LanguageScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <View style={styles.content}>
         {/* HEADER */}
         <View style={[styles.header, { marginTop: insets.top + 6 }]}>

@@ -210,7 +210,13 @@ function BranchCard(props: BranchCardProps) {
               </View>
             ) : null}
             {resolvedMoreCount > 0 ? (
-              <Text style={[styles.moreText, styles.moreTextFixed, { fontSize: metaSize }]} numberOfLines={1}>+ {resolvedMoreCount} {t("more")}</Text>
+              <Text
+                style={[styles.moreText, styles.moreTextFixed, { fontSize: metaSize }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                + {resolvedMoreCount} {t("more")}
+              </Text>
             ) : null}
           </View>
         )}
@@ -259,9 +265,11 @@ const styles = StyleSheet.create({
   // Obsahová časť (pravá strana)
   branchContent: {
     flex: 1,
+    minWidth: 0,
     justifyContent: "flex-start",
   },
   branchContentInline: {
+    minWidth: 0,
     justifyContent: "flex-start",
     gap: 0,
   },
@@ -310,6 +318,8 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
+    width: "100%",
+    minWidth: 0,
     paddingRight: 4,
     overflow: "hidden",
   },
@@ -335,6 +345,7 @@ const styles = StyleSheet.create({
   badgeShrink: {
     flexShrink: 1,
     minWidth: 0,
+    maxWidth: "100%",
   },
   moreTextFixed: {
     flexShrink: 0,

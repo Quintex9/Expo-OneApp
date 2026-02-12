@@ -4,12 +4,11 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    SafeAreaView,
     Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationActionsModal from "../../components/LocationActionModal";
 import { useTranslation } from "react-i18next";
 
@@ -27,7 +26,7 @@ export default function SavedLocationsScreen() {
     const { t } = useTranslation();
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={["left", "right"]}>
             <View style={styles.content}>
                 {/* HEADER */}
                 <View style={[styles.header, { marginTop: insets.top + 6 }]}>

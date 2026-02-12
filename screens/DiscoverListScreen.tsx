@@ -189,7 +189,7 @@ export default function DiscoverListScreen() {
   const filters = useDiscoverFilters("Gastro");
 
   // Stav pre sort dropdown
-  const [sortOption, setSortOption] = useState<SortOption>("trending");
+  const [sortOption, setSortOption] = useState<SortOption>("openNearYou");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [sortContainerLayout, setSortContainerLayout] = useState({ x: 0, y: 0 });
   const [sortTriggerLayout, setSortTriggerLayout] = useState({

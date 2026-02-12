@@ -119,13 +119,20 @@ const ServiceCard = memo(
       {(item.discount || item.moreCount) && (
         <View style={styles.serviceOfferRow}>
           {item.discount ? (
-            <View style={styles.serviceBadge}>
-              <Text style={styles.serviceBadgeText}>{item.discount}</Text>
+            <View style={[styles.serviceBadge, styles.serviceBadgePrimary]}>
+              <Text
+                style={[styles.serviceBadgeText, styles.serviceBadgeTextShrink]}
+                numberOfLines={1}
+              >
+                {item.discount}
+              </Text>
             </View>
           ) : null}
           {item.moreCount ? (
-            <View style={styles.serviceBadge}>
-              <Text style={styles.serviceBadgeText}>+{item.moreCount} more</Text>
+            <View style={[styles.serviceBadge, styles.serviceBadgeSecondary]}>
+              <Text style={styles.serviceBadgeText} numberOfLines={1}>
+                +{item.moreCount} more
+              </Text>
             </View>
           ) : null}
         </View>
@@ -611,7 +618,11 @@ const styles = StyleSheet.create({
   },
   serviceOfferRow: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 4,
+    width: "100%",
+    minWidth: 0,
+    overflow: "hidden",
   },
   serviceBadge: {
     paddingHorizontal: 12,
@@ -619,10 +630,21 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: "#EB8100",
   },
+  serviceBadgePrimary: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  serviceBadgeSecondary: {
+    flexShrink: 0,
+  },
   serviceBadgeText: {
     fontSize: 11,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  serviceBadgeTextShrink: {
+    flexShrink: 1,
+    minWidth: 0,
   },
 });
 

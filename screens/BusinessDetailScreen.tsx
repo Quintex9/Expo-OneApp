@@ -4,8 +4,6 @@ import {
     ScrollView,
     StyleSheet,
     useWindowDimensions,
-    TouchableOpacity,
-    Image,
     Share,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -58,6 +56,7 @@ export default function BusinessDetailScreen() {
     const scrollPositionsRef = useRef(new Map<string, number>());
     const prevBranchKey = useRef<string | null>(null);
     const prevTabKey = useRef<string | null>(null);
+    const benefitActionLockRef = useRef(false);
 
     const sheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["15%", "35%"], []);
@@ -96,11 +95,6 @@ export default function BusinessDetailScreen() {
     const sectionWrapperStyle = useMemo(
         () => [styles.sectionWrapper, { paddingHorizontal: sidePadding }],
         [sidePadding]
-    );
-
-    const qrButtonStyle = useMemo(
-        () => [styles.qrButton, { bottom: insets.bottom + 20 }],
-        [insets.bottom]
     );
 
     const snapOffset = useMemo(
@@ -358,19 +352,19 @@ export default function BusinessDetailScreen() {
     );
 
     const handleActivateBenefit = useCallback(() => {
-        if (!AUTH_GUARD_ENABLED || user) {
-            navigation.navigate("Benefits");
+        if (benefitActionLockRef.current) {
             return;
         }
-        sheetRef.current?.expand();
-    }, [user, navigation]);
+        benefitActionLockRef.current = true;
 
-    const handleQrPress = useCallback(() => {
         if (!AUTH_GUARD_ENABLED || user) {
             navigation.navigate("Benefits");
-            return;
+        } else {
+            sheetRef.current?.expand();
         }
-        navigation.navigate("Login");
+        setTimeout(() => {
+            benefitActionLockRef.current = false;
+        }, 450);
     }, [user, navigation]);
 
     const handleLogin = useCallback(() => {
@@ -554,14 +548,6 @@ export default function BusinessDetailScreen() {
                 />
             )}
 
-            {/* Floating QR tlačidlo */}
-            <TouchableOpacity
-                style={qrButtonStyle}
-                onPress={handleQrPress}
-                activeOpacity={0.85}
-            >
-                <Image source={require("../images/qr.png")} style={styles.qrIcon} />
-            </TouchableOpacity>
         </SafeAreaView>
     );
 }
@@ -584,18 +570,5 @@ const styles = StyleSheet.create({
     },
     sectionWrapper: {
         paddingTop: 12,
-    },
-    qrButton: {
-        position: "absolute",
-        right: 16,
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-    },
-    qrIcon: {
-        width: 48,
-        height: 48,
     },
 });

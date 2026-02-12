@@ -48,14 +48,29 @@ export default function DiscoverTopControls({
     () => location.find((item) => item.label === option),
     [location, option]
   );
+  const fallbackCityCoord = useMemo(
+    () => location.find((item) => item.label === "nitra")?.coord ?? null,
+    [location]
+  );
   const selectedIcon = useMemo(
     () => getLocationIcon(option, selectedOption?.isSaved),
     [option, selectedOption]
   );
+  const centerYourLocation = useCallback(() => {
+    const target = userCoord ?? fallbackCityCoord ?? mainMapCenter ?? null;
+    setOption("yourLocation");
+    setOpen(false);
+    if (target) {
+      setMapCamera(cameraRef, { center: target, zoom: 14, durationMs: 800 });
+    }
+  }, [cameraRef, fallbackCityCoord, mainMapCenter, setOpen, setOption, userCoord]);
   const focusLocation = useCallback(
     (label: string, coord?: [number, number]) => {
-      const target =
-        label === "yourLocation" ? userCoord ?? mainMapCenter ?? null : coord ?? null;
+      if (label === "yourLocation") {
+        centerYourLocation();
+        return;
+      }
+      const target = coord ?? null;
 
       setOption(label);
       setOpen(false);
@@ -64,11 +79,27 @@ export default function DiscoverTopControls({
         setMapCamera(cameraRef, { center: target, zoom: 14, durationMs: 800 });
       }
     },
-    [cameraRef, mainMapCenter, setOpen, setOption, userCoord]
+    [cameraRef, centerYourLocation, setOpen, setOption]
   );
   const topBarWidth = useMemo(
     () => Math.max(0, screenWidth - 34),
     [screenWidth]
+  );
+  const openCardWidth = useMemo(
+    () => Math.max(0, topBarWidth - 42 - 14),
+    [topBarWidth]
+  );
+  const openCardStyle = useMemo(
+    () => ({
+      flex: 0,
+      flexBasis: "auto" as const,
+      width: openCardWidth,
+      minWidth: openCardWidth,
+      maxWidth: openCardWidth,
+      marginRight: 0,
+      borderRadius: 20,
+    }),
+    [openCardWidth]
   );
   return (
     <>
@@ -111,10 +142,14 @@ export default function DiscoverTopControls({
         {/* Dropdown mode: Location dropdown */}
         {open && (
           <>
-            <View style={styles.card}>
+            <View style={[styles.card, openCardStyle]}>
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => focusLocation(option, selectedOption?.coord)}
+                onPress={() =>
+                  option === "yourLocation"
+                    ? centerYourLocation()
+                    : focusLocation(option, selectedOption?.coord)
+                }
                 activeOpacity={0.85}
               >
                 <Ionicons name={selectedIcon} size={20} color="#000" style={styles.rowIcon} />
@@ -174,17 +209,7 @@ export default function DiscoverTopControls({
               </View>
             </View>
 
-            <View style={[localStyles.openActions, { top: 0 }]}>
-              <TouchableOpacity
-                style={localStyles.roundBtn}
-                activeOpacity={0.85}
-                onPress={() => {
-                  setOpen(false);
-                  onOpenSearch();
-                }}
-              >
-                <Ionicons name="search-outline" size={18} color="#000" />
-              </TouchableOpacity>
+            <View style={[localStyles.openActions, { top: 0, width: 42, gap: 0 }]}>
               <TouchableOpacity
                 style={localStyles.roundBtn}
                 activeOpacity={0.85}

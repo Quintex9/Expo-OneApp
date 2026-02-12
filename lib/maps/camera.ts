@@ -16,9 +16,35 @@ const MIN_LATITUDE = -85;
 const MAX_LATITUDE = 85;
 const MIN_LONGITUDE = -180;
 const MAX_LONGITUDE = 180;
+const LONGITUDE_SPAN = 360;
 
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value));
+};
+
+export const normalizeLongitude = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  const normalized =
+    ((((value - MIN_LONGITUDE) % LONGITUDE_SPAN) + LONGITUDE_SPAN) % LONGITUDE_SPAN) +
+    MIN_LONGITUDE;
+
+  return normalized;
+};
+
+export const normalizeLatitude = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return clamp(value, MIN_LATITUDE, MAX_LATITUDE);
+};
+
+export const normalizeCenter = (center: [number, number]): [number, number] => {
+  const lng = Array.isArray(center) && center.length > 0 ? center[0] : NaN;
+  const lat = Array.isArray(center) && center.length > 1 ? center[1] : NaN;
+  return [normalizeLongitude(lng), normalizeLatitude(lat)];
 };
 
 const getDefaultAspectRatio = () => {
@@ -34,12 +60,7 @@ export const zoomToRegion = (
   zoom: number,
   aspectRatio: number = getDefaultAspectRatio()
 ): Region => {
-  const longitude = Number.isFinite(center?.[0])
-    ? clamp(center[0], MIN_LONGITUDE, MAX_LONGITUDE)
-    : 0;
-  const latitude = Number.isFinite(center?.[1])
-    ? clamp(center[1], MIN_LATITUDE, MAX_LATITUDE)
-    : 0;
+  const [longitude, latitude] = normalizeCenter(center);
   const normalizedZoom = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
   const longitudeDelta = 360 / Math.pow(2, normalizedZoom);
   const safeAspectRatio =

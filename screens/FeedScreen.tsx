@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useCallback, useEffect } from "react";
-import { View, StyleSheet, ImageBackground, Text, TouchableOpacity, Platform, useWindowDimensions, FlatList, Pressable, StatusBar, Vibration, Share, Alert } from "react-native";
+import { View, StyleSheet, ImageBackground, Image, Text, TouchableOpacity, Platform, useWindowDimensions, FlatList, Pressable, StatusBar, Vibration, Share, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +17,7 @@ import {
 } from "../lib/constants/layout";
 
 type ReelType = "image" | "video";
+type FeedOfferKey = (typeof OFFER_KEYS)[keyof typeof OFFER_KEYS];
 
 interface ReelItem {
     id: string;
@@ -32,7 +33,7 @@ interface ReelItem {
         distance: string;
         hours: string;
         category: string;
-        offerKeys: string[];
+        offerKeys: FeedOfferKey[];
     };
 }
 
@@ -48,6 +49,32 @@ const OFFER_KEYS = {
     discount25Weekend: "offer_discount25Weekend",
     freeTowel: "offer_freeTowel",
 };
+
+const OFFER_DESCRIPTION_KEYS: Record<FeedOfferKey, string> = {
+    [OFFER_KEYS.discount20]: "feedOfferDescDiscount20",
+    [OFFER_KEYS.freeEntryFriend]: "feedOfferDescFreeEntryFriend",
+    [OFFER_KEYS.discount10Monthly]: "feedOfferDescDiscount10Monthly",
+    [OFFER_KEYS.discount15Today]: "feedOfferDescDiscount15Today",
+    [OFFER_KEYS.twoForOne]: "feedOfferDescTwoForOne",
+    [OFFER_KEYS.firstMonthFree]: "feedOfferDescFirstMonthFree",
+    [OFFER_KEYS.personalTrainer]: "feedOfferDescPersonalTrainer",
+    [OFFER_KEYS.discount25Weekend]: "feedOfferDescDiscount25Weekend",
+    [OFFER_KEYS.freeTowel]: "feedOfferDescFreeTowel",
+};
+
+const OFFER_DESCRIPTION_DEFAULTS: Record<FeedOfferKey, string> = {
+    [OFFER_KEYS.discount20]: "Get 20% off your first entry when you activate this offer.",
+    [OFFER_KEYS.freeEntryFriend]: "Bring your friend for free and train together today.",
+    [OFFER_KEYS.discount10Monthly]: "Save 10% on your monthly pass this week.",
+    [OFFER_KEYS.discount15Today]: "Use this offer today and get 15% off your purchase.",
+    [OFFER_KEYS.twoForOne]: "Buy one entry and get the second one free.",
+    [OFFER_KEYS.firstMonthFree]: "Start now and enjoy your first month free.",
+    [OFFER_KEYS.personalTrainer]: "Get a guided session with a personal trainer included.",
+    [OFFER_KEYS.discount25Weekend]: "Get 25% off selected services during the weekend.",
+    [OFFER_KEYS.freeTowel]: "Receive a free towel service with your visit.",
+};
+
+const OVERLAY_CARD_GAP = 12;
 
 // Gallery images pre Fitness kategóriu
 const FITNESS_GALLERY = [
@@ -143,6 +170,7 @@ const ReelItemComponent = memo(
         height,
         actionsBottom,
         branchCardWidth,
+        overlayViewportWidth,
         branchCardOffset,
         isScrolling,
         isVisible,
@@ -151,6 +179,7 @@ const ReelItemComponent = memo(
         height: number;
         actionsBottom: number;
         branchCardWidth: number;
+        overlayViewportWidth: number;
         branchCardOffset: number;
         isScrolling: boolean;
         isVisible: boolean;
@@ -170,6 +199,21 @@ const ReelItemComponent = memo(
 
         // Translate offers
         const translatedOffers = item.branch.offerKeys.map(key => t(key));
+        const overlaySideInset = useMemo(
+            () => Math.max(0, Math.floor((overlayViewportWidth - branchCardWidth) / 2)),
+            [overlayViewportWidth, branchCardWidth]
+        );
+        const overlayCards = useMemo(
+            () => [
+                { id: `${item.id}-branch`, type: "branch" as const },
+                ...item.branch.offerKeys.map((offerKey, index) => ({
+                    id: `${item.id}-offer-${index}-${offerKey}`,
+                    type: "offer" as const,
+                    offerKey,
+                })),
+            ],
+            [item.id, item.branch.offerKeys]
+        );
         const shouldPlay = isVisible && !isScrolling;
 
         useEffect(() => {
@@ -265,6 +309,52 @@ const ReelItemComponent = memo(
         }));
 
         const posterSource = item.poster ?? item.background ?? item.branch.image;
+        const renderOverlayCard = useCallback(
+            ({ item: cardItem }: { item: { id: string; type: "branch" } | { id: string; type: "offer"; offerKey: FeedOfferKey } }) => {
+                if (cardItem.type === "branch") {
+                    return (
+                        <View style={[styles.overlayCardSlot, { width: branchCardWidth }]}>
+                            <BranchCard
+                                title={item.branch.title}
+                                image={item.branch.image}
+                                images={item.branch.images}
+                                rating={item.branch.rating}
+                                distance={item.branch.distance}
+                                hours={item.branch.hours}
+                                category={item.branch.category}
+                                offers={translatedOffers}
+                                badgeVariant="more"
+                                cardPaddingBottom={14}
+                            />
+                        </View>
+                    );
+                }
+
+                const offerTitle = t(cardItem.offerKey);
+                const descriptionKey = OFFER_DESCRIPTION_KEYS[cardItem.offerKey];
+                const fallbackDescription = OFFER_DESCRIPTION_DEFAULTS[cardItem.offerKey];
+                const offerDescription = t(descriptionKey, { defaultValue: fallbackDescription });
+                const offerImage = item.branch.images?.[0] ?? item.branch.image;
+
+                return (
+                    <View style={[styles.overlayCardSlot, { width: branchCardWidth }]}>
+                        <View style={styles.offerCard}>
+                            <Image source={offerImage} style={styles.offerImage} resizeMode="cover" />
+                            <View style={styles.offerTextContent}>
+                                <Text style={styles.offerTitle} numberOfLines={1}>
+                                    {offerTitle}
+                                </Text>
+                                <Text style={styles.offerDescription} numberOfLines={3}>
+                                    {offerDescription}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                );
+            },
+            [branchCardWidth, item.branch.category, item.branch.distance, item.branch.hours, item.branch.image, item.branch.images, item.branch.rating, item.branch.title, t, translatedOffers]
+        );
+
         // Overlay content (shared between image and video)
         const OverlayContent = (
             <>
@@ -327,20 +417,31 @@ const ReelItemComponent = memo(
                                 { paddingVertical: BRANCH_CARD_OVERLAY_PADDING_Y },
                             ]}
                         >
-                            <View style={{ width: branchCardWidth }}>
-                                <BranchCard
-                                    title={item.branch.title}
-                                    image={item.branch.image}
-                                    images={item.branch.images}
-                                    rating={item.branch.rating}
-                                    distance={item.branch.distance}
-                                    hours={item.branch.hours}
-                                    category={item.branch.category}
-                                    offers={translatedOffers}
-                                    badgeVariant="more"
-                                    cardPaddingBottom={14}
-                                />
-                            </View>
+                            <FlatList
+                                horizontal
+                                data={overlayCards}
+                                keyExtractor={(overlayCard) => overlayCard.id}
+                                renderItem={renderOverlayCard}
+                                showsHorizontalScrollIndicator={false}
+                                directionalLockEnabled
+                                bounces={false}
+                                nestedScrollEnabled
+                                style={{ width: overlayViewportWidth }}
+                                contentContainerStyle={[
+                                    styles.overlayCardsContent,
+                                    { paddingHorizontal: overlaySideInset },
+                                ]}
+                                ItemSeparatorComponent={() => <View style={{ width: OVERLAY_CARD_GAP }} />}
+                                snapToInterval={branchCardWidth + OVERLAY_CARD_GAP}
+                                snapToAlignment="start"
+                                decelerationRate="fast"
+                                disableIntervalMomentum
+                                getItemLayout={(_, index) => ({
+                                    length: branchCardWidth + OVERLAY_CARD_GAP,
+                                    offset: (branchCardWidth + OVERLAY_CARD_GAP) * index,
+                                    index,
+                                })}
+                            />
                         </View>
                     </View>
             </>
@@ -508,6 +609,7 @@ export default function FeedScreen() {
                         height={screenHeight}
                         actionsBottom={actionsBottom}
                         branchCardWidth={branchCardWidth}
+                        overlayViewportWidth={screenWidth}
                         branchCardOffset={branchCardOffset}
                         isScrolling={isScrolling}
                         isVisible={index === visibleIndex}
@@ -683,6 +785,57 @@ const styles = StyleSheet.create({
     branchCardOverlayContent: {
         width: "100%",
         alignItems: "center",
+    },
+    overlayCardsContent: {
+        paddingVertical: BRANCH_CARD_OVERLAY_PADDING_Y,
+        alignItems: "center",
+    },
+    overlayCardSlot: {
+        justifyContent: "flex-end",
+    },
+    offerCard: {
+        height: 111,
+        borderRadius: 14,
+        borderWidth: 0.5,
+        borderColor: "#E4E4E7",
+        backgroundColor: "#FFFFFF",
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        marginBottom: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        ...(Platform.OS === "web"
+            ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
+            : {
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                elevation: 4,
+            }),
+    },
+    offerImage: {
+        width: 86,
+        height: 86,
+        borderRadius: 10,
+        marginRight: 12,
+    },
+    offerTextContent: {
+        flex: 1,
+        justifyContent: "center",
+    },
+    offerTitle: {
+        fontSize: 15,
+        lineHeight: 18,
+        fontWeight: "700",
+        color: "#000000",
+        marginBottom: 8,
+    },
+    offerDescription: {
+        fontSize: 10,
+        lineHeight: 14,
+        fontWeight: "500",
+        color: "rgba(0, 0, 0, 0.5)",
     },
     heartBurst: {
         position: "absolute",

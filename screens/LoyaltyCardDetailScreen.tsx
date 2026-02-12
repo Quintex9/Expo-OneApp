@@ -480,25 +480,28 @@ export default function LoyaltyCardDetailScreen() {
         <View style={[styles.editCardSheet, { height: editCardSheetHeight }]}>
           <View style={styles.editCardSheetHandle} />
           <Text style={styles.editCardSheetTitle}>{t("cardsEditSheetTitle")}</Text>
-          <View style={styles.editCardField}>
-            <Text style={styles.editCardFieldLabel}>{t("cardsEditCardNumberLabel")}</Text>
-            <TextInput
-              style={styles.editCardInput}
-              value={editCardNumberInput}
-              onChangeText={setEditCardNumberInput}
-              placeholder={t("cardsCardNumberPlaceholder")}
-              placeholderTextColor="#71717A"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+          <View style={styles.editCardControls}>
+            <View style={styles.editCardField}>
+              <Text style={styles.editCardFieldLabel}>{t("cardsEditCardNumberLabel")}</Text>
+              <TextInput
+                style={styles.editCardInput}
+                value={editCardNumberInput}
+                onChangeText={setEditCardNumberInput}
+                placeholder={t("cardsCardNumberPlaceholder")}
+                placeholderTextColor="#71717A"
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel={t("cardsEditCardNumberLabel")}
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.editCardSaveButton}
+              activeOpacity={0.85}
+              onPress={handleSaveEditCard}
+            >
+              <Text style={styles.editCardSaveButtonText}>{t("cardsSave")}</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.editCardSaveButton}
-            activeOpacity={0.85}
-            onPress={handleSaveEditCard}
-          >
-            <Text style={styles.editCardSaveButtonText}>{t("cardsSave")}</Text>
-          </TouchableOpacity>
         </View>
       </BottomSheet>
     </View>
@@ -739,9 +742,9 @@ const styles = StyleSheet.create({
     color: "#FAFAFA",
   },
   editCardSheet: {
-    paddingTop: 4,
+    paddingTop: 8,
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 17,
   },
   editCardSheetHandle: {
     width: 53,
@@ -749,7 +752,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#B9B9B9",
     alignSelf: "center",
-    marginBottom: 29,
+    marginBottom: 20,
   },
   editCardSheetTitle: {
     fontSize: 16,
@@ -758,11 +761,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#000000",
     textAlign: "center",
-    marginBottom: 24,
+    marginTop: 10,
+    marginBottom: 40,
+  },
+  editCardControls: {
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
+    gap: 8,
   },
   editCardField: {
     width: "100%",
-    maxWidth: 360,
     height: 50,
     borderRadius: 16,
     borderWidth: 1,
@@ -771,7 +780,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 6,
     paddingBottom: 4,
-    marginBottom: 8,
   },
   editCardFieldLabel: {
     fontSize: 14,
@@ -793,7 +801,6 @@ const styles = StyleSheet.create({
   },
   editCardSaveButton: {
     width: "100%",
-    maxWidth: 360,
     height: 40,
     borderRadius: 999,
     backgroundColor: "#000000",

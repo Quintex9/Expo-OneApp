@@ -1,8 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/AuthContext";
 
 
@@ -47,7 +47,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top + 6 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>

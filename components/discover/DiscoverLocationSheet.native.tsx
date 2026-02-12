@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import MapView, { type Region } from "react-native-maps";
 import { styles } from "./discoverStyles";
-import { setMapCamera, zoomToRegion } from "../../lib/maps/camera";
+import { normalizeCenter, setMapCamera, zoomToRegion } from "../../lib/maps/camera";
 import { STATIC_MAP_ZOOM } from "../../lib/constants/discover";
 import type {
   DiscoverLocationSearchResult,
@@ -270,7 +270,7 @@ function LocationMapStep({
               if (!hasMapMoved) {
                 setHasMapMoved(true);
               }
-              setSelectedCoord([longitude, latitude]);
+              setSelectedCoord(normalizeCenter([longitude, latitude]));
             }}
             showsCompass={false}
             zoomControlEnabled={false}
@@ -333,7 +333,7 @@ export default function DiscoverLocationSheet({
   const [addressLine2, setAddressLine2] = useState("");
   const [locationName, setLocationName] = useState("");
   const [selectedCoord, setSelectedCoord] = useState<[number, number]>(
-    () => mainMapCenter ?? userCoord ?? [18.091, 48.3069]
+    () => normalizeCenter(mainMapCenter ?? userCoord ?? [18.091, 48.3069])
   );
   const [hasMapMoved, setHasMapMoved] = useState(false);
   const searchResults = useMemo<DiscoverLocationSearchResult[]>(
@@ -389,7 +389,7 @@ export default function DiscoverLocationSheet({
       setLocationReturnStep(returnTo);
       setHasMapMoved(false);
       const target = userCoord ?? mainMapCenter ?? [18.091, 48.3069];
-      setSelectedCoord(target);
+      setSelectedCoord(normalizeCenter(target));
       setLocationStep("map");
       locationRef.current?.snapToIndex(1);
     },
@@ -399,7 +399,7 @@ export default function DiscoverLocationSheet({
   const handleCenterPress = useCallback(() => {
     const target = userCoord ?? mainMapCenter ?? [18.091, 48.3069];
     setHasMapMoved(false);
-    setSelectedCoord([target[0], target[1]]);
+    setSelectedCoord(normalizeCenter(target));
     setMapCamera(mapCameraRef, { center: target, zoom: STATIC_MAP_ZOOM, durationMs: 500 });
   }, [mainMapCenter, userCoord]);
 
@@ -460,12 +460,12 @@ export default function DiscoverLocationSheet({
       return;
     }
     if (userCoord) {
-      setSelectedCoord(userCoord);
+      setSelectedCoord(normalizeCenter(userCoord));
       setMapCamera(mapCameraRef, { center: userCoord, zoom: STATIC_MAP_ZOOM, durationMs: 350 });
       return;
     }
     if (mainMapCenter) {
-      setSelectedCoord(mainMapCenter);
+      setSelectedCoord(normalizeCenter(mainMapCenter));
     }
   }, [locationStep, hasMapMoved, mainMapCenter, userCoord]);
 

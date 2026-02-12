@@ -11,6 +11,7 @@ import type { BranchData, DiscoverCategory, DiscoverMapMarker } from "../interfa
 import { useDataSource } from "../data/useDataSource";
 import { DUMMY_BRANCH, translateBranchOffers } from "../constants/discover";
 import { formatTitleFromId, getRatingForId } from "../data/normalizers";
+import { normalizeCenter } from "../maps/camera";
 
 // Ikonka pre multi-pin (keď je viac pobočiek na jednom mieste)
 const MULTI_MARKER_ICON: ImageSourcePropType = require("../../images/icons/multi/multi.png");
@@ -326,15 +327,23 @@ export const useSavedLocationMarkers = (
     () =>
       locations
         // Vyfiltrujeme len uložené lokácie so súradnicami
-        .filter((item) => item.isSaved && item.coord)
+        .filter(
+          (item) =>
+            item.isSaved &&
+            Array.isArray(item.coord) &&
+            Number.isFinite(item.coord[0]) &&
+            Number.isFinite(item.coord[1])
+        )
         // Transformujeme na markery
         .map((item, index) => {
           // Vygenerujeme unikátne ID
-          const id = `saved-${index}-${item.coord![0]}-${item.coord![1]}`;
+          const coord = item.coord as [number, number];
+          const [lng, lat] = normalizeCenter(coord);
+          const id = `saved-${index}-${lng}-${lat}`;
           
           return {
             id,
-            coord: { lng: item.coord![0], lat: item.coord![1] },
+            coord: { lng, lat },
             icon: item.markerImage ?? item.image,
             rating: getRatingForId(id),  // deterministické hodnotenie z ID
             category: "Multi" as const,

@@ -371,8 +371,6 @@ export default function DiscoverScreen() {
         hasActiveFilter={filters.hasActiveFilter}
         onMarkerPress={handleMarkerPress}
         onCameraChanged={handleCameraChanged}
-        mapCenter={camera.mapCenter}
-        mapZoom={camera.mapZoom}
         cityCenter={NITRA_CENTER}
         initialCamera={cameraSnapshot}
       />
