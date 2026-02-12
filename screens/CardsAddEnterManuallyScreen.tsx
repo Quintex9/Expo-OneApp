@@ -83,7 +83,7 @@ export default function CardsAddEnterManuallyScreen() {
         <TouchableOpacity
           style={styles.headerIconButton}
           activeOpacity={0.75}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("CardsList")}
         >
           <Ionicons name="chevron-back" size={30} color="#000000" />
         </TouchableOpacity>

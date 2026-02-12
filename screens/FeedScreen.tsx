@@ -1,13 +1,28 @@
 import React, { memo, useMemo, useRef, useCallback, useEffect } from "react";
-import { View, StyleSheet, ImageBackground, Image, Text, TouchableOpacity, Platform, useWindowDimensions, FlatList, Pressable, StatusBar, Vibration, Share, Alert } from "react-native";
+import {
+    View,
+    StyleSheet,
+    ImageBackground,
+    Image,
+    Text,
+    TouchableOpacity,
+    Platform,
+    useWindowDimensions,
+    FlatList,
+    StatusBar,
+    Share,
+    Alert,
+    AppState,
+    type AppStateStatus,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import BranchCard from "../components/BranchCard";
-import { Asset } from "expo-asset";
-import { useFocusEffect } from "@react-navigation/native";
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import {
     BRANCH_CARD_BASELINE_OFFSET,
     BRANCH_CARD_OVERLAY_PADDING_Y,
@@ -75,6 +90,19 @@ const OFFER_DESCRIPTION_DEFAULTS: Record<FeedOfferKey, string> = {
 };
 
 const OVERLAY_CARD_GAP = 12;
+const PINCH_SCALE_ACTIVATION_THRESHOLD = 0.06;
+const TAP_MAX_DISTANCE = 12;
+const DOUBLE_TAP_MAX_DELAY = 250;
+const TAP_MAX_DURATION = 180;
+const LONG_PRESS_MIN_DURATION = 260;
+const LONG_PRESS_MAX_DISTANCE = 14;
+const SPEED_BOOST_RATE = 2;
+const SPEED_BOOST_LEFT_ZONE_RATIO = 0.4;
+const REEL_SNAP_DISTANCE_THRESHOLD = 0.78;
+const REEL_SNAP_VELOCITY_THRESHOLD_IOS = 0.42;
+const REEL_SNAP_VELOCITY_THRESHOLD_ANDROID = 0.55;
+const SOURCE_ANCHOR_SWITCH_THRESHOLD = 0.58;
+const LIKE_BURST_SIZE = 86;
 
 // Gallery images pre Fitness kategóriu
 const FITNESS_GALLERY = [
@@ -87,8 +115,9 @@ const FITNESS_GALLERY = [
 const REELS_DATA = [
     {
         id: "reel-1",
-        type: "image" as ReelType,
-        background: require("../assets/feed1.jpg"),
+        type: "video" as ReelType,
+        video: require("../assets/stock/15859732.mp4"),
+        poster: require("../assets/feed1.jpg"),
         branch: {
             title: "RED ROYAL GYM",
             image: require("../assets/365.jpg"),
@@ -103,7 +132,7 @@ const REELS_DATA = [
     {
         id: "reel-2",
         type: "video" as ReelType,
-        video: require("../assets/vertical1.mp4"),
+        video: require("../assets/stock/10740030.mp4"),
         poster: require("../assets/feed1.jpg"),
         branch: {
             title: "GYM KLUB",
@@ -118,8 +147,9 @@ const REELS_DATA = [
     },
     {
         id: "reel-3",
-        type: "image" as ReelType,
-        background: require("../assets/feed2.jpg"),
+        type: "video" as ReelType,
+        video: require("../assets/vertical1.mp4"),
+        poster: require("../assets/feed2.jpg"),
         branch: {
             title: "DIAMOND GYM",
             image: require("../assets/royal.jpg"),
@@ -134,7 +164,7 @@ const REELS_DATA = [
     {
         id: "reel-4",
         type: "video" as ReelType,
-        video: require("../assets/vertical2.mp4"),
+        video: require("../assets/stock/15859732.mp4"),
         poster: require("../assets/feed2.jpg"),
         branch: {
             title: "FLEX FITNESS",
@@ -149,8 +179,9 @@ const REELS_DATA = [
     },
     {
         id: "reel-5",
-        type: "image" as ReelType,
-        background: require("../assets/feed3.jpg"),
+        type: "video" as ReelType,
+        video: require("../assets/stock/10740030.mp4"),
+        poster: require("../assets/feed3.jpg"),
         branch: {
             title: "POWER ZONE",
             image: require("../assets/royal.jpg"),
@@ -164,6 +195,49 @@ const REELS_DATA = [
     },
 ];
 
+interface ReelLoopItem {
+    key: string;
+    reel: ReelItem;
+    sourceIndex: number;
+    loopIndex: number;
+}
+
+const REEL_LOOP_REPEAT = 240;
+const REEL_LOOP_EDGE_BUFFER_CYCLES = 2;
+const REEL_BASE_COUNT = REELS_DATA.length;
+const REEL_LOOP_TOTAL_COUNT = REEL_BASE_COUNT * REEL_LOOP_REPEAT;
+const REEL_LOOP_CENTER_INDEX =
+    REEL_BASE_COUNT === 0 ? 0 : Math.floor(REEL_LOOP_REPEAT / 2) * REEL_BASE_COUNT;
+
+const positiveModulo = (value: number, divisor: number) => {
+    if (divisor === 0) {
+        return 0;
+    }
+    const remainder = value % divisor;
+    return remainder < 0 ? remainder + divisor : remainder;
+};
+
+const normalizeToLoopCenterIndex = (index: number) => {
+    if (REEL_BASE_COUNT === 0) {
+        return 0;
+    }
+    return REEL_LOOP_CENTER_INDEX + positiveModulo(index, REEL_BASE_COUNT);
+};
+
+const REELS_LOOP_DATA: ReelLoopItem[] =
+    REEL_BASE_COUNT === 0
+        ? []
+        : Array.from({ length: REEL_LOOP_TOTAL_COUNT }, (_, loopIndex) => {
+              const sourceIndex = positiveModulo(loopIndex, REEL_BASE_COUNT);
+              const reel = REELS_DATA[sourceIndex];
+              return {
+                  key: `${reel.id}-loop-${loopIndex}`,
+                  reel,
+                  sourceIndex,
+                  loopIndex,
+              };
+          });
+
 const ReelItemComponent = memo(
     ({
         item,
@@ -174,6 +248,14 @@ const ReelItemComponent = memo(
         branchCardOffset,
         isScrolling,
         isVisible,
+        isAudioVisible,
+        isSourceAnchor,
+        isSourceCandidate,
+        isPlaybackAllowed,
+        isZooming,
+        onZoomStateChange,
+        onPinchTouchStateChange,
+        onSpeedBoostStateChange,
     }: {
         item: ReelItem;
         height: number;
@@ -183,19 +265,66 @@ const ReelItemComponent = memo(
         branchCardOffset: number;
         isScrolling: boolean;
         isVisible: boolean;
+        isAudioVisible: boolean;
+        isSourceAnchor: boolean;
+        isSourceCandidate: boolean;
+        isPlaybackAllowed: boolean;
+        isZooming: boolean;
+        onZoomStateChange: (value: boolean) => void;
+        onPinchTouchStateChange: (value: boolean) => void;
+        onSpeedBoostStateChange: (value: boolean) => void;
     }) => {
         const { t } = useTranslation();
-        const videoPlayer = useVideoPlayer(item.video ?? null, (player) => {
+        // Keep source attached on iOS while the cell is mounted.
+        // Frequent source replacement can cause visible frame drops/black flashes during fast swipes.
+        const activeVideoSource =
+            item.type === "video" && ((Platform.OS === "ios" && Boolean(item.video)) || isSourceCandidate)
+                ? item.video ?? null
+                : null;
+        const videoPlayer = useVideoPlayer(activeVideoSource, (player) => {
             player.loop = true;
             player.muted = true;
+            player.volume = 0;
+            player.playbackRate = 1;
+            player.keepScreenOnWhilePlaying = false;
+            player.audioMixingMode = "doNotMix";
+            try {
+                player.bufferOptions =
+                    Platform.OS === "android"
+                        ? {
+                              preferredForwardBufferDuration: 4,
+                              minBufferForPlayback: 1,
+                              maxBufferBytes: 2 * 1024 * 1024,
+                              prioritizeTimeOverSizeThreshold: true,
+                          }
+                        : {
+                              preferredForwardBufferDuration: 1,
+                              waitsToMinimizeStalling: false,
+                          };
+            } catch {
+                // ignore unsupported buffer tuning
+            }
         });
-        const lastTapRef = useRef(0);
         const [isLiked, setIsLiked] = React.useState(false);
+        const [isMuted, setIsMuted] = React.useState(false);
+        const [isHoldPaused, setIsHoldPaused] = React.useState(false);
+        const [isSpeedBoosting, setIsSpeedBoosting] = React.useState(false);
+        const [isPosterVisible, setIsPosterVisible] = React.useState(true);
+        const [volumeIconName, setVolumeIconName] = React.useState<"volume-mute" | "volume-high">("volume-high");
+        const suppressMuteUntilRef = useRef(0);
+        const skipInitialPosterOnMountRef = useRef(Platform.OS === "ios" && isVisible);
         const posterOpacity = useSharedValue(1);
-        const heartScale = useSharedValue(0);
-        const heartOpacity = useSharedValue(0);
-        const likeButtonScale = useSharedValue(1);
-        const shareButtonScale = useSharedValue(1);
+        const volumeScale = useSharedValue(0.82);
+        const volumeOpacity = useSharedValue(0);
+        const likeBurstX = useSharedValue(overlayViewportWidth / 2);
+        const likeBurstY = useSharedValue(height / 2);
+        const likeBurstScale = useSharedValue(0.75);
+        const likeBurstOpacity = useSharedValue(0);
+        const likeBurstTranslateY = useSharedValue(0);
+        const pinchScale = useSharedValue(1);
+        const pinchFocalX = useSharedValue(overlayViewportWidth / 2);
+        const pinchFocalY = useSharedValue(height / 2);
+        const zoomGestureActivated = useSharedValue(false);
 
         // Translate offers
         const translatedOffers = item.branch.offerKeys.map(key => t(key));
@@ -214,73 +343,216 @@ const ReelItemComponent = memo(
             ],
             [item.id, item.branch.offerKeys]
         );
-        const shouldPlay = isVisible && !isScrolling;
+        const shouldPlay = isPlaybackAllowed && (isVisible || (isScrolling && isSourceAnchor && !isVisible)) && !isHoldPaused;
+        const isAudioFocused = isPlaybackAllowed && isAudioVisible && !isHoldPaused;
+        const safelyApplyToPlayer = useCallback(
+            (action: () => void) => {
+                try {
+                    action();
+                } catch {
+                    // native player can be in transient state during fast unmount/remount
+                }
+            },
+            []
+        );
 
         useEffect(() => {
-            if (item.type !== "video" || !item.video) {
-                videoPlayer.pause();
+            if (item.type !== "video" || !item.video || !activeVideoSource) {
+                safelyApplyToPlayer(() => {
+                    videoPlayer.pause();
+                    videoPlayer.muted = true;
+                    videoPlayer.volume = 0;
+                    videoPlayer.playbackRate = 1;
+                });
                 return;
             }
 
             if (shouldPlay) {
-                videoPlayer.play();
+                safelyApplyToPlayer(() => videoPlayer.play());
             } else {
-                videoPlayer.pause();
+                safelyApplyToPlayer(() => videoPlayer.pause());
             }
-        }, [item.type, item.video, shouldPlay, videoPlayer]);
+        }, [activeVideoSource, item.type, item.video, safelyApplyToPlayer, shouldPlay, videoPlayer]);
 
         useEffect(() => {
+            if (item.type === "video" && item.video && activeVideoSource) {
+                safelyApplyToPlayer(() => {
+                    const shouldMute = isMuted || !isAudioFocused;
+                    // Keep audio strictly tied to the currently focused reel.
+                    videoPlayer.muted = shouldMute;
+                    videoPlayer.volume = shouldMute ? 0 : 1;
+                    if (!shouldMute) {
+                        videoPlayer.play();
+                    }
+                });
+            }
+        }, [activeVideoSource, isAudioFocused, isMuted, item.type, item.video, safelyApplyToPlayer, videoPlayer]);
+
+        useEffect(() => {
+            if (item.type === "video" && item.video && activeVideoSource) {
+                safelyApplyToPlayer(() => {
+                    videoPlayer.playbackRate = isSpeedBoosting ? SPEED_BOOST_RATE : 1;
+                });
+            }
+        }, [activeVideoSource, isSpeedBoosting, item.type, item.video, safelyApplyToPlayer, videoPlayer]);
+
+        useEffect(
+            () => () => {
+                safelyApplyToPlayer(() => {
+                    videoPlayer.pause();
+                    videoPlayer.muted = true;
+                    videoPlayer.volume = 0;
+                    videoPlayer.playbackRate = 1;
+                });
+            },
+            [safelyApplyToPlayer, videoPlayer]
+        );
+
+        useEffect(() => {
+            if (skipInitialPosterOnMountRef.current) {
+                skipInitialPosterOnMountRef.current = false;
+                posterOpacity.value = 0;
+                setIsPosterVisible(false);
+                return;
+            }
             posterOpacity.value = 1;
+            setIsPosterVisible(true);
         }, [item.id, posterOpacity]);
+
+        useEffect(() => {
+            setIsMuted(false);
+            setIsHoldPaused(false);
+            setIsSpeedBoosting(false);
+            setVolumeIconName("volume-high");
+            safelyApplyToPlayer(() => {
+                videoPlayer.playbackRate = 1;
+            });
+        }, [item.id, safelyApplyToPlayer, videoPlayer]);
+
+        useEffect(() => {
+            if (!isVisible && (isSpeedBoosting || isHoldPaused)) {
+                if (isSpeedBoosting) {
+                    onSpeedBoostStateChange(false);
+                }
+                setIsSpeedBoosting(false);
+                setIsHoldPaused(false);
+            }
+        }, [isHoldPaused, isSpeedBoosting, isVisible, onSpeedBoostStateChange]);
+
+        useEffect(() => {
+            pinchScale.value = 1;
+            pinchFocalX.value = overlayViewportWidth / 2;
+            pinchFocalY.value = height / 2;
+        }, [height, overlayViewportWidth, pinchFocalX, pinchFocalY, pinchScale]);
 
         const posterStyle = useAnimatedStyle(() => ({
             opacity: posterOpacity.value,
         }));
+        const shouldShowPosterOverlay =
+            !activeVideoSource || (isPosterVisible && (!isVisible || Platform.OS === "ios"));
 
-        const heartStyle = useAnimatedStyle(() => ({
-            opacity: heartOpacity.value,
-            transform: [{ scale: heartScale.value }],
+        const volumeStyle = useAnimatedStyle(() => ({
+            opacity: volumeOpacity.value,
+            transform: [{ scale: volumeScale.value }],
+        }));
+        const likeBurstStyle = useAnimatedStyle(() => ({
+            opacity: likeBurstOpacity.value,
+            left: likeBurstX.value - LIKE_BURST_SIZE / 2,
+            top: likeBurstY.value - LIKE_BURST_SIZE / 2,
+            transform: [
+                { translateY: likeBurstTranslateY.value },
+                { scale: likeBurstScale.value },
+            ],
         }));
 
-        const triggerLike = useCallback(() => {
-            setIsLiked(true);
-            Vibration.vibrate(10);
-            heartOpacity.value = 1;
-            heartScale.value = 0.2;
-            heartScale.value = withSequence(
-                withSpring(1, { damping: 10, stiffness: 180 }),
-                withTiming(1.15, { duration: 120 }),
-                withTiming(0.9, { duration: 160 })
-            );
-            heartOpacity.value = withTiming(0, { duration: 320 });
-        }, [heartOpacity, heartScale]);
+        const playLikeBurstAt = useCallback(
+            (x: number, y: number) => {
+                likeBurstX.value = Math.max(LIKE_BURST_SIZE / 2, Math.min(overlayViewportWidth - LIKE_BURST_SIZE / 2, x));
+                likeBurstY.value = Math.max(LIKE_BURST_SIZE / 2, Math.min(height - LIKE_BURST_SIZE / 2, y));
+                likeBurstOpacity.value = 1;
+                likeBurstScale.value = 0.45;
+                likeBurstTranslateY.value = 12;
 
-        const handleDoubleTap = useCallback(() => {
-            const now = Date.now();
-            if (now - lastTapRef.current < 260) {
-                triggerLike();
+                likeBurstScale.value = withSequence(
+                    withSpring(1.08, { damping: 12, stiffness: 230 }),
+                    withTiming(0.96, { duration: 120 })
+                );
+                likeBurstTranslateY.value = withTiming(-22, { duration: 300 });
+                likeBurstOpacity.value = withSequence(
+                    withTiming(1, { duration: 90 }),
+                    withTiming(0, { duration: 330 })
+                );
+            },
+            [height, likeBurstOpacity, likeBurstScale, likeBurstTranslateY, likeBurstX, likeBurstY, overlayViewportWidth]
+        );
+
+        const handleDoubleTapLike = useCallback((x: number, y: number) => {
+            const nextLiked = !isLiked;
+            setIsLiked(nextLiked);
+            playLikeBurstAt(x, y);
+        }, [isLiked, playLikeBurstAt]);
+
+        const suppressMuteForActionTap = useCallback((durationMs = 420) => {
+            suppressMuteUntilRef.current = Date.now() + durationMs;
+        }, []);
+
+        const handleToggleMute = useCallback(() => {
+            if (Date.now() < suppressMuteUntilRef.current) {
+                return;
             }
-            lastTapRef.current = now;
-        }, [triggerLike]);
+            if (item.type !== "video" || !item.video || !activeVideoSource || !isAudioFocused) {
+                return;
+            }
+            setIsMuted((prev) => {
+                const nextMuted = !prev;
+                safelyApplyToPlayer(() => {
+                    videoPlayer.muted = nextMuted;
+                    videoPlayer.volume = nextMuted ? 0 : 1;
+                });
+                setVolumeIconName(nextMuted ? "volume-mute" : "volume-high");
+                volumeOpacity.value = 1;
+                volumeScale.value = 0.82;
+                volumeScale.value = withSequence(
+                    withSpring(1, { damping: 12, stiffness: 230 }),
+                    withTiming(0.95, { duration: 110 })
+                );
+                volumeOpacity.value = withTiming(0, { duration: 380 });
+                return nextMuted;
+            });
+        }, [activeVideoSource, isAudioFocused, item.type, item.video, safelyApplyToPlayer, videoPlayer, volumeOpacity, volumeScale]);
+
+        const handleHoldStart = useCallback((x: number) => {
+            if (item.type !== "video" || !item.video || !activeVideoSource) {
+                return;
+            }
+            const leftZoneMaxX = overlayViewportWidth * SPEED_BOOST_LEFT_ZONE_RATIO;
+            if (x <= leftZoneMaxX) {
+                setIsHoldPaused(false);
+                setIsSpeedBoosting(true);
+                onSpeedBoostStateChange(true);
+                return;
+            }
+            setIsSpeedBoosting(false);
+            onSpeedBoostStateChange(false);
+            setIsHoldPaused(true);
+        }, [activeVideoSource, item.type, item.video, onSpeedBoostStateChange, overlayViewportWidth]);
+
+        const handleHoldEnd = useCallback(() => {
+            if (item.type !== "video" || !item.video || !activeVideoSource) {
+                return;
+            }
+            setIsSpeedBoosting(false);
+            onSpeedBoostStateChange(false);
+            setIsHoldPaused(false);
+        }, [activeVideoSource, item.type, item.video, onSpeedBoostStateChange]);
+
         const handleLikePress = useCallback(() => {
+            suppressMuteForActionTap();
             setIsLiked((prev) => !prev);
-            Vibration.vibrate(10);
-            
-            // Bounce animation
-            likeButtonScale.value = withSequence(
-                withSpring(1.3, { damping: 8, stiffness: 400 }),
-                withSpring(1, { damping: 10, stiffness: 200 })
-            );
-        }, [likeButtonScale]);
+        }, [suppressMuteForActionTap]);
 
         const handleSharePress = useCallback(async () => {
-            Vibration.vibrate(10);
-            
-            // Bounce animation
-            shareButtonScale.value = withSequence(
-                withSpring(1.2, { damping: 8, stiffness: 400 }),
-                withSpring(1, { damping: 10, stiffness: 200 })
-            );
+            suppressMuteForActionTap();
 
             try {
                 const result = await Share.share({
@@ -298,15 +570,139 @@ const ReelItemComponent = memo(
             } catch (error: any) {
                 Alert.alert('Chyba', 'Nepodarilo sa zdieľať');
             }
-        }, [item.branch.title, item.branch.rating, item.branch.distance, shareButtonScale]);
+        }, [item.branch.title, item.branch.rating, item.branch.distance, suppressMuteForActionTap]);
+        const zoomStyle = useAnimatedStyle(() => {
+            const focalOffsetX = pinchFocalX.value - overlayViewportWidth / 2;
+            const focalOffsetY = pinchFocalY.value - height / 2;
+            return {
+                transform: [
+                    { translateX: focalOffsetX },
+                    { translateY: focalOffsetY },
+                    { scale: pinchScale.value },
+                    { translateX: -focalOffsetX },
+                    { translateY: -focalOffsetY },
+                ],
+            };
+        });
 
-        const likeButtonAnimStyle = useAnimatedStyle(() => ({
-            transform: [{ scale: likeButtonScale.value }],
-        }));
+        const pinchGesture = useMemo(
+            () =>
+                Gesture.Pinch()
+                    .enabled(isVisible)
+                    .cancelsTouchesInView(false)
+                    .onTouchesDown((event) => {
+                        if (event.numberOfTouches >= 2) {
+                            runOnJS(onPinchTouchStateChange)(true);
+                        }
+                    })
+                    .onStart((event) => {
+                        pinchFocalX.value = event.focalX;
+                        pinchFocalY.value = event.focalY;
+                        zoomGestureActivated.value = false;
+                    })
+                    .onUpdate((event) => {
+                        const nextScale = Math.max(1, Math.min(3, event.scale));
+                        pinchFocalX.value = event.focalX;
+                        pinchFocalY.value = event.focalY;
 
-        const shareButtonAnimStyle = useAnimatedStyle(() => ({
-            transform: [{ scale: shareButtonScale.value }],
-        }));
+                        if (!zoomGestureActivated.value) {
+                            if (Math.abs(nextScale - 1) <= PINCH_SCALE_ACTIVATION_THRESHOLD) {
+                                pinchScale.value = 1;
+                                return;
+                            }
+                            zoomGestureActivated.value = true;
+                            runOnJS(onZoomStateChange)(true);
+                        }
+
+                        pinchScale.value = nextScale;
+                    })
+                    .onTouchesUp((event) => {
+                        if (event.numberOfTouches < 2) {
+                            runOnJS(onPinchTouchStateChange)(false);
+                        }
+                    })
+                    .onTouchesCancelled(() => {
+                        runOnJS(onPinchTouchStateChange)(false);
+                    })
+                    .onFinalize(() => {
+                        pinchScale.value = withTiming(1, { duration: 180 });
+                        if (zoomGestureActivated.value) {
+                            runOnJS(onZoomStateChange)(false);
+                        }
+                        zoomGestureActivated.value = false;
+                        runOnJS(onPinchTouchStateChange)(false);
+                    }),
+            [
+                isVisible,
+                onPinchTouchStateChange,
+                onZoomStateChange,
+                pinchFocalX,
+                pinchFocalY,
+                pinchScale,
+                zoomGestureActivated,
+            ]
+        );
+
+        const doubleTapGesture = useMemo(
+            () =>
+                Gesture.Tap()
+                    .enabled(isVisible && !isZooming)
+                    .cancelsTouchesInView(false)
+                    .minPointers(1)
+                    .numberOfTaps(2)
+                    .maxDuration(TAP_MAX_DURATION)
+                    .maxDelay(DOUBLE_TAP_MAX_DELAY)
+                    .maxDistance(TAP_MAX_DISTANCE)
+                    .onEnd((event, success) => {
+                        if (success) {
+                            runOnJS(handleDoubleTapLike)(event.x, event.y);
+                        }
+                    }),
+            [handleDoubleTapLike, isVisible, isZooming]
+        );
+
+        const singleTapGesture = useMemo(
+            () =>
+                Gesture.Tap()
+                    .enabled(isVisible && !isZooming && !isHoldPaused && !isSpeedBoosting && item.type === "video" && Boolean(item.video))
+                    .cancelsTouchesInView(false)
+                    .minPointers(1)
+                    .numberOfTaps(1)
+                    .maxDuration(TAP_MAX_DURATION)
+                    .maxDistance(TAP_MAX_DISTANCE)
+                    .onEnd((_event, success) => {
+                        if (success) {
+                            runOnJS(handleToggleMute)();
+                        }
+                    }),
+            [handleToggleMute, isHoldPaused, isSpeedBoosting, isVisible, isZooming, item.type, item.video]
+        );
+
+        const longPressGesture = useMemo(
+            () =>
+                Gesture.LongPress()
+                    .enabled(isVisible && !isZooming && item.type === "video" && Boolean(item.video))
+                    .cancelsTouchesInView(false)
+                    .numberOfPointers(1)
+                    .minDuration(LONG_PRESS_MIN_DURATION)
+                    .maxDistance(LONG_PRESS_MAX_DISTANCE)
+                    .onStart((event) => {
+                        runOnJS(handleHoldStart)(event.x);
+                    })
+                    .onFinalize(() => {
+                        runOnJS(handleHoldEnd)();
+                    }),
+            [handleHoldEnd, handleHoldStart, isVisible, isZooming, item.type, item.video]
+        );
+
+        const mediaGesture = useMemo(
+            () =>
+                Gesture.Simultaneous(
+                    pinchGesture,
+                    Gesture.Exclusive(doubleTapGesture, singleTapGesture, longPressGesture)
+                ),
+            [doubleTapGesture, longPressGesture, pinchGesture, singleTapGesture]
+        );
 
         const posterSource = item.poster ?? item.background ?? item.branch.image;
         const renderOverlayCard = useCallback(
@@ -361,42 +757,40 @@ const ReelItemComponent = memo(
                     {/* Like/Share buttons */}
                     <View style={[styles.actionsColumn, { bottom: actionsBottom }]}>
                         {/* Like Button */}
-                        <Animated.View style={likeButtonAnimStyle}>
-                            <TouchableOpacity 
-                                style={styles.actionBtn} 
-                                activeOpacity={0.7} 
-                                onPress={handleLikePress}
-                            >
-                                <View style={styles.actionIconWrap}>
-                                    <Ionicons 
-                                        name={isLiked ? "heart" : "heart-outline"} 
-                                        size={28} 
-                                        color={isLiked ? "#FF2D55" : "#fff"} 
-                                        style={styles.iconShadow}
-                                    />
-                                </View>
-                                <Text style={styles.actionLabel} numberOfLines={1}>{t("like")}</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
+                        <TouchableOpacity 
+                            style={styles.actionBtn} 
+                            activeOpacity={0.7} 
+                            onPressIn={() => suppressMuteForActionTap()}
+                            onPress={handleLikePress}
+                        >
+                            <View style={styles.actionIconWrap}>
+                                <Ionicons 
+                                    name={isLiked ? "heart" : "heart-outline"} 
+                                    size={28} 
+                                    color={isLiked ? "#FF2D55" : "#fff"} 
+                                    style={styles.iconShadow}
+                                />
+                            </View>
+                            <Text style={styles.actionLabel} numberOfLines={1}>{t("like")}</Text>
+                        </TouchableOpacity>
 
                         {/* Share Button */}
-                        <Animated.View style={shareButtonAnimStyle}>
-                            <TouchableOpacity 
-                                style={styles.actionBtn} 
-                                activeOpacity={0.7} 
-                                onPress={handleSharePress}
-                            >
-                                <View style={styles.actionIconWrap}>
-                                    <Ionicons 
-                                        name="share-social-outline" 
-                                        size={28} 
-                                        color="#fff" 
-                                        style={styles.iconShadow}
-                                    />
-                                </View>
-                                <Text style={styles.actionLabel} numberOfLines={1}>{t("share")}</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
+                        <TouchableOpacity 
+                            style={styles.actionBtn} 
+                            activeOpacity={0.7} 
+                            onPressIn={() => suppressMuteForActionTap()}
+                            onPress={handleSharePress}
+                        >
+                            <View style={styles.actionIconWrap}>
+                                <Ionicons 
+                                    name="share-social-outline" 
+                                    size={28} 
+                                    color="#fff" 
+                                    style={styles.iconShadow}
+                                />
+                            </View>
+                            <Text style={styles.actionLabel} numberOfLines={1}>{t("share")}</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Branch card (overlay) */}
@@ -412,10 +806,7 @@ const ReelItemComponent = memo(
                         ]}
                     >
                         <View
-                            style={[
-                                styles.branchCardOverlayContent,
-                                { paddingVertical: BRANCH_CARD_OVERLAY_PADDING_Y },
-                            ]}
+                            style={styles.branchCardOverlayContent}
                         >
                             <FlatList
                                 horizontal
@@ -450,41 +841,62 @@ const ReelItemComponent = memo(
         if (item.type === "video" && item.video) {
             return (
                 <View style={[styles.reel, { height }]}>
-                    <View style={styles.videoContainer}>
-                        <ImageBackground source={posterSource} style={styles.video} resizeMode="cover" blurRadius={12} />
-                        <VideoView
-                            player={videoPlayer}
-                            style={styles.video}
-                            nativeControls={false}
-                            contentFit="cover"
-                            onFirstFrameRender={() => {
-                                posterOpacity.value = withTiming(0, { duration: 250 });
-                            }}
-                        />
-                        <Animated.View style={[styles.posterOverlay, posterStyle]} pointerEvents="none">
-                            <ImageBackground source={posterSource} style={styles.video} resizeMode="cover" blurRadius={16} />
+                    <GestureDetector gesture={mediaGesture}>
+                        <Animated.View style={[styles.videoContainer, zoomStyle]}>
+                            {activeVideoSource ? (
+                                <VideoView
+                                    key={`${item.id}-active`}
+                                    player={videoPlayer}
+                                    style={styles.video}
+                                    nativeControls={false}
+                                    contentFit="cover"
+                                    useExoShutter={false}
+                                    surfaceType={Platform.OS === "android" ? "textureView" : undefined}
+                                    onFirstFrameRender={() => {
+                                        posterOpacity.value = 0;
+                                        setIsPosterVisible(false);
+                                    }}
+                                />
+                            ) : null}
+                            {shouldShowPosterOverlay ? (
+                                <Animated.View
+                                    style={[styles.posterOverlay, posterStyle]}
+                                    pointerEvents="none"
+                                >
+                                    <Image source={posterSource} style={styles.video} resizeMode="cover" />
+                                </Animated.View>
+                            ) : null}
+                            <Animated.View style={[styles.likeBurst, likeBurstStyle]} pointerEvents="none">
+                                <Ionicons name="heart" size={LIKE_BURST_SIZE} color="#FF2D55" style={styles.likeBurstIcon} />
+                            </Animated.View>
+                            <Animated.View style={[styles.volumeBurst, volumeStyle]} pointerEvents="none">
+                                <View style={styles.volumeBadge}>
+                                    <Ionicons name={volumeIconName} size={36} color="#fff" />
+                                </View>
+                            </Animated.View>
+                            {!isZooming && !isSpeedBoosting ? (
+                                <View style={styles.videoOverlay}>
+                                    {OverlayContent}
+                                </View>
+                            ) : null}
                         </Animated.View>
-                        <Pressable style={StyleSheet.absoluteFill} onPress={handleDoubleTap} />
-                        <Animated.View style={[styles.heartBurst, heartStyle]} pointerEvents="none">
-                            <Ionicons name="heart" size={86} color="#fff" />
-                        </Animated.View>
-                        <View style={styles.videoOverlay}>
-                            {OverlayContent}
-                        </View>
-                    </View>
+                    </GestureDetector>
                 </View>
             );
         }
 
         return (
             <View style={[styles.reel, { height }]}>
-                <ImageBackground source={item.background} style={styles.hero} resizeMode="cover">
-                    <Pressable style={StyleSheet.absoluteFill} onPress={handleDoubleTap} />
-                    <Animated.View style={[styles.heartBurst, heartStyle]} pointerEvents="none">
-                        <Ionicons name="heart" size={86} color="#fff" />
+                <GestureDetector gesture={mediaGesture}>
+                    <Animated.View style={[styles.hero, zoomStyle]}>
+                        <ImageBackground source={item.background} style={styles.hero} resizeMode="cover">
+                            <Animated.View style={[styles.likeBurst, likeBurstStyle]} pointerEvents="none">
+                                <Ionicons name="heart" size={LIKE_BURST_SIZE} color="#FF2D55" style={styles.likeBurstIcon} />
+                            </Animated.View>
+                            {!isZooming && !isSpeedBoosting ? OverlayContent : null}
+                        </ImageBackground>
                     </Animated.View>
-                    {OverlayContent}
-                </ImageBackground>
+                </GestureDetector>
             </View>
         );
     }
@@ -492,13 +904,37 @@ const ReelItemComponent = memo(
 
 export default function FeedScreen() {
     const { t } = useTranslation();
+    const navigation = useNavigation<any>();
+    const isFeedFocused = useIsFocused();
+    const [isAppActive, setIsAppActive] = React.useState(true);
     const insets = useSafeAreaInsets();
     const { height: screenHeight, width: screenWidth } = useWindowDimensions();
-    const [visibleIndex, setVisibleIndex] = React.useState(0);
+    const reelHeight = useMemo(() => Math.max(1, Math.round(screenHeight)), [screenHeight]);
+    const initialLoopIndex = useMemo(() => normalizeToLoopCenterIndex(0), []);
+    const [visibleIndex, setVisibleIndex] = React.useState(initialLoopIndex);
+    const [audioVisibleIndex, setAudioVisibleIndex] = React.useState(initialLoopIndex);
+    const [sourceAnchorIndex, setSourceAnchorIndex] = React.useState(initialLoopIndex);
     const [isScrolling, setIsScrolling] = React.useState(false);
-    const listRef = useRef<FlatList>(null);
-    const currentIndexRef = useRef(0);
-    const scrollStartIndexRef = useRef(0);
+    const [isZooming, setIsZooming] = React.useState(false);
+    const [isPinchTouchActive, setIsPinchTouchActive] = React.useState(false);
+    const [isSpeedBoosting, setIsSpeedBoosting] = React.useState(false);
+    const listRef = useRef<FlatList<ReelLoopItem>>(null);
+    const isScrollingRef = useRef(false);
+    const momentumInProgressRef = useRef(false);
+    const scrollReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const currentIndexRef = useRef(initialLoopIndex);
+    const scrollStartIndexRef = useRef(initialLoopIndex);
+    const sourceAnchorIndexRef = useRef(initialLoopIndex);
+    const setScrollingState = useCallback((value: boolean) => {
+        isScrollingRef.current = value;
+        setIsScrolling((prev) => (prev === value ? prev : value));
+    }, []);
+    const clearScrollReleaseTimeout = useCallback(() => {
+        if (scrollReleaseTimeoutRef.current) {
+            clearTimeout(scrollReleaseTimeoutRef.current);
+            scrollReleaseTimeoutRef.current = null;
+        }
+    }, []);
     const branchCardWidth = useMemo(
         () => Math.max(280, Math.min(340, screenWidth - 48)),
         [screenWidth]
@@ -511,6 +947,11 @@ export default function FeedScreen() {
         () => Math.max(0, baseBottom - 16) - 30,
         [baseBottom]
     );
+    const speedBadgeBottomOffset = useMemo(
+        () => Math.max(insets.bottom, TAB_BAR_MIN_INSET) + 16,
+        [insets.bottom]
+    );
+    const isPlaybackAllowed = isFeedFocused && isAppActive;
 
     // Position card just above the tab bar
     const branchCardOffset = useMemo(
@@ -530,14 +971,30 @@ export default function FeedScreen() {
         () => Math.max(120, Math.round(screenHeight * 0.22) + bottomOverlayOffset),
         [screenHeight, bottomOverlayOffset]
     );
-
-    const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-        if (viewableItems.length > 0) {
-            const nextIndex = viewableItems[0].index ?? 0;
-            currentIndexRef.current = nextIndex;
-            setVisibleIndex(nextIndex);
+    const feedDecelerationRate = useMemo(() => {
+        if (Platform.OS === "ios") {
+            return 0.99;
         }
+        if (Platform.OS === "android") {
+            return 0.995;
+        }
+        return 0.998;
     }, []);
+    const reelSnapVelocityThreshold = useMemo(() => {
+        if (Platform.OS === "ios") {
+            return REEL_SNAP_VELOCITY_THRESHOLD_IOS;
+        }
+        if (Platform.OS === "android") {
+            return REEL_SNAP_VELOCITY_THRESHOLD_ANDROID;
+        }
+        return 1.2;
+    }, []);
+    const sourceCandidateCenterIndex = useMemo(
+        () => (isScrolling ? sourceAnchorIndex : visibleIndex),
+        [isScrolling, sourceAnchorIndex, visibleIndex]
+    );
+    const feedMaxToRenderPerBatch = useMemo(() => (Platform.OS === "ios" ? 2 : 3), []);
+    const feedWindowSize = useMemo(() => (Platform.OS === "ios" ? 3 : 4), []);
 
     const viewabilityConfig = useMemo(() => ({
         itemVisiblePercentThreshold: 70,
@@ -549,121 +1006,325 @@ export default function FeedScreen() {
             return () => StatusBar.setBarStyle("dark-content", true);
         }, [])
     );
+    useEffect(() => {
+        const handleAppStateChange = (nextState: AppStateStatus) => {
+            setIsAppActive(nextState === "active");
+        };
+
+        const subscription = AppState.addEventListener("change", handleAppStateChange);
+        return () => {
+            subscription.remove();
+        };
+    }, []);
 
     useEffect(() => {
-        const preload = async (index: number) => {
-            const candidates = [index - 1, index + 1]
-                .map((i) => REELS_DATA[i])
-                .filter((item) => item && item.video)
-                .map((item) => Asset.fromModule(item.video));
-            for (const asset of candidates) {
-                try {
-                    await asset.downloadAsync();
-                } catch {
-                    // ignore preload errors for local dummy assets
-                }
-            }
-        };
-        preload(visibleIndex);
-    }, [visibleIndex]);
+        navigation.setOptions({
+            tabBarStyle: isZooming || isSpeedBoosting ? { display: "none" } : undefined,
+        });
+    }, [isSpeedBoosting, isZooming, navigation]);
 
+    useEffect(
+        () => () => {
+            navigation.setOptions({ tabBarStyle: undefined });
+        },
+        [navigation]
+    );
+    useEffect(
+        () => () => {
+            clearScrollReleaseTimeout();
+        },
+        [clearScrollReleaseTimeout]
+    );
     const clampIndex = useCallback(
-        (index: number) => Math.max(0, Math.min(REELS_DATA.length - 1, index)),
+        (index: number) => Math.max(0, Math.min(REELS_LOOP_DATA.length - 1, index)),
         []
     );
+    const updateAudioVisibleIndex = useCallback(
+        (nextIndex: number) => {
+            const clampedIndex = clampIndex(nextIndex);
+            setAudioVisibleIndex((prev) => (prev === clampedIndex ? prev : clampedIndex));
+        },
+        [clampIndex]
+    );
+    const updateSourceAnchorIndex = useCallback(
+        (nextIndex: number) => {
+            const clampedIndex = clampIndex(nextIndex);
+            sourceAnchorIndexRef.current = clampedIndex;
+            setSourceAnchorIndex((prev) => (prev === clampedIndex ? prev : clampedIndex));
+        },
+        [clampIndex]
+    );
+    useEffect(() => {
+        if (!isPlaybackAllowed) {
+            return;
+        }
+        const stableIndex = currentIndexRef.current;
+        updateAudioVisibleIndex(stableIndex);
+        updateSourceAnchorIndex(stableIndex);
+    }, [isPlaybackAllowed, updateAudioVisibleIndex, updateSourceAnchorIndex]);
+    const safeScrollToIndex = useCallback(
+        (index: number, animated = true) => {
+            const clampedIndex = clampIndex(index);
+            const targetOffset = Math.max(0, clampedIndex * reelHeight);
+            try {
+                listRef.current?.scrollToIndex({ index: clampedIndex, animated });
+            } catch {
+                listRef.current?.scrollToOffset({ offset: targetOffset, animated: false });
+            }
+        },
+        [clampIndex, reelHeight]
+    );
+    const recenterAroundLoopMiddle = useCallback(
+        (index: number) => {
+            const clampedIndex = clampIndex(index);
+            if (REEL_BASE_COUNT === 0 || REELS_LOOP_DATA.length === 0) {
+                return clampedIndex;
+            }
+
+            const edgeBuffer = REEL_BASE_COUNT * REEL_LOOP_EDGE_BUFFER_CYCLES;
+            const upperBound = REELS_LOOP_DATA.length - edgeBuffer - 1;
+            if (clampedIndex > edgeBuffer && clampedIndex < upperBound) {
+                return clampedIndex;
+            }
+
+            const normalizedIndex = clampIndex(normalizeToLoopCenterIndex(clampedIndex));
+            if (normalizedIndex !== clampedIndex) {
+                safeScrollToIndex(normalizedIndex, false);
+            }
+            return normalizedIndex;
+        },
+        [clampIndex, safeScrollToIndex]
+    );
+    const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+        // Ignore mid-drag/momentum viewability changes to avoid flicker while swiping.
+        if (isScrollingRef.current) {
+            return;
+        }
+        if (!viewableItems?.length) {
+            return;
+        }
+        const rawNextIndex = viewableItems[0].index ?? currentIndexRef.current;
+        const nextIndex = Math.max(0, Math.min(REELS_LOOP_DATA.length - 1, rawNextIndex));
+        const stableIndex = recenterAroundLoopMiddle(nextIndex);
+        currentIndexRef.current = stableIndex;
+        setVisibleIndex(stableIndex);
+        updateAudioVisibleIndex(stableIndex);
+        updateSourceAnchorIndex(stableIndex);
+    }, [recenterAroundLoopMiddle, updateAudioVisibleIndex, updateSourceAnchorIndex]);
 
     const handleMomentumStart = useCallback(() => {
-        setIsScrolling(true);
-        scrollStartIndexRef.current = currentIndexRef.current;
-    }, []);
+        momentumInProgressRef.current = true;
+        clearScrollReleaseTimeout();
+        setScrollingState(true);
+    }, [clearScrollReleaseTimeout, setScrollingState]);
 
     const handleMomentumEnd = useCallback(
         (e: any) => {
+            momentumInProgressRef.current = false;
+            clearScrollReleaseTimeout();
             const offsetY = e.nativeEvent.contentOffset.y;
-            const rawIndex = Math.round(offsetY / screenHeight);
-            const startIndex = scrollStartIndexRef.current;
-            let targetIndex = rawIndex;
-            if (Math.abs(rawIndex - startIndex) > 1) {
-                targetIndex = startIndex + (rawIndex > startIndex ? 1 : -1);
+            if (!Number.isFinite(offsetY) || reelHeight <= 0) {
+                setScrollingState(false);
+                return;
             }
-            targetIndex = clampIndex(targetIndex);
+            const rawIndex = Math.round(offsetY / reelHeight);
+            const targetIndex = clampIndex(rawIndex);
             if (targetIndex !== rawIndex) {
-                listRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+                safeScrollToIndex(targetIndex, true);
             }
-            currentIndexRef.current = targetIndex;
-            setVisibleIndex(targetIndex);
-            setIsScrolling(false);
+            const stableIndex = recenterAroundLoopMiddle(targetIndex);
+            currentIndexRef.current = stableIndex;
+            setVisibleIndex(stableIndex);
+            updateAudioVisibleIndex(stableIndex);
+            updateSourceAnchorIndex(stableIndex);
+            setScrollingState(false);
         },
-        [clampIndex, screenHeight]
+        [clampIndex, clearScrollReleaseTimeout, reelHeight, recenterAroundLoopMiddle, safeScrollToIndex, setScrollingState, updateAudioVisibleIndex, updateSourceAnchorIndex]
     );
+
+    const handleZoomStateChange = useCallback((value: boolean) => {
+        setIsZooming((prev) => (prev === value ? prev : value));
+    }, []);
+
+    const handlePinchTouchStateChange = useCallback((value: boolean) => {
+        setIsPinchTouchActive((prev) => (prev === value ? prev : value));
+    }, []);
+
+    const handleSpeedBoostStateChange = useCallback((value: boolean) => {
+        setIsSpeedBoosting((prev) => (prev === value ? prev : value));
+    }, []);
+
+    if (REELS_LOOP_DATA.length === 0) {
+        return <View style={styles.container} />;
+    }
 
     return (
         <View style={styles.container}>
-            <FlatList
+            <FlatList<ReelLoopItem>
                 ref={listRef}
-                data={REELS_DATA}
-                keyExtractor={(item) => item.id}
+                data={REELS_LOOP_DATA}
+                keyExtractor={(item) => item.key}
                 renderItem={({ item, index }) => (
                     <ReelItemComponent
-                        item={item}
-                        height={screenHeight}
+                        item={item.reel}
+                        height={reelHeight}
                         actionsBottom={actionsBottom}
                         branchCardWidth={branchCardWidth}
                         overlayViewportWidth={screenWidth}
                         branchCardOffset={branchCardOffset}
                         isScrolling={isScrolling}
                         isVisible={index === visibleIndex}
+                        isAudioVisible={index === audioVisibleIndex}
+                        isSourceAnchor={index === sourceAnchorIndex}
+                        isSourceCandidate={Math.abs(index - sourceCandidateCenterIndex) <= 1}
+                        isPlaybackAllowed={isPlaybackAllowed}
+                        isZooming={isZooming}
+                        onZoomStateChange={handleZoomStateChange}
+                        onPinchTouchStateChange={handlePinchTouchStateChange}
+                        onSpeedBoostStateChange={handleSpeedBoostStateChange}
                     />
                 )}
                 showsVerticalScrollIndicator={false}
                 pagingEnabled
-                snapToInterval={screenHeight}
+                snapToInterval={reelHeight}
                 snapToAlignment="start"
-                decelerationRate="fast"
+                decelerationRate={feedDecelerationRate}
                 disableIntervalMomentum
+                scrollEventThrottle={16}
                 initialNumToRender={2}
-                maxToRenderPerBatch={3}
-                windowSize={5}
-                updateCellsBatchingPeriod={50}
-                removeClippedSubviews={Platform.OS !== "web"}
+                maxToRenderPerBatch={feedMaxToRenderPerBatch}
+                windowSize={feedWindowSize}
+                updateCellsBatchingPeriod={8}
+                removeClippedSubviews={false}
+                initialScrollIndex={initialLoopIndex}
                 getItemLayout={(_, index) => ({
-                    length: screenHeight,
-                    offset: screenHeight * index,
+                    length: reelHeight,
+                    offset: reelHeight * index,
                     index,
                 })}
-                style={{ height: screenHeight }}
+                style={{ height: reelHeight }}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
                 onScrollBeginDrag={() => {
-                    setIsScrolling(true);
+                    momentumInProgressRef.current = false;
+                    clearScrollReleaseTimeout();
+                    setScrollingState(true);
                     scrollStartIndexRef.current = currentIndexRef.current;
+                    updateAudioVisibleIndex(currentIndexRef.current);
+                    updateSourceAnchorIndex(currentIndexRef.current);
                 }}
-                onScrollEndDrag={() => setIsScrolling(false)}
+                onScroll={(e) => {
+                    if (!isScrollingRef.current || reelHeight <= 0) {
+                        return;
+                    }
+                    const offsetY = e.nativeEvent.contentOffset.y;
+                    if (!Number.isFinite(offsetY)) {
+                        return;
+                    }
+                    const pageOffset = offsetY / reelHeight;
+                    const anchorIndex = sourceAnchorIndexRef.current;
+                    let nextSourceIndex = anchorIndex;
+
+                    if (pageOffset >= anchorIndex + SOURCE_ANCHOR_SWITCH_THRESHOLD) {
+                        nextSourceIndex = clampIndex(anchorIndex + 1);
+                    } else if (pageOffset <= anchorIndex - SOURCE_ANCHOR_SWITCH_THRESHOLD) {
+                        nextSourceIndex = clampIndex(anchorIndex - 1);
+                    }
+
+                    if (nextSourceIndex !== anchorIndex) {
+                        updateSourceAnchorIndex(nextSourceIndex);
+                    }
+                }}
+                onScrollEndDrag={(e) => {
+                    const velocityY = e.nativeEvent.velocity?.y ?? 0;
+                    const offsetY = e.nativeEvent.contentOffset.y;
+                    if (!Number.isFinite(offsetY) || !Number.isFinite(velocityY) || reelHeight <= 0) {
+                        setScrollingState(false);
+                        return;
+                    }
+                    const startIndex = scrollStartIndexRef.current;
+                    const startOffsetY = startIndex * reelHeight;
+                    const deltaPages = (offsetY - startOffsetY) / reelHeight;
+                    const shouldKeepCurrent =
+                        Math.abs(deltaPages) < REEL_SNAP_DISTANCE_THRESHOLD &&
+                        Math.abs(velocityY) < reelSnapVelocityThreshold;
+
+                    if (shouldKeepCurrent) {
+                        const stableStartIndex = recenterAroundLoopMiddle(startIndex);
+                        safeScrollToIndex(stableStartIndex, true);
+                        currentIndexRef.current = stableStartIndex;
+                        setVisibleIndex(stableStartIndex);
+                        updateAudioVisibleIndex(stableStartIndex);
+                        updateSourceAnchorIndex(stableStartIndex);
+                    } else {
+                        const rawTargetIndex = Math.round(offsetY / reelHeight);
+                        let predictedTargetIndex = clampIndex(rawTargetIndex);
+                        if (predictedTargetIndex === startIndex) {
+                            const dragDirection = Math.sign(deltaPages);
+                            const velocityDirection = Math.sign(velocityY);
+                            const direction = dragDirection !== 0 ? dragDirection : velocityDirection;
+                            if (direction !== 0) {
+                                predictedTargetIndex = clampIndex(startIndex + (direction > 0 ? 1 : -1));
+                            }
+                        }
+                        const stablePredictedIndex = recenterAroundLoopMiddle(predictedTargetIndex);
+                        updateAudioVisibleIndex(stablePredictedIndex);
+                        updateSourceAnchorIndex(stablePredictedIndex);
+                    }
+
+                    clearScrollReleaseTimeout();
+                    scrollReleaseTimeoutRef.current = setTimeout(() => {
+                        if (!momentumInProgressRef.current) {
+                            setScrollingState(false);
+                        }
+                    }, 180);
+                }}
+                onScrollToIndexFailed={(info) => {
+                    const fallbackOffset = Math.max(0, info.index * reelHeight);
+                    listRef.current?.scrollToOffset({ offset: fallbackOffset, animated: false });
+                    requestAnimationFrame(() => {
+                        safeScrollToIndex(info.index, false);
+                    });
+                }}
                 onMomentumScrollBegin={handleMomentumStart}
                 onMomentumScrollEnd={handleMomentumEnd}
+                scrollEnabled={!isZooming && !isPinchTouchActive && !isSpeedBoosting}
             />
 
-            <View
-                pointerEvents="box-none"
-                style={[styles.staticTopBarContainer, { top: insets.top + 16 }]}
-            >
-                <View style={styles.topBar}>
-                    <View style={styles.card}>
-                        <TouchableOpacity style={styles.row} activeOpacity={0.85}>
-                            <Ionicons name="location-outline" size={18} color="#000" />
-                            <Text style={styles.rowTextBold} numberOfLines={1}>
-                                {t("yourLocation")}
-                            </Text>
-                            <Ionicons
-                                name="chevron-down-outline"
-                                size={16}
-                                color="#000"
-                                style={styles.caret}
-                            />
-                        </TouchableOpacity>
+            {!isZooming && !isSpeedBoosting ? (
+                <View
+                    pointerEvents="box-none"
+                    style={[styles.staticTopBarContainer, { top: insets.top + 16 }]}
+                >
+                    <View style={styles.topBar}>
+                        <View style={styles.card}>
+                            <TouchableOpacity style={styles.row} activeOpacity={0.85}>
+                                <Ionicons name="location-outline" size={18} color="#000" />
+                                <Text style={styles.rowTextBold} numberOfLines={1}>
+                                    {t("yourLocation")}
+                                </Text>
+                                <Ionicons
+                                    name="chevron-down-outline"
+                                    size={16}
+                                    color="#000"
+                                    style={styles.caret}
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
-            </View>
+            ) : null}
+            {!isZooming && isSpeedBoosting ? (
+                <View
+                    pointerEvents="none"
+                    style={[styles.speedBottomContainer, { bottom: speedBadgeBottomOffset }]}
+                >
+                    <View style={styles.speedBottomBadge}>
+                        <Ionicons name="play-forward" size={20} color="#fff" />
+                        <Text style={styles.speedBottomBadgeText}>2x</Text>
+                    </View>
+                </View>
+            ) : null}
         </View>
     );
 }
@@ -705,6 +1366,28 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         justifyContent: "space-between",
         paddingHorizontal: 16,
+    },
+    speedBottomContainer: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        alignItems: "center",
+        zIndex: 12,
+    },
+    speedBottomBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        borderRadius: 999,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        backgroundColor: "rgba(0, 0, 0, 0.62)",
+    },
+    speedBottomBadgeText: {
+        color: "#fff",
+        fontSize: 16,
+        lineHeight: 19,
+        fontWeight: "700",
     },
     card: {
         width: 184,
@@ -837,7 +1520,7 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         color: "rgba(0, 0, 0, 0.5)",
     },
-    heartBurst: {
+    volumeBurst: {
         position: "absolute",
         top: "42%",
         left: 0,
@@ -845,5 +1528,22 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         zIndex: 4,
+    },
+    volumeBadge: {
+        width: 78,
+        height: 78,
+        borderRadius: 39,
+        backgroundColor: "rgba(0, 0, 0, 0.55)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    likeBurst: {
+        position: "absolute",
+        zIndex: 4,
+    },
+    likeBurstIcon: {
+        textShadowColor: "rgba(0,0,0,0.55)",
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 6,
     },
 });
