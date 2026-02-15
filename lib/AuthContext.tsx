@@ -1,4 +1,7 @@
-// lib/AuthContext.tsx
+// AuthContext: centralna sprava prihlasenia a pouzivatelskeho stavu.
+// Zodpovednost: poskytuje auth context pre celu appku.
+// Vstup/Vystup: expose login/logout/session hodnoty pre komponenty.
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { supabase } from './supabaseClient';
 import { Session, User } from '@supabase/supabase-js';

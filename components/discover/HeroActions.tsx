@@ -23,7 +23,7 @@ export function HeroActions({
   notificationsEnabled = false,
 }: Props) {
   const iconColor = "#111";
-  const iconSize = 18;
+  const iconSize = 16;
 
   return (
     <>
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   topRight: {
     position: "absolute",
     right: 16,
-    gap: 6,
+    gap: 5,
     zIndex: 40,
     elevation: 40,
   },
@@ -130,9 +130,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   actionBtn: {
-    width: 42,
-    height: 42,
-    padding: 12,
+    width: 38,
+    height: 38,
+    padding: 10,
     backgroundColor: "#fff",
     borderRadius: 999,
     alignItems: "center",

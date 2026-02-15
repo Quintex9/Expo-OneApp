@@ -1,16 +1,20 @@
+// apiSource: adapter pre REST/HTTP datasource.
+// Zodpovednost: miesto pre realne API volania a transformacie.
+// Vstup/Vystup: implementuje DataSource kontrakt cez API vrstvu.
+
 import type { DataSource } from "./source";
-import type { BranchData, DiscoverMapMarker } from "../interfaces";
+import type { BranchDto, MarkerDto } from "./models";
 import { mockSource } from "./mockSource";
 
-// Minimal stub: reuse mock for now. Replace methods with real fetch logic later.
+// Sem pridame realne volania na API (teraz len proxy na mock).
 export const apiSource: DataSource = {
-  async getBranches(): Promise<BranchData[]> {
+  async getBranches(): Promise<BranchDto[]> {
     return mockSource.getBranches();
   },
-  async getBranchById(id: string): Promise<BranchData | null> {
+  async getBranchById(id: string): Promise<BranchDto | null> {
     return mockSource.getBranchById(id);
   },
-  async getMarkers(): Promise<DiscoverMapMarker[]> {
+  async getMarkers(): Promise<MarkerDto[]> {
     return mockSource.getMarkers();
   },
 };

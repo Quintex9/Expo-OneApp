@@ -1,8 +1,11 @@
+// HomeScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import React, { memo, useCallback, useMemo } from "react";
 import {
   FlatList,
   Image,
-  ImageSourcePropType,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,8 +19,10 @@ import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useDiscoverData } from "../lib/hooks";
+import { appendDerivedBranchesFromMarkers } from "../lib/data/mappers";
 import { TAB_BAR_BASE_HEIGHT } from "../lib/constants/layout";
 import type { BranchData, DiscoverCategory } from "../lib/interfaces";
+import { getCategoryPreviewImages } from "../lib/data/assets/categoryAssets";
 
 type HomeCategoryFilter = "All" | DiscoverCategory;
 
@@ -32,33 +37,6 @@ const HOME_CATEGORY_CHIPS: Array<{
   { key: "Beauty", iconName: "sparkles-outline", labelKey: "Beauty" },
   { key: "Relax", iconName: "leaf-outline", labelKey: "Relax" },
 ];
-
-const CATEGORY_PREVIEW_IMAGES: Record<DiscoverCategory, ImageSourcePropType[]> = {
-  Fitness: [
-    require("../assets/gallery/fitness/fitness_1.jpg"),
-    require("../assets/gallery/fitness/fitness_2.jpg"),
-    require("../assets/gallery/fitness/fitness_3.jpg"),
-    require("../assets/gallery/fitness/fitness_4.jpg"),
-  ],
-  Gastro: [
-    require("../assets/gallery/gastro/gastro_1.jpg"),
-    require("../assets/gallery/gastro/gastro_2.jpg"),
-    require("../assets/gallery/gastro/gastro_3.jpg"),
-    require("../assets/gallery/gastro/gastro_4.jpg"),
-  ],
-  Relax: [
-    require("../assets/gallery/relax/relax_1.jpg"),
-    require("../assets/gallery/relax/relax_2.jpg"),
-    require("../assets/gallery/relax/relax_3.jpg"),
-    require("../assets/gallery/relax/relax_4.jpg"),
-  ],
-  Beauty: [
-    require("../assets/gallery/beauty/beauty_1.jpg"),
-    require("../assets/gallery/beauty/beauty_2.jpg"),
-    require("../assets/gallery/beauty/beauty_3.jpg"),
-    require("../assets/gallery/beauty/beauty_4.jpg"),
-  ],
-};
 
 const normalizeCategory = (value?: string): HomeCategoryFilter | null => {
   if (!value) return null;
@@ -183,46 +161,21 @@ export default function HomeScreen() {
     [headerControlsGap, horizontalPadding, screenWidth]
   );
   const [selectedCategory, setSelectedCategory] = React.useState<HomeCategoryFilter>("All");
-  const markerBranchOverrides = useMemo(
-    () => ({
-      gym_365: { title: t("365 GYM Nitra"), image: require("../assets/365.jpg"), category: "Fitness" },
-      gym_klub: { title: t("GYM KLUB"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond gym": { title: t("Diamond Gym"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond barber": { title: t("Diamond Barber"), image: require("../assets/royal.jpg"), category: "Beauty" },
-    }),
-    [t]
+  const { branches, markers, buildBranchFromMarker } = useDiscoverData({ t });
+  const homeBranchesSource = useMemo(
+    () => appendDerivedBranchesFromMarkers(branches, markers, buildBranchFromMarker),
+    [branches, markers, buildBranchFromMarker]
   );
-  const { branches, markers, buildBranchFromMarker } = useDiscoverData({ t, markerBranchOverrides });
-
-  const supplementalBranches = useMemo(() => {
-    const existingKeys = new Set(branches.map(getBranchKey));
-    const extras: BranchData[] = [];
-
-    markers.forEach((marker) => {
-      if (marker.category === "Multi") return;
-
-      if (existingKeys.has(marker.id.toLowerCase())) return;
-
-      const branch = buildBranchFromMarker(marker);
-      const key = getBranchKey(branch);
-      if (existingKeys.has(key)) return;
-
-      existingKeys.add(key);
-      extras.push(branch);
-    });
-
-    return extras;
-  }, [branches, markers, buildBranchFromMarker]);
 
   const homeBranches = useMemo(
     () =>
-      [...branches, ...supplementalBranches].map((branch) => {
+      homeBranchesSource.map((branch) => {
         const normalizedCategory = normalizeCategory(branch.category);
         if (!normalizedCategory || normalizedCategory === "All") {
           return branch;
         }
 
-        const categoryImages = CATEGORY_PREVIEW_IMAGES[normalizedCategory];
+        const categoryImages = getCategoryPreviewImages(normalizedCategory);
         if (!categoryImages || categoryImages.length === 0) {
           return branch;
         }
@@ -239,7 +192,7 @@ export default function HomeScreen() {
               : [...categoryImages],
         };
       }),
-    [branches, supplementalBranches]
+    [homeBranchesSource]
   );
 
   const filteredBranches = useMemo(() => {

@@ -1,3 +1,7 @@
+// interfaces: zdielane typy pre navigaciu, mapu a data modely.
+// Zodpovednost: drzi spolocne kontrakty medzi UI a data vrstvou.
+// Vstup/Vystup: export TypeScript interfejsov pouzitych napriec appkou.
+
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type BottomSheet from "@gorhom/bottom-sheet";
 import { ImageSourcePropType } from "react-native";

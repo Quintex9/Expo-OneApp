@@ -1,3 +1,7 @@
+// clusterIcons: generator/loader cluster ikon podla poctu markerov.
+// Zodpovednost: priprava vizualu cluster pinov pre mapu.
+// Vstup/Vystup: vracia image source pre cluster marker.
+
 export const CLUSTER_COUNT_KEYS = [
   "0",
   "1",

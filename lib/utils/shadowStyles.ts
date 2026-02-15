@@ -1,3 +1,7 @@
+// shadowStyles: helpery pre jednotne tiene v UI.
+// Zodpovednost: drzat opakovane shadow hodnoty na jednom mieste.
+// Vstup/Vystup: export style objektov pre iOS/Android tiene.
+
 import { Platform, ViewStyle } from "react-native";
 
 interface ShadowProps {

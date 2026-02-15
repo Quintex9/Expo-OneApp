@@ -1,3 +1,7 @@
+// useDiscoverClusters: custom hook pre clustering markerov.
+// Zodpovednost: priprava cluster/single marker vystupu podla zoomu.
+// Vstup/Vystup: vracia data pre mapovy render Discover markerov.
+
 import { useMemo } from "react";
 import Supercluster from "supercluster";
 import type { DiscoverMapMarker } from "../interfaces";

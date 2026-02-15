@@ -1,3 +1,7 @@
+// DiscoverScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageSourcePropType, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,11 +25,11 @@ import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPa
 import DiscoverGroupSheet from "../components/discover/DiscoverGroupSheet";
 import { setMapCamera } from "../lib/maps/camera";
 import { SINGLE_MODE_ZOOM } from "../lib/constants/discover";
-
-
-// Constants
-const NITRA_CENTER: [number, number] = [18.091, 48.3069];
-const FILTER_OPTIONS: DiscoverCategory[] = ["Fitness", "Gastro", "Relax", "Beauty"];
+import {
+  DISCOVER_FILTER_OPTIONS,
+  DISCOVER_SUBCATEGORIES,
+  NITRA_CENTER,
+} from "../lib/constants/discoverUi";
 
 /**
  * Vypočíta približnú veľkosť viditeľnej oblasti mapy v stupňoch
@@ -75,7 +79,6 @@ const FILTER_ICONS: Record<DiscoverCategory, ImageSourcePropType> = {
   Relax: require("../images/icons/relax/Relax.png"),
   Beauty: require("../images/icons/beauty/Beauty.png"),
 };
-const SUBCATEGORIES = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
 
 // Camera state is preserved via useDiscoverCamera hook (module-level state).
 
@@ -93,17 +96,6 @@ export default function DiscoverScreen() {
   const snapPoints = useMemo(() => ["25%", "85%"], []);
   const groupSnapPoints = useMemo(() => ["45%"], []);
 
-  // Marker branch overrides for specific locations
-  const markerBranchOverrides = useMemo(
-    () => ({
-      gym_365: { title: t("365 GYM Nitra"), image: require("../assets/365.jpg"), category: "Fitness" },
-      gym_klub: { title: t("GYM KLUB"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond gym": { title: t("Diamond Gym"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond barber": { title: t("Diamond Barber"), image: require("../assets/royal.jpg"), category: "Beauty" },
-    }),
-    [t]
-  );
-
   // Custom hooks
   const filters = useDiscoverFilters("Gastro");
   const {
@@ -115,7 +107,7 @@ export default function DiscoverScreen() {
     refetch,
     fetchBranchForMarker,
     buildBranchFromMarker,
-  } = useDiscoverData({ t, markerBranchOverrides });
+  } = useDiscoverData({ t });
 
   // Location state
   const [location, setLocation] = useState<Location[]>([
@@ -414,9 +406,9 @@ export default function DiscoverScreen() {
         setFilter={filters.setFilter}
         rating={filters.ratingFilter}
         setRating={filters.setRatingFilter}
-        filterOptions={FILTER_OPTIONS}
+        filterOptions={DISCOVER_FILTER_OPTIONS}
         filterIcons={FILTER_ICONS}
-        subcategories={SUBCATEGORIES}
+        subcategories={DISCOVER_SUBCATEGORIES}
         sub={filters.sub}
         toggle={filters.toggleSubcategory}
         count={filters.filterCount}
@@ -432,13 +424,13 @@ export default function DiscoverScreen() {
         visible={sideFilterOpen}
         onOpen={() => setSideFilterOpen(true)}
         onClose={() => setSideFilterOpen(false)}
-        filterOptions={FILTER_OPTIONS}
+        filterOptions={DISCOVER_FILTER_OPTIONS}
         appliedFilters={filters.appliedFilters}
         setAppliedFilters={filters.setAppliedFilters}
         rating={filters.ratingFilter}
         setRating={filters.setRatingFilter}
         setAppliedRatings={filters.setAppliedRatings}
-        subcategories={SUBCATEGORIES}
+        subcategories={DISCOVER_SUBCATEGORIES}
         sub={filters.sub}
         toggleSubcategory={filters.toggleSubcategory}
       />
@@ -449,7 +441,7 @@ export default function DiscoverScreen() {
           insetsBottom={insets.bottom}
           categoriesOpen={categoriesOpen}
           setCategoriesOpen={setCategoriesOpen}
-          filterOptions={FILTER_OPTIONS}
+          filterOptions={DISCOVER_FILTER_OPTIONS}
           filterIcons={FILTER_ICONS}
           appliedFilters={filters.appliedFilters}
           setAppliedFilters={filters.setAppliedFilters}
@@ -504,3 +496,5 @@ const errorStyles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+

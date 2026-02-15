@@ -1,4 +1,6 @@
 declare module '@env' {
+  export const DATA_SOURCE: string | undefined;
+  export const API_BASE_URL: string | undefined;
   export const SUPABASE_ANON_KEY: string;
   export const SUPABASE_URL: string;
 }

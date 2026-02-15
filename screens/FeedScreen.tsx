@@ -1,3 +1,7 @@
+// FeedScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import React, { memo, useMemo, useRef, useCallback, useEffect } from "react";
 import {
     View,
@@ -30,65 +34,13 @@ import {
     TAB_BAR_BASE_HEIGHT,
     TAB_BAR_MIN_INSET,
 } from "../lib/constants/layout";
-
-type ReelType = "image" | "video";
-type FeedOfferKey = (typeof OFFER_KEYS)[keyof typeof OFFER_KEYS];
-
-interface ReelItem {
-    id: string;
-    type: ReelType;
-    background?: any;
-    video?: any;
-    poster?: any;
-    branch: {
-        title: string;
-        image: any;
-        images?: any[];
-        rating: number;
-        distance: string;
-        hours: string;
-        category: string;
-        offerKeys: FeedOfferKey[];
-    };
-}
-
-// Offer keys for translation
-const OFFER_KEYS = {
-    discount20: "offer_discount20",
-    freeEntryFriend: "offer_freeEntryFriend",
-    discount10Monthly: "offer_discount10Monthly",
-    discount15Today: "offer_discount15Today",
-    twoForOne: "offer_twoForOne",
-    firstMonthFree: "offer_firstMonthFree",
-    personalTrainer: "offer_personalTrainer",
-    discount25Weekend: "offer_discount25Weekend",
-    freeTowel: "offer_freeTowel",
-};
-
-const OFFER_DESCRIPTION_KEYS: Record<FeedOfferKey, string> = {
-    [OFFER_KEYS.discount20]: "feedOfferDescDiscount20",
-    [OFFER_KEYS.freeEntryFriend]: "feedOfferDescFreeEntryFriend",
-    [OFFER_KEYS.discount10Monthly]: "feedOfferDescDiscount10Monthly",
-    [OFFER_KEYS.discount15Today]: "feedOfferDescDiscount15Today",
-    [OFFER_KEYS.twoForOne]: "feedOfferDescTwoForOne",
-    [OFFER_KEYS.firstMonthFree]: "feedOfferDescFirstMonthFree",
-    [OFFER_KEYS.personalTrainer]: "feedOfferDescPersonalTrainer",
-    [OFFER_KEYS.discount25Weekend]: "feedOfferDescDiscount25Weekend",
-    [OFFER_KEYS.freeTowel]: "feedOfferDescFreeTowel",
-};
-
-const OFFER_DESCRIPTION_DEFAULTS: Record<FeedOfferKey, string> = {
-    [OFFER_KEYS.discount20]: "Get 20% off your first entry when you activate this offer.",
-    [OFFER_KEYS.freeEntryFriend]: "Bring your friend for free and train together today.",
-    [OFFER_KEYS.discount10Monthly]: "Save 10% on your monthly pass this week.",
-    [OFFER_KEYS.discount15Today]: "Use this offer today and get 15% off your purchase.",
-    [OFFER_KEYS.twoForOne]: "Buy one entry and get the second one free.",
-    [OFFER_KEYS.firstMonthFree]: "Start now and enjoy your first month free.",
-    [OFFER_KEYS.personalTrainer]: "Get a guided session with a personal trainer included.",
-    [OFFER_KEYS.discount25Weekend]: "Get 25% off selected services during the weekend.",
-    [OFFER_KEYS.freeTowel]: "Receive a free towel service with your visit.",
-};
-
+import {
+    FEED_OFFER_DESCRIPTION_DEFAULTS,
+    FEED_OFFER_DESCRIPTION_KEYS,
+    FEED_REELS_DATA,
+    type FeedOfferKey,
+    type FeedReelItem,
+} from "../lib/fixtures/feedReels";
 const OVERLAY_CARD_GAP = 12;
 const PINCH_SCALE_ACTIVATION_THRESHOLD = 0.06;
 const TAP_MAX_DISTANCE = 12;
@@ -101,107 +53,16 @@ const SPEED_BOOST_LEFT_ZONE_RATIO = 0.4;
 const SOURCE_ANCHOR_SWITCH_THRESHOLD = 0.58;
 const LIKE_BURST_SIZE = 86;
 
-// Gallery images pre Fitness kategóriu
-const FITNESS_GALLERY = [
-    require("../assets/gallery/fitness/fitness_1.jpg"),
-    require("../assets/gallery/fitness/fitness_2.jpg"),
-    require("../assets/gallery/fitness/fitness_3.jpg"),
-    require("../assets/gallery/fitness/fitness_4.jpg"),
-];
-
-const REELS_DATA = [
-    {
-        id: "reel-1",
-        type: "video" as ReelType,
-        video: require("../assets/stock/15859732.mp4"),
-        poster: require("../assets/feed1.jpg"),
-        branch: {
-            title: "RED ROYAL GYM",
-            image: require("../assets/365.jpg"),
-            images: [require("../assets/365.jpg"), ...FITNESS_GALLERY],
-            rating: 4.6,
-            distance: "1.7 km",
-            hours: "9:00 - 21:00",
-            category: "Fitness",
-            offerKeys: [OFFER_KEYS.discount20, OFFER_KEYS.freeEntryFriend],
-        },
-    },
-    {
-        id: "reel-2",
-        type: "video" as ReelType,
-        video: require("../assets/stock/10740030.mp4"),
-        poster: require("../assets/feed1.jpg"),
-        branch: {
-            title: "GYM KLUB",
-            image: require("../assets/klub.jpg"),
-            images: [require("../assets/klub.jpg"), ...FITNESS_GALLERY],
-            rating: 4.7,
-            distance: "2.1 km",
-            hours: "8:00 - 22:00",
-            category: "Fitness",
-            offerKeys: [OFFER_KEYS.freeEntryFriend, OFFER_KEYS.discount10Monthly],
-        },
-    },
-    {
-        id: "reel-3",
-        type: "video" as ReelType,
-        video: require("../assets/vertical1.mp4"),
-        poster: require("../assets/feed2.jpg"),
-        branch: {
-            title: "DIAMOND GYM",
-            image: require("../assets/royal.jpg"),
-            images: [require("../assets/royal.jpg"), ...FITNESS_GALLERY],
-            rating: 4.4,
-            distance: "1.3 km",
-            hours: "7:00 - 20:00",
-            category: "Fitness",
-            offerKeys: [OFFER_KEYS.discount15Today, OFFER_KEYS.twoForOne],
-        },
-    },
-    {
-        id: "reel-4",
-        type: "video" as ReelType,
-        video: require("../assets/stock/15859732.mp4"),
-        poster: require("../assets/feed2.jpg"),
-        branch: {
-            title: "FLEX FITNESS",
-            image: require("../assets/klub.jpg"),
-            images: [require("../assets/klub.jpg"), ...FITNESS_GALLERY],
-            rating: 4.8,
-            distance: "0.9 km",
-            hours: "6:00 - 23:00",
-            category: "Fitness",
-            offerKeys: [OFFER_KEYS.firstMonthFree, OFFER_KEYS.personalTrainer],
-        },
-    },
-    {
-        id: "reel-5",
-        type: "video" as ReelType,
-        video: require("../assets/stock/10740030.mp4"),
-        poster: require("../assets/feed3.jpg"),
-        branch: {
-            title: "POWER ZONE",
-            image: require("../assets/royal.jpg"),
-            images: [require("../assets/royal.jpg"), ...FITNESS_GALLERY],
-            rating: 4.5,
-            distance: "3.2 km",
-            hours: "7:00 - 22:00",
-            category: "Fitness",
-            offerKeys: [OFFER_KEYS.discount25Weekend, OFFER_KEYS.freeTowel],
-        },
-    },
-];
-
 interface ReelLoopItem {
     key: string;
-    reel: ReelItem;
+    reel: FeedReelItem;
     sourceIndex: number;
     loopIndex: number;
 }
 
 const REEL_LOOP_REPEAT = 240;
 const REEL_LOOP_EDGE_BUFFER_CYCLES = 2;
-const REEL_BASE_COUNT = REELS_DATA.length;
+const REEL_BASE_COUNT = FEED_REELS_DATA.length;
 const REEL_LOOP_TOTAL_COUNT = REEL_BASE_COUNT * REEL_LOOP_REPEAT;
 const REEL_LOOP_CENTER_INDEX =
     REEL_BASE_COUNT === 0 ? 0 : Math.floor(REEL_LOOP_REPEAT / 2) * REEL_BASE_COUNT;
@@ -226,7 +87,7 @@ const REELS_LOOP_DATA: ReelLoopItem[] =
         ? []
         : Array.from({ length: REEL_LOOP_TOTAL_COUNT }, (_, loopIndex) => {
               const sourceIndex = positiveModulo(loopIndex, REEL_BASE_COUNT);
-              const reel = REELS_DATA[sourceIndex];
+              const reel = FEED_REELS_DATA[sourceIndex];
               return {
                   key: `${reel.id}-loop-${loopIndex}`,
                   reel,
@@ -254,7 +115,7 @@ const ReelItemComponent = memo(
         onPinchTouchStateChange,
         onSpeedBoostStateChange,
     }: {
-        item: ReelItem;
+        item: FeedReelItem;
         height: number;
         actionsBottom: number;
         branchCardWidth: number;
@@ -724,8 +585,8 @@ const ReelItemComponent = memo(
                 }
 
                 const offerTitle = t(cardItem.offerKey);
-                const descriptionKey = OFFER_DESCRIPTION_KEYS[cardItem.offerKey];
-                const fallbackDescription = OFFER_DESCRIPTION_DEFAULTS[cardItem.offerKey];
+                const descriptionKey = FEED_OFFER_DESCRIPTION_KEYS[cardItem.offerKey];
+                const fallbackDescription = FEED_OFFER_DESCRIPTION_DEFAULTS[cardItem.offerKey];
                 const offerDescription = t(descriptionKey, { defaultValue: fallbackDescription });
                 const offerImage = item.branch.images?.[0] ?? item.branch.image;
 
@@ -1553,3 +1414,5 @@ const styles = StyleSheet.create({
         textShadowRadius: 6,
     },
 });
+
+

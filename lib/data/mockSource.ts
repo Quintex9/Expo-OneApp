@@ -1,101 +1,136 @@
-/**
- * mockSource.ts
- * 
- * Mock dátový zdroj pre vývoj a testovanie.
- * Poskytuje statické dáta bez nutnosti pripojenia k API/databáze.
- * 
- * OPTIMALIZÁCIE:
- * - Všetky dáta sú pred-vypočítané pri štarte (nie pri každom volaní)
- * - Používame Map pre O(1) lookup namiesto O(n) find()
- * - Pole pobočiek je cachované (nevytvárame nové pri každom volaní)
- */
+// mockSource: lokalny datasource pre vyvoj a testovanie.
+// Zodpovednost: vracia fixture DTO data bez sietovych volani.
+// Vstup/Vystup: implementuje DataSource kontrakt nad mock datami.
 
-import { ImageSourcePropType } from "react-native";
 import type { DataSource } from "./source";
-import type { BranchData, DiscoverMapMarker, DiscoverCategory } from "../interfaces";
-import { branchesFixture } from "../fixtures/branches";
-import { coords } from "../data/coords";
-import { normalizeBranch, formatTitleFromId, getRatingForId } from "./normalizers";
+import type { BranchDto, MarkerDto } from "./models";
+import { branchDtosFixture } from "../fixtures/branchDtos";
+import { coords } from "./coords";
+import { formatTitleFromId, getRatingForId } from "./utils/marker";
+import { normalizeId } from "./utils/id";
 
-// Ikonky pre jednotlivé kategórie (bez hodnotenia - základný pin)
-const MARKER_ICONS: Record<DiscoverCategory, ImageSourcePropType> = {
-  Fitness: require("../../images/icons/fitness/fitness_without_review.png"),
-  Gastro: require("../../images/icons/gastro/gastro_without_rating.png"),
-  Relax: require("../../images/icons/relax/relax_without_rating.png"),
-  Beauty: require("../../images/icons/beauty/beauty_without_rating.png"),
-};
+const DEFAULT_HOURS = "9:00 - 21:00";
+const DEFAULT_DISTANCE = "1.7 km";
 
-// === PRED-VÝPOČET POBOČIEK ===
-// Vytvoríme Map pre rýchle vyhľadávanie podľa ID - O(1) namiesto O(n)
-const branchMap = new Map<string, BranchData>();
-branchesFixture.forEach((b) => {
-  const normalized = normalizeBranch(b);
-  branchMap.set(normalized.id ?? normalized.title, normalized);
+const branchList: BranchDto[] = branchDtosFixture.map((branch) => ({
+  ...branch,
+  imageKey: branch.imageKey ?? normalizeId(branch.category ?? "fitness"),
+  labelPriority:
+    branch.labelPriority ??
+    (Number.isFinite(branch.rating) ? Math.round((branch.rating as number) * 10) : undefined),
+}));
+const branchByRawId = new Map<string, BranchDto>();
+const branchByCanonicalId = new Map<string, BranchDto>();
+
+branchList.forEach((branch) => {
+  branchByRawId.set(branch.id, branch);
+
+  const canonicalId = normalizeId(branch.id);
+  if (canonicalId && !branchByCanonicalId.has(canonicalId)) {
+    branchByCanonicalId.set(canonicalId, branch);
+  }
 });
 
-// Cachujeme pole pobočiek - vyhne sa Array.from() pri každom volaní getBranches()
-const branchesArray = Array.from(branchMap.values());
+const markerList: MarkerDto[] = coords.map((coord) => {
+  const rating = getRatingForId(coord.id);
+  return {
+    id: coord.id,
+    title: formatTitleFromId(coord.id),
+    groupId: coord.groupId,
+    coord: { lng: coord.lng, lat: coord.lat },
+    category: coord.category,
+    rating,
+    ratingFormatted: rating.toFixed(1),
+    iconKey: normalizeId(coord.category),
+    markerSpriteKey: coord.id,
+    labelPriority: Math.round(rating * 10),
+  } satisfies MarkerDto;
+});
 
-// === PRED-VÝPOČET MARKEROV ===
-// Transformujeme súradnice na markery s ikonkami a hodnotením
-const markers: DiscoverMapMarker[] = coords.map((c) => ({
-  id: c.id,
-  title: formatTitleFromId(c.id),       // "gym_365" -> "Gym 365"
-  groupId: c.groupId,                    // pre multi-piny (viac pobočiek na jednom mieste)
-  coord: { lng: c.lng, lat: c.lat },
-  category: c.category,
-  rating: getRatingForId(c.id),          // deterministické hodnotenie z ID
-  icon: MARKER_ICONS[c.category],
-}));
+const markerByRawId = new Map<string, MarkerDto>();
+const markerByCanonicalId = new Map<string, MarkerDto>();
 
-// Map pre rýchle vyhľadávanie markerov - O(1) namiesto O(n) find()
-const markerMap = new Map(markers.map((m) => [m.id, m]));
+markerList.forEach((marker) => {
+  markerByRawId.set(marker.id, marker);
 
-/**
- * Mock implementácia DataSource rozhrania
- * Všetky metódy sú async pre kompatibilitu s reálnym API/Supabase
- */
+  const canonicalId = normalizeId(marker.id);
+  if (canonicalId && !markerByCanonicalId.has(canonicalId)) {
+    markerByCanonicalId.set(canonicalId, marker);
+  }
+});
+
+const findBranch = (id: string) => {
+  const byRaw = branchByRawId.get(id);
+  if (byRaw) {
+    return byRaw;
+  }
+
+  const canonicalId = normalizeId(id);
+  if (!canonicalId) {
+    return undefined;
+  }
+
+  return branchByCanonicalId.get(canonicalId);
+};
+
+const findMarker = (id: string) => {
+  const byRaw = markerByRawId.get(id);
+  if (byRaw) {
+    return byRaw;
+  }
+
+  const canonicalId = normalizeId(id);
+  if (!canonicalId) {
+    return undefined;
+  }
+
+  return markerByCanonicalId.get(canonicalId);
+};
+
+const buildBranchFromMarker = (id: string, marker: MarkerDto): BranchDto => {
+  const markerId = marker.id || id;
+  const derivedBranch: BranchDto = {
+    id: markerId,
+    title: marker.title ?? formatTitleFromId(markerId),
+    category: marker.category === "Multi" ? "Fitness" : marker.category,
+    rating: Number.isFinite(marker.rating) ? marker.rating : getRatingForId(markerId),
+    distance: DEFAULT_DISTANCE,
+    hours: DEFAULT_HOURS,
+    coordinates: [marker.coord.lng, marker.coord.lat],
+    imageKey: normalizeId(marker.category === "Multi" ? "fitness" : marker.category),
+    labelPriority: marker.labelPriority,
+  };
+
+  branchByRawId.set(markerId, derivedBranch);
+
+  const canonicalId = normalizeId(id || markerId);
+  if (canonicalId && !branchByCanonicalId.has(canonicalId)) {
+    branchByCanonicalId.set(canonicalId, derivedBranch);
+  }
+
+  return derivedBranch;
+};
+
 export const mockSource: DataSource = {
-  /**
-   * Vráti všetky pobočky
-   * Vďaka cache vracia vždy rovnaké pole (žiadna alokácia pamäte)
-   */
   async getBranches() {
-    return branchesArray;
+    return branchList;
   },
 
-  /**
-   * Vráti pobočku podľa ID
-   * Najprv hľadá v cache, ak nenájde, vytvorí z markera
-   * 
-   * @param id - ID pobočky
-   * @returns pobočka alebo null ak neexistuje
-   */
   async getBranchById(id: string) {
-    // Skúsime nájsť v cache
-    const cached = branchMap.get(id);
-    if (cached) return cached;
+    const branch = findBranch(id);
+    if (branch) {
+      return branch;
+    }
 
-    // Ak nie je v cache, skúsime vytvoriť z markera
-    const marker = markerMap.get(id);  // O(1) lookup
-    if (!marker) return null;
+    const marker = findMarker(id);
+    if (!marker) {
+      return null;
+    }
 
-    // Vytvoríme pobočku z markera a uložíme do cache
-    const normalized = normalizeBranch({
-      id,
-      title: id,
-      category: marker.category,
-      rating: marker.rating,
-    });
-    branchMap.set(id, normalized);
-    
-    return normalized;
+    return buildBranchFromMarker(id, marker);
   },
 
-  /**
-   * Vráti všetky markery pre mapu
-   */
   async getMarkers() {
-    return markers;
+    return markerList;
   },
 };

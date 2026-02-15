@@ -1,3 +1,7 @@
+// markerImageProvider: hybrid resolver marker obrazkov.
+// Zodpovednost: full sprite / local asset / fallback ikonova vetva.
+// Vstup/Vystup: resolve marker image + metadata anchor/variant.
+
 import type { ImageSourcePropType, ImageURISource } from "react-native";
 import type { DiscoverMapMarker } from "../interfaces";
 import { resolveBadgedIconSource } from "./badgedIcons";
@@ -6,6 +10,7 @@ import {
   getLocalFullMarkerSprite,
   hasLocalFullMarkerSpriteKey,
 } from "./generatedFullMarkerSprites";
+import { normalizeId } from "../data/utils/id";
 
 const FITNESS_ICON = require("../../images/icons/fitness/fitness_without_review.png");
 const GASTRO_ICON = require("../../images/icons/gastro/gastro_without_rating.png");
@@ -110,14 +115,30 @@ export const getMarkerSpriteKey = (marker?: DiscoverMapMarker | null) => {
     return "";
   }
   const explicit = marker.markerSpriteKey?.trim();
-  if (explicit) {
-    return explicit;
+  const raw = explicit || marker.id;
+  const canonical = normalizeId(raw);
+  return canonical || raw;
+};
+
+const getMarkerSpriteKeyCandidates = (marker?: DiscoverMapMarker | null) => {
+  if (!marker) {
+    return [] as string[];
   }
-  return marker.id;
+
+  const explicit = marker.markerSpriteKey?.trim();
+  const raw = explicit || marker.id;
+  const canonical = normalizeId(raw);
+  const candidates = [canonical, raw, marker.id].filter(
+    (value): value is string => Boolean(value && value.trim())
+  );
+
+  return Array.from(new Set(candidates));
 };
 
 export const hasLocalFullMarkerSprite = (marker?: DiscoverMapMarker | null) =>
-  hasLocalFullMarkerSpriteKey(getMarkerSpriteKey(marker));
+  getMarkerSpriteKeyCandidates(marker).some((key) =>
+    hasLocalFullMarkerSpriteKey(key)
+  );
 
 export const getMarkerRemoteSpriteUrl = (marker?: DiscoverMapMarker | null) =>
   normalizeRemoteSpriteUrl(marker?.markerSpriteUrl);
@@ -144,6 +165,7 @@ export const resolveMarkerImage = (
   context?: ResolveMarkerImageContext
 ): ResolvedMarkerImage => {
   const spriteKey = getMarkerSpriteKey(marker);
+  const spriteKeyCandidates = getMarkerSpriteKeyCandidates(marker);
   const preferFull = Boolean(context?.preferFullSprite);
   const failedRemoteKeys = context?.remoteSpriteFailureKeys;
 
@@ -158,7 +180,11 @@ export const resolveMarkerImage = (
       };
     }
 
-    const localFull = getLocalFullMarkerSprite(spriteKey);
+    const localFull =
+      getLocalFullMarkerSprite(spriteKey) ??
+      spriteKeyCandidates
+        .map((candidate) => getLocalFullMarkerSprite(candidate))
+        .find((candidate) => Boolean(candidate));
     if (localFull) {
       return {
         image: localFull.image,

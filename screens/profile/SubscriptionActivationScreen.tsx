@@ -1,3 +1,7 @@
+// SubscriptionActivationScreen: obrazovka profilovej sekcie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

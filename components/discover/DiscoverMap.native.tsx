@@ -25,6 +25,22 @@ import {
   zoomToRegion,
 } from "../../lib/maps/camera";
 import {
+  appendUniqueValue,
+  clampNumber,
+  getDefaultPinColor,
+  getIOSScaledMarkerSize,
+  getMarkerNumericRating,
+  getPixelDistanceSq,
+  getTooltipCategoryIcon,
+  isFiniteCoordinate,
+  isValidMapCoordinate,
+  isValidMarkerImage,
+  isValidRegion,
+  projectToWorld,
+  toMarkerTitle,
+  wrapWorldDelta,
+} from "../../lib/maps/discoverMapUtils";
+import {
   type MarkerLabelCandidate,
 } from "../../lib/maps/labelSelection";
 import {
@@ -58,8 +74,6 @@ const MULTI_ICON = require("../../images/icons/multi/multi.png");
 const CLUSTER_ID_PREFIX = "cluster:";
 const USER_MARKER_ID = "user-location";
 const USER_MARKER_COLOR = "#2563EB";
-const CLUSTER_PIN_COLOR = "#111827";
-const FILTER_CLUSTER_PIN_COLOR = "#EB8100";
 const CLUSTER_ZOOM_BUCKET_SIZE = 2;
 const VIEWPORT_PADDING_RATIO = 0.35;
 const TOOLTIP_WIDTH = 183;
@@ -128,37 +142,6 @@ type ClusterPointFeature = {
   properties: { markerId: string; weight: number };
 };
 
-const projectToWorld = (
-  longitude: number,
-  latitude: number,
-  worldSize: number
-) => {
-  const x = ((longitude + 180) / 360) * worldSize;
-  const sinLat = Math.sin((latitude * Math.PI) / 180);
-  const clampedSinLat = Math.min(0.9999, Math.max(-0.9999, sinLat));
-  const y =
-    (0.5 -
-      Math.log((1 + clampedSinLat) / (1 - clampedSinLat)) / (4 * Math.PI)) *
-    worldSize;
-
-  return { x, y };
-};
-
-const getPixelDistanceSq = (
-  a: { x: number; y: number },
-  b: { x: number; y: number }
-) => {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return dx * dx + dy * dy;
-};
-
-const clampNumber = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
-const appendUniqueValue = (items: string[], value: string) =>
-  items.includes(value) ? items : [...items, value];
-
 const estimateInlineTitleWidth = (title: string) => {
   const normalized = title.trim();
   if (!normalized) {
@@ -167,120 +150,6 @@ const estimateInlineTitleWidth = (title: string) => {
   const estimated =
     normalized.length * BADGED_TITLE_CHAR_PX + BADGED_TITLE_HORIZONTAL_PADDING * 2;
   return Math.round(clampNumber(estimated, BADGED_TITLE_WIDTH, BADGED_TITLE_MAX_WIDTH));
-};
-
-const wrapWorldDelta = (delta: number, worldSize: number) => {
-  if (delta > worldSize / 2) {
-    return delta - worldSize;
-  }
-  if (delta < -worldSize / 2) {
-    return delta + worldSize;
-  }
-  return delta;
-};
-
-const isFiniteCoordinate = (latitude: number, longitude: number) => {
-  return Number.isFinite(latitude) && Number.isFinite(longitude);
-};
-
-const isValidMapCoordinate = (latitude: number, longitude: number) => {
-  return (
-    isFiniteCoordinate(latitude, longitude) &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180
-  );
-};
-
-const isValidMarkerImage = (
-  image: number | ImageURISource | undefined
-): image is number | ImageURISource => {
-  if (typeof image === "number") {
-    return Number.isFinite(image) && image > 0;
-  }
-  if (!image || typeof image !== "object") {
-    return false;
-  }
-  return typeof image.uri === "string" && image.uri.length > 0;
-};
-
-const isValidRegion = (region: Region) => {
-  return (
-    Number.isFinite(region.latitude) &&
-    Number.isFinite(region.longitude) &&
-    Number.isFinite(region.latitudeDelta) &&
-    Number.isFinite(region.longitudeDelta)
-  );
-};
-
-const getTooltipCategoryIcon = (
-  category?: DiscoverMapMarker["category"]
-): keyof typeof Ionicons.glyphMap => {
-  switch (category) {
-    case "Gastro":
-      return "restaurant-outline";
-    case "Beauty":
-      return "sparkles-outline";
-    case "Relax":
-      return "leaf-outline";
-    case "Fitness":
-      return "barbell-outline";
-    default:
-      return "apps-outline";
-  }
-};
-
-const toMarkerTitle = (marker: DiscoverMapMarker) => {
-  const fallback = marker.id
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (match) => match.toUpperCase());
-
-  const explicit = marker.title?.trim();
-  if (explicit && explicit.length > 3) {
-    return explicit;
-  }
-  return fallback;
-};
-
-const getMarkerNumericRating = (marker?: DiscoverMapMarker) => {
-  if (!marker) {
-    return null;
-  }
-  const parsed =
-    typeof marker.rating === "number"
-      ? marker.rating
-      : typeof marker.ratingFormatted === "string"
-        ? Number.parseFloat(marker.ratingFormatted)
-        : NaN;
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-  return Math.min(5, Math.max(0, parsed));
-};
-
-const CATEGORY_PIN_COLORS: Record<DiscoverMapMarker["category"], string> = {
-  Fitness: "#2563EB",
-  Gastro: "#16A34A",
-  Relax: "#0891B2",
-  Beauty: "#DB2777",
-  Multi: CLUSTER_PIN_COLOR,
-};
-
-const getDefaultPinColor = (
-  marker: RenderMarker,
-  hasActiveFilter?: boolean
-) => {
-  if (marker.isCluster) {
-    return hasActiveFilter ? FILTER_CLUSTER_PIN_COLOR : CLUSTER_PIN_COLOR;
-  }
-  if (marker.isStacked) {
-    return CLUSTER_PIN_COLOR;
-  }
-  const category = marker.category ?? "Multi";
-  return CATEGORY_PIN_COLORS[category] ?? CLUSTER_PIN_COLOR;
 };
 
 const buildClusterId = (memberIds: string[]) => {
@@ -1589,6 +1458,11 @@ function DiscoverMap({
           const markerPinColor = useCustomImage
             ? undefined
             : getDefaultPinColor(marker, hasActiveFilter);
+          const shouldRenderIOSScaledStaticImage =
+            Platform.OS === "ios" && typeof imageProp === "number";
+          const iosScaledMarkerSize = shouldRenderIOSScaledStaticImage
+            ? getIOSScaledMarkerSize(imageProp)
+            : undefined;
 
           return (
             <Marker
@@ -1596,12 +1470,23 @@ function DiscoverMap({
               coordinate={marker.coordinate}
               zIndex={marker.zIndex}
               onPress={() => handleMarkerPress(marker)}
-              {...(imageProp
+              {...(!shouldRenderIOSScaledStaticImage && imageProp
                 ? { image: imageProp, tracksViewChanges: false }
-                : {})}
+                : shouldRenderIOSScaledStaticImage
+                  ? { tracksViewChanges: false }
+                  : {})}
               {...(anchorProp ? { anchor: anchorProp } : {})}
               {...(markerPinColor ? { pinColor: markerPinColor } : {})}
-            />
+            >
+              {shouldRenderIOSScaledStaticImage && iosScaledMarkerSize ? (
+                <Image
+                  source={imageProp}
+                  style={iosScaledMarkerSize}
+                  resizeMode="contain"
+                  fadeDuration={0}
+                />
+              ) : null}
+            </Marker>
           );
         }),
     [

@@ -1,3 +1,7 @@
+// coords: fixture suradnice markerov pre Discover mapu.
+// Zodpovednost: drzi id, kategoriu a geo polohu markerov.
+// Vstup/Vystup: exportuje zdrojove mapove body pre datasource.
+
 import { Coords } from "../interfaces";
 
 export const coords : Coords[] = [

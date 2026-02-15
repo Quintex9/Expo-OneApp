@@ -1,23 +1,17 @@
-/**
- * index.ts
- * 
- * Re-exporty všetkých custom hookov pre jednoduchší import.
- * 
- * Použitie:
- * import { useDiscoverFilters, useDiscoverCamera } from "../lib/hooks";
- */
+// hooks index: barrel export custom hookov.
+// Zodpovednost: jednotny vstupny bod pre import hookov.
+// Vstup/Vystup: re-export useDiscover* a useDynamicQRCode.
 
-// Hook pre správu filtrov (kategória, hodnotenie, vyhľadávanie)
 export { useDiscoverFilters } from "./useDiscoverFilters";
 export type { UseDiscoverFiltersReturn } from "./useDiscoverFilters";
 
-// Hook pre správu kamery mapy (pozícia, zoom, centrovanie)
+// Kamera mapy v Discover.
 export { useDiscoverCamera } from "./useDiscoverCamera";
 export type { UseDiscoverCameraReturn } from "./useDiscoverCamera";
 
-// Hook pre načítanie dát (pobočky, markery)
+// Data pre Discover (branches + markery).
 export { useDiscoverData, useSavedLocationMarkers } from "./useDiscoverData";
 export type { UseDiscoverDataReturn } from "./useDiscoverData";
 
-// Hook pre dynamicky QR kod (dummy JWT)
+// Dynamicky QR kod.
 export { useDynamicQRCode } from "./useDynamicQRCode";

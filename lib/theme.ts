@@ -1,13 +1,7 @@
-/**
- * Theme - centralizované farby, fonty a spoločné štýly
- * 
- * Použitie:
- * import { colors, fonts, spacing } from "../lib/theme";
- * 
- * <Text style={{ color: colors.primary, fontFamily: fonts.bold }}>
- */
+// theme: centralne dizajn tokeny aplikacie.
+// Zodpovednost: farby, typografia, spacing, shadows a helper style objekty.
+// Vstup/Vystup: exportuje theme hodnoty pre konzistentne UI styly.
 
-// === FARBY ===
 export const colors = {
     // Primárna farba (oranžová)
     primary: "#EB8100",

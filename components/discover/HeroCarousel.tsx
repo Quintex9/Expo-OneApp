@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { FlatList, Image, Platform, StyleSheet, View } from "react-native";
+import { FlatList, Image, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
 type Props = {
   data: any[];
@@ -7,22 +7,30 @@ type Props = {
   width: number;
   index: number;
   onIndexChange: (i: number) => void;
+  onImagePress?: (index: number) => void;
 };
 
-export function HeroCarousel({ data, height, width, index, onIndexChange }: Props) {
+export function HeroCarousel({ data, height, width, index, onIndexChange, onImagePress }: Props) {
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
+    ({ item, index: itemIndex }: { item: any; index: number }) => (
       <View style={{ width, height }}>
-        <Image
-          source={item.image}
-          style={carouselStyles.image}
-          resizeMode="cover"
-          resizeMethod="resize"
-          fadeDuration={0}
-        />
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={onImagePress ? () => onImagePress(itemIndex) : undefined}
+          style={carouselStyles.pressArea}
+          disabled={!onImagePress}
+        >
+          <Image
+            source={item.image}
+            style={carouselStyles.image}
+            resizeMode="cover"
+            resizeMethod="resize"
+            fadeDuration={0}
+          />
+        </TouchableOpacity>
       </View>
     ),
-    [height, width]
+    [height, onImagePress, width]
   );
 
   const getItemLayout = useCallback(
@@ -76,6 +84,10 @@ export function HeroCarousel({ data, height, width, index, onIndexChange }: Prop
 }
 
 const carouselStyles = StyleSheet.create({
+  pressArea: {
+    width: "100%",
+    height: "100%",
+  },
   image: {
     width: "100%",
     height: "100%",

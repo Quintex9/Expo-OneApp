@@ -1,3 +1,7 @@
+// camera utils: helpery pre map camera prevody a ovladanie.
+// Zodpovednost: normalizacia center, zoom vypocet a setMapCamera.
+// Vstup/Vystup: utility pre konzistentne map pohyby v appke.
+
 import { Dimensions } from "react-native";
 import type { Region } from "react-native-maps";
 import type { MapViewRef } from "../interfaces";

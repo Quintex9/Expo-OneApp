@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from "react";
+// OnboardingScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { DiscoverCategory, BranchData, PlanId } from "../lib/interfaces";
 import BranchCard from "../components/BranchCard";
 import SelectableCard from "../components/SelectableCard";
-import { useDataSource } from "../lib/data/useDataSource";
+import { useDiscoverData } from "../lib/hooks";
 import { DUMMY_BRANCH } from "../lib/constants/discover";
 
 /* ---------- KONŠTANTY ---------- */
@@ -56,11 +60,10 @@ export default function OnboardingScreen() {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { getBranches } = useDataSource();
+  const { branches: discoverBranches } = useDiscoverData({ t });
 
   const [stepIndex, setStepIndex] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<DiscoverCategory>>(new Set());
-  const [branches, setBranches] = useState<BranchData[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
 
   const step = STEPS[stepIndex];
@@ -79,26 +82,15 @@ export default function OnboardingScreen() {
   const categoriesText = selectedCategoriesArray.map((c) => t(c)).join(", ");
 
 
-  useEffect(() => {
-    if (step === "branches" && selectedCategories.size > 0) {
-      loadBranches();
-    }
-  }, [step, selectedCategories]);
+  const branches = useMemo<BranchData[]>(
+    () =>
+      discoverBranches.filter((branch) =>
+        selectedCategories.has(branch.category as DiscoverCategory)
+      ),
+    [discoverBranches, selectedCategories]
+  );
 
   /* ---------- LOGIKA ---------- */
-
-  const loadBranches = async () => {
-    try {
-      const allBranches = await getBranches();
-      setBranches(
-        allBranches.filter((b) =>
-          selectedCategories.has(b.category as DiscoverCategory)
-        )
-      );
-    } catch (error) {
-      console.error("Error loading branches:", error);
-    }
-  };
 
   const toggleCategory = (category: DiscoverCategory) => {
     setSelectedCategories((prev) => {

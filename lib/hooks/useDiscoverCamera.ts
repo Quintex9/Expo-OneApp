@@ -1,9 +1,6 @@
-/**
- * useDiscoverCamera.ts
- * 
- * Tento hook spravuje stav kamery mapy a polohu používateľa.
- * Obsahuje logiku pre centrovanie, zoom a uchovávanie pozície medzi prepínaním tabov.
- */
+// useDiscoverCamera: custom hook pre kameru mapy v Discover.
+// Zodpovednost: sync map center/zoom, user location a restore spravanie.
+// Vstup/Vystup: handlery a akcie pre mapove gesto, centrum a zoom.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";

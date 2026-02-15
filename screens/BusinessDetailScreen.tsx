@@ -1,3 +1,7 @@
+// BusinessDetailScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -9,7 +13,6 @@ import {
   Share,
   StyleSheet,
   useWindowDimensions,
-  type ImageSourcePropType,
 } from "react-native";
 import { Asset } from "expo-asset";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +26,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { HeroCarousel } from "../components/discover/HeroCarousel";
+import { BusinessGalleryModal } from "../components/discover/BusinessGalleryModal";
 import { TabMenu } from "../components/discover/TabMenu";
 import { NEWS_IMAGE_SOURCES } from "../components/discover/NewsSection";
 import { BenefitsSection } from "../components/discover/BenefitsSection";
@@ -33,6 +37,10 @@ import { InfoSection } from "../components/discover/InfoSection";
 import { HomeSection } from "../components/discover/HomeSection";
 import { ReviewsSection } from "../components/discover/ReviewsSection";
 import { normalizeBranch } from "../lib/data/normalizers";
+import {
+  getCategoryGalleryImages,
+  resolveDiscoverCategory,
+} from "../lib/data/assets/categoryAssets";
 import { useAuth } from "../lib/AuthContext";
 import { AUTH_GUARD_ENABLED } from "../lib/constants/auth";
 import type { BranchData } from "../lib/interfaces";
@@ -53,35 +61,12 @@ const MENU_TABS: TabKey[] = ["home", "benefits", "info", "reviews"];
 const MENU_GAP = 10;
 const SIDE_PADDING = 15;
 const SNAP_THRESHOLD = 24;
+const SNAP_EDGE_EPSILON = 1;
+const SNAP_DRAG_VELOCITY_THRESHOLD = 0.2;
+const STICKY_ENTER_EPSILON = 1;
+const STICKY_EXIT_GAP = 18;
 const SCROLL_CACHE_LIMIT = 40;
 const PREFETCH_NEWS_LIMIT = 6;
-
-const CATEGORY_GALLERY: Record<string, ImageSourcePropType[]> = {
-  fitness: [
-    require("../assets/gallery/fitness/fitness_1.jpg"),
-    require("../assets/gallery/fitness/fitness_2.jpg"),
-    require("../assets/gallery/fitness/fitness_3.jpg"),
-    require("../assets/gallery/fitness/fitness_4.jpg"),
-  ],
-  gastro: [
-    require("../assets/gallery/gastro/gastro_1.jpg"),
-    require("../assets/gallery/gastro/gastro_2.jpg"),
-    require("../assets/gallery/gastro/gastro_3.jpg"),
-    require("../assets/gallery/gastro/gastro_4.jpg"),
-  ],
-  relax: [
-    require("../assets/gallery/relax/relax_1.jpg"),
-    require("../assets/gallery/relax/relax_2.jpg"),
-    require("../assets/gallery/relax/relax_3.jpg"),
-    require("../assets/gallery/relax/relax_4.jpg"),
-  ],
-  beauty: [
-    require("../assets/gallery/beauty/beauty_1.jpg"),
-    require("../assets/gallery/beauty/beauty_2.jpg"),
-    require("../assets/gallery/beauty/beauty_3.jpg"),
-    require("../assets/gallery/beauty/beauty_4.jpg"),
-  ],
-};
 
 export default function BusinessDetailScreen() {
   const navigation = useNavigation<any>();
@@ -96,6 +81,8 @@ export default function BusinessDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [isFavorite, setIsFavorite] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -104,6 +91,7 @@ export default function BusinessDetailScreen() {
   const lastScrollY = useRef(0);
   const prevScrollY = useRef(0);
   const scrollDirection = useRef<"up" | "down" | null>(null);
+  const isMomentumScrolling = useRef(false);
   const isStickyRef = useRef(false);
   const [isSticky, setIsSticky] = useState(false);
   const scrollPositionsRef = useRef(new Map<string, number>());
@@ -142,8 +130,8 @@ export default function BusinessDetailScreen() {
   const positionKey = useCallback((key: string, tab: string) => `${key}:${tab}`, []);
 
   const images = useMemo(() => {
-    const categoryKey = String(branch.category ?? "").trim().toLowerCase();
-    const categoryImages = CATEGORY_GALLERY[categoryKey];
+    const normalizedCategory = resolveDiscoverCategory(branch.category);
+    const categoryImages = getCategoryGalleryImages(normalizedCategory);
     const sourceImages =
       categoryImages && categoryImages.length > 0
         ? categoryImages
@@ -363,6 +351,15 @@ export default function BusinessDetailScreen() {
     }
   }, [branch.distance, branch.hours, branch.title, t]);
 
+  const handleOpenGallery = useCallback((index: number) => {
+    setGalleryStartIndex(index);
+    setIsGalleryVisible(true);
+  }, []);
+
+  const handleCloseGallery = useCallback(() => {
+    setIsGalleryVisible(false);
+  }, []);
+
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value as TabKey);
   }, []);
@@ -462,25 +459,11 @@ export default function BusinessDetailScreen() {
     return value;
   }, []);
 
-  const handleSnap = useCallback(() => {
-    if (snapOffset <= 0) {
-      return;
-    }
-
-    const y = lastScrollY.current;
-    const direction = scrollDirection.current;
-
-    if (y > 0 && y < snapOffset) {
-      const snapTo = direction === "up" ? 0 : y >= SNAP_THRESHOLD ? snapOffset : 0;
-      if (Math.abs(y - snapTo) > 1) {
-        flatListRef.current?.scrollToOffset({ offset: snapTo, animated: true });
-      }
-    }
-  }, [snapOffset]);
-
   const setStickyFromOffset = useCallback(
     (offset: number) => {
-      const shouldStick = offset >= snapOffset - 1;
+      const enterAt = snapOffset - STICKY_ENTER_EPSILON;
+      const exitAt = snapOffset - STICKY_EXIT_GAP;
+      const shouldStick = isStickyRef.current ? offset >= exitAt : offset >= enterAt;
       if (shouldStick !== isStickyRef.current) {
         isStickyRef.current = shouldStick;
         setIsSticky(shouldStick);
@@ -488,6 +471,73 @@ export default function BusinessDetailScreen() {
     },
     [snapOffset]
   );
+
+  const getSnapTargetOffset = useCallback((): number | null => {
+    if (snapOffset <= 0) {
+      return null;
+    }
+
+    const y = lastScrollY.current;
+    const direction = scrollDirection.current;
+
+    if (y <= SNAP_EDGE_EPSILON || y >= snapOffset - SNAP_EDGE_EPSILON) {
+      return null;
+    }
+
+    return direction === "up" ? 0 : y >= SNAP_THRESHOLD ? snapOffset : 0;
+  }, [snapOffset]);
+
+  const snapToOffset = useCallback(
+    (targetOffset: number, immediate: boolean) => {
+      if (immediate) {
+        lastScrollY.current = targetOffset;
+        prevScrollY.current = targetOffset;
+        scrollDirection.current = null;
+        setStickyFromOffset(targetOffset);
+      }
+
+      flatListRef.current?.scrollToOffset({
+        offset: targetOffset,
+        animated: !immediate,
+      });
+    },
+    [setStickyFromOffset]
+  );
+
+  const handleSnap = useCallback(
+    (immediate = false) => {
+      const targetOffset = getSnapTargetOffset();
+      if (targetOffset === null) {
+        return;
+      }
+
+      if (Math.abs(lastScrollY.current - targetOffset) <= 1) {
+        return;
+      }
+
+      snapToOffset(targetOffset, immediate);
+    },
+    [getSnapTargetOffset, snapToOffset]
+  );
+
+  const handleScrollEndDrag = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const velocityY = Math.abs(event.nativeEvent.velocity?.y ?? 0);
+    const shouldWaitForMomentum =
+      isMomentumScrolling.current || velocityY > SNAP_DRAG_VELOCITY_THRESHOLD;
+    if (shouldWaitForMomentum) {
+      return;
+    }
+    handleSnap(false);
+  }, [handleSnap]);
+
+  const handleMomentumScrollBegin = useCallback(() => {
+    isMomentumScrolling.current = true;
+  }, []);
+
+  const handleMomentumScrollEnd = useCallback(() => {
+    isMomentumScrolling.current = false;
+    handleSnap(false);
+  }, [handleSnap]);
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -555,7 +605,7 @@ export default function BusinessDetailScreen() {
       if (item.key === "menu") {
         return (
           <View style={menuWrapperStyle}>
-            {isSticky && <View style={{ height: insets.top }} />}
+            <View style={{ height: isSticky ? insets.top : 0 }} />
             <TabMenu items={MENU_TABS} active={activeTab} onChange={handleTabChange} width={menuItemWidth} />
           </View>
         );
@@ -640,6 +690,7 @@ export default function BusinessDetailScreen() {
           width={width}
           index={carouselIndex}
           onIndexChange={setCarouselIndex}
+          onImagePress={handleOpenGallery}
         />
 
         <HeroActions
@@ -667,6 +718,7 @@ export default function BusinessDetailScreen() {
       heroHeight,
       width,
       carouselIndex,
+      handleOpenGallery,
       insets.top,
       handleBack,
       handleFavoritePress,
@@ -696,10 +748,12 @@ export default function BusinessDetailScreen() {
         extraData={`${activeTab}-${isSticky}`}
         removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={handleScroll}
-        onScrollEndDrag={handleSnap}
-        onMomentumScrollEnd={handleSnap}
+      scrollEventThrottle={16}
+      onScroll={handleScroll}
+      onScrollEndDrag={handleScrollEndDrag}
+        onMomentumScrollBegin={handleMomentumScrollBegin}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        bounces={false}
         initialNumToRender={1}
         maxToRenderPerBatch={2}
         windowSize={5}
@@ -708,6 +762,14 @@ export default function BusinessDetailScreen() {
       {AUTH_GUARD_ENABLED && activeTab === "benefits" && !user && (
         <BenefitsBottomSheet sheetRef={sheetRef} snapPoints={snapPoints} onLogin={handleLogin} />
       )}
+
+      <BusinessGalleryModal
+        visible={isGalleryVisible}
+        images={images}
+        initialIndex={galleryStartIndex}
+        topInset={insets.top}
+        onClose={handleCloseGallery}
+      />
     </SafeAreaView>
   );
 }

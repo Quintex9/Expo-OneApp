@@ -1,9 +1,6 @@
-/**
- * ShowMoreScreen.tsx
- * 
- * Obrazovka zobrazujúca všetky pobočky v danej kategórii.
- * Použitá z HomeScreen pri kliknutí na "Zobraziť viac".
- */
+// ShowMoreScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
 
 import React, { useMemo } from "react";
 import {
@@ -30,33 +27,19 @@ export default function ShowMoreScreen() {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
 
-  // Získame typ sekcie z parametrov
   const sectionType: SectionType = route.params?.section || "openNearYou";
   const sectionTitle: string = route.params?.title || t("openNearYou");
 
-  // Načítame dáta
-  const markerBranchOverrides = useMemo(
-    () => ({
-      gym_365: { title: t("365 GYM Nitra"), image: require("../assets/365.jpg"), category: "Fitness" },
-      gym_klub: { title: t("GYM KLUB"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond gym": { title: t("Diamond Gym"), image: require("../assets/klub.jpg"), category: "Fitness" },
-      "Diamond barber": { title: t("Diamond Barber"), image: require("../assets/royal.jpg"), category: "Beauty" },
-    }),
-    [t]
-  );
-  const { branches } = useDiscoverData({ t, markerBranchOverrides });
+  const { branches } = useDiscoverData({ t });
 
-  // Filtrujeme/sortujeme podľa typu sekcie
   const filteredBranches = useMemo(() => {
     switch (sectionType) {
       case "topRated":
         return [...branches].sort((a, b) => b.rating - a.rating);
       case "trending":
-        // V reálnej appke by tu bola logika pre trending
         return branches;
       case "openNearYou":
       default:
-        // V reálnej appke by tu bola logika pre najbližšie
         return branches;
     }
   }, [branches, sectionType]);
@@ -82,13 +65,13 @@ export default function ShowMoreScreen() {
     </View>
   );
 
-  const keyExtractor = (item: BranchData, index: number) => 
+  const keyExtractor = (item: BranchData, index: number) =>
     item.id ?? `${item.title}-${index}`;
 
   const ListHeader = () => (
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <TouchableOpacity 
-        style={styles.backButton} 
+      <TouchableOpacity
+        style={styles.backButton}
         onPress={() => navigation.goBack()}
         activeOpacity={0.7}
       >

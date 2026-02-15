@@ -1,3 +1,7 @@
+// labelSelection: vyber markerov pre zobrazenie labelov.
+// Zodpovednost: ranking, collision filter a stabilny vyber Top N.
+// Vstup/Vystup: vracia set marker ID pre label render politiku.
+
 import {
   MAP_LABEL_CANDIDATE_MULTIPLIER,
   MAP_LABEL_COLLISION_GAP_X,

@@ -1,3 +1,7 @@
+// useDiscoverFilters: stav a logika filtrov pre Discover flow.
+// Zodpovednost: category/rating/subcategory filtre a ich obsluha.
+// Vstup/Vystup: vracia filter state a mutacne helper funkcie.
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BranchData, DiscoverMapMarker } from "../interfaces";
 

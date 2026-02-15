@@ -1,3 +1,7 @@
+// BenefitsScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {

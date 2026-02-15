@@ -1,3 +1,7 @@
+// reanimated shim: kompatibilitna vrstva pre starsie API volania.
+// Zodpovednost: predchadza padom pri rozdieloch verzii kniznice.
+// Vstup/Vystup: exportuje fallback helpery pre reanimated pouzitie.
+
 import { useCallback } from "react";
 
 // Reanimated v4 removed `useWorkletCallback`, but some libs (e.g. bottom-sheet v4)

@@ -1,3 +1,7 @@
+// DiscoverListScreen: obrazovka hlavneho flow aplikacie.
+// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
+// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View,
@@ -5,7 +9,6 @@ import {
   FlatList,
   Pressable,
   Text,
-  ImageSourcePropType,
   Platform,
   TouchableOpacity,
   useWindowDimensions,
@@ -16,13 +19,22 @@ import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import BranchCard from "../components/BranchCard";
 import { Skeleton } from "../components/Skeleton";
-import { useDataSource } from "../lib/data/useDataSource";
-import { useDiscoverFilters } from "../lib/hooks";
+import { useDiscoverData, useDiscoverFilters } from "../lib/hooks";
+import {
+  buildDiscoverListItems,
+  filterDiscoverListItems,
+  sortDiscoverListItems,
+  type DiscoverListItem,
+  type DiscoverListSortOption,
+} from "../lib/data/selectors";
 import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPanel";
 import { TAB_BAR_BASE_HEIGHT } from "../lib/constants/layout";
-import type { DiscoverMapMarker, DiscoverCategory } from "../lib/interfaces";
+import {
+  DISCOVER_FILTER_OPTIONS,
+  DISCOVER_SUBCATEGORIES,
+  NITRA_CENTER,
+} from "../lib/constants/discoverUi";
 
-// Skeleton pre BranchCard - zobrazuje sa počas načítavania
 function SkeletonBranchCard({ scale, cardPadding }: { scale: number; cardPadding: number }) {
   const imageSize = Math.round(80 * scale);
   const cardHeight = Math.round(112 * scale);
@@ -32,10 +44,8 @@ function SkeletonBranchCard({ scale, cardPadding }: { scale: number; cardPadding
   const badgeHeight = Math.round(19 * scale);
 
   return (
-    <View style={[skeletonStyles.card, { height: cardHeight, padding: cardPadding, borderRadius: cardRadius }]}>
-      {/* Skeleton obrázka */}
+    <View style={[skeletonStyles.card, { height: cardHeight, padding: cardPadding, borderRadius: cardRadius }]}> 
       <Skeleton width={imageSize} height={imageSize} borderRadius={Math.round(6 * scale)} />
-      {/* Skeleton obsahu */}
       <View style={[skeletonStyles.content, { marginLeft: cardPadding, gap }]}>
         <Skeleton width="70%" height={Math.round(14 * scale)} borderRadius={4} />
         <View style={[skeletonStyles.metaRow, { gap }]}>
@@ -52,7 +62,6 @@ function SkeletonBranchCard({ scale, cardPadding }: { scale: number; cardPadding
   );
 }
 
-// Štýly pre skeleton
 const skeletonStyles = StyleSheet.create({
   card: {
     flexDirection: "row",
@@ -75,106 +84,7 @@ const skeletonStyles = StyleSheet.create({
   },
 });
 
-const CATEGORY_PREVIEW_IMAGES: Record<DiscoverCategory, ImageSourcePropType[]> = {
-  Fitness: [
-    require("../assets/gallery/fitness/fitness_1.jpg"),
-    require("../assets/gallery/fitness/fitness_2.jpg"),
-    require("../assets/gallery/fitness/fitness_3.jpg"),
-    require("../assets/gallery/fitness/fitness_4.jpg"),
-  ],
-  Gastro: [
-    require("../assets/gallery/gastro/gastro_1.jpg"),
-    require("../assets/gallery/gastro/gastro_2.jpg"),
-    require("../assets/gallery/gastro/gastro_3.jpg"),
-    require("../assets/gallery/gastro/gastro_4.jpg"),
-  ],
-  Relax: [
-    require("../assets/gallery/relax/relax_1.jpg"),
-    require("../assets/gallery/relax/relax_2.jpg"),
-    require("../assets/gallery/relax/relax_3.jpg"),
-    require("../assets/gallery/relax/relax_4.jpg"),
-  ],
-  Beauty: [
-    require("../assets/gallery/beauty/beauty_1.jpg"),
-    require("../assets/gallery/beauty/beauty_2.jpg"),
-    require("../assets/gallery/beauty/beauty_3.jpg"),
-    require("../assets/gallery/beauty/beauty_4.jpg"),
-  ],
-};
-
-const getStableHash = (value: string): number => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-  }
-  return hash;
-};
-
-const getCategoryPreviewImage = (
-  category: DiscoverCategory,
-  markerId: string
-): ImageSourcePropType => {
-  const images = CATEGORY_PREVIEW_IMAGES[category];
-  if (!images || images.length === 0) {
-    return CATEGORY_PREVIEW_IMAGES.Fitness[0];
-  }
-  return images[getStableHash(markerId) % images.length];
-};
-
-// Haversine formula - výpočet vzdialenosti medzi dvoma GPS bodmi v km
-function getDistanceKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Polomer Zeme v km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// Formátovanie názvu z ID (napr. "gym_365" -> "Gym 365")
-function formatTitle(id: string): string {
-  return id
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-interface NearbyBranch {
-  id: string;
-  title: string;
-  image: ImageSourcePropType;
-  rating: number;
-  distance: string;
-  distanceKm: number;
-  hours: string;
-  category: DiscoverCategory;
-  discount?: string;
-  offers?: string[];
-  moreCount?: number;
-}
-
-// Fallback poloha - centrum Nitry
-const NITRA_CENTER: [number, number] = [18.091, 48.3069];
-
-const DEG_TO_RAD = Math.PI / 180;
-
-// Možnosti triedenia
-const SORT_OPTIONS = ["trending", "topRated", "openNearYou"] as const;
-type SortOption = typeof SORT_OPTIONS[number];
-
-// Filter options
-const FILTER_OPTIONS: DiscoverCategory[] = ["Fitness", "Gastro", "Relax", "Beauty"];
-const SUBCATEGORIES = ["Vegan", "Coffee", "Asian", "Pizza", "Sushi", "Fast Food", "Seafood", "Beer"];
+const SORT_OPTIONS: DiscoverListSortOption[] = ["trending", "topRated", "openNearYou"];
 const SORT_MENU_MIN_WIDTH = 180;
 const SORT_MENU_HORIZONTAL_MARGIN = 16;
 const SORT_MENU_OFFSET = 8;
@@ -185,11 +95,14 @@ export default function DiscoverListScreen() {
   const route = useRoute<any>();
   const { t } = useTranslation();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
-  const dataSource = useDataSource();
   const filters = useDiscoverFilters("Gastro");
+  const { markers, loading, error, buildBranchFromMarker } = useDiscoverData({
+    t,
+    includeBranches: false,
+    includeGroupedMarkers: false,
+  });
 
-  // Stav pre sort dropdown
-  const [sortOption, setSortOption] = useState<SortOption>("openNearYou");
+  const [sortOption, setSortOption] = useState<DiscoverListSortOption>("openNearYou");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [sortContainerLayout, setSortContainerLayout] = useState({ x: 0, y: 0 });
   const [sortTriggerLayout, setSortTriggerLayout] = useState({
@@ -197,8 +110,6 @@ export default function DiscoverListScreen() {
     y: 0,
     height: 0,
   });
-
-  // Stav pre bočný filter
   const [sideFilterOpen, setSideFilterOpen] = useState(false);
 
   useFocusEffect(
@@ -216,7 +127,9 @@ export default function DiscoverListScreen() {
   );
 
   useEffect(() => {
-    if (!sideFilterOpen || !sortDropdownOpen) return;
+    if (!sideFilterOpen || !sortDropdownOpen) {
+      return;
+    }
     setSortDropdownOpen(false);
   }, [sideFilterOpen, sortDropdownOpen]);
 
@@ -259,117 +172,45 @@ export default function DiscoverListScreen() {
     sortTriggerLayout.height,
     sortMenuFallbackTop,
   ]);
+
   const cardHeight = Math.round(112 * scale);
   const cardPadding = Math.round(16 * scale);
   const cardHeightWithMargin = cardHeight + 16;
 
-  // Výpočet počtu skeleton kariet podľa výšky obrazovky
   const skeletonCount = useMemo(() => {
     const headerHeight = insets.top + 76;
     const availableHeight = screenHeight - headerHeight;
     return Math.ceil(availableHeight / cardHeightWithMargin);
   }, [screenHeight, insets.top, cardHeightWithMargin]);
 
-  // Získame userCoord z route params alebo použijeme fallback
   const userLocation: [number, number] = route.params?.userCoord ?? NITRA_CENTER;
 
-  const [markers, setMarkers] = useState<DiscoverMapMarker[]>([]);
-  const [loading, setLoading] = useState(true);
+  const allBranches = useMemo(
+    () =>
+      buildDiscoverListItems({
+        markers,
+        userLocation,
+        buildBranchFromMarker,
+      }),
+    [buildBranchFromMarker, markers, userLocation]
+  );
 
-  // Načítanie markerov
-  useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      try {
-        const markersData = await dataSource.getMarkers();
-        if (isMounted) setMarkers(markersData);
-      } catch (error) {
-        console.error("Error loading markers:", error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    loadData();
-    return () => { isMounted = false; };
-  }, [dataSource]);
-
-  // Filtrovanie a zoradenie pobočiek do 2km
-  // Používame bounding box filter a predpočítané konštanty pre rýchlejšie výpočty
-  const allBranches = useMemo<NearbyBranch[]>(() => {
-    if (!userLocation || markers.length === 0) return [];
-
-    const [userLng, userLat] = userLocation;
-    
-    // Konštanty pre rýchly pred-filter
-    const LAT_DEGREE_KM = 111; 
-    // Longitude stupeň sa skracuje s kosínusom šírky
-    const userLatRad = userLat * DEG_TO_RAD;
-
-    const results: NearbyBranch[] = [];
-
-    for (const marker of markers) {
-      if (marker.category === "Multi") continue;
-
-      const mCoord = marker.coord;
-      
-      // Vypočítame vzdialenosť pre každú pobočku (pre sorting aj display)
-      const distanceKm = getDistanceKm(userLat, userLng, mCoord.lat, mCoord.lng);
-
-      results.push({
-        id: marker.id,
-        title: marker.title || formatTitle(marker.id),
-        image: getCategoryPreviewImage(marker.category as DiscoverCategory, marker.id),
-        rating: marker.rating,
-        distance: `${distanceKm.toFixed(1)} km`,
-        distanceKm,
-        hours: "9:00 - 21:00",
-        category: marker.category as DiscoverCategory,
-        discount: t("offer_discount20"),
-        offers: [t("offer_discount20"), t("offer_freeEntryFriend"), t("offer_discount10Monthly"), t("offer_firstMonthFree")],
-        moreCount: 3,
-      });
+  const visibleBranches = useMemo<DiscoverListItem[]>(() => {
+    if (allBranches.length === 0) {
+      return [];
     }
 
-    return results;
-  }, [userLocation, markers, t]);
+    const filtered = filterDiscoverListItems({
+      items: allBranches,
+      appliedCategories: filters.appliedFilters,
+      ratingThreshold: filters.ratingThreshold,
+    });
 
-  const visibleBranches = useMemo<NearbyBranch[]>(() => {
-    if (allBranches.length === 0) return [];
+    return sortDiscoverListItems(filtered, sortOption, 2);
+  }, [allBranches, filters.appliedFilters, filters.ratingThreshold, sortOption]);
 
-    // Najprv aplikujeme filtre
-    let filtered = allBranches;
-
-    // Filter podľa kategórie
-    if (filters.appliedFilters.size > 0) {
-      filtered = filtered.filter((item) => filters.appliedFilters.has(item.category));
-    }
-
-    // Filter podľa ratingu
-    const ratingThreshold = filters.ratingThreshold;
-    if (ratingThreshold !== null) {
-      filtered = filtered.filter((item) => item.rating >= ratingThreshold);
-    }
-
-    // Potom triedime
-    switch (sortOption) {
-      case "openNearYou": {
-        const MAX_DIST_KM = 2;
-        return filtered
-          .filter((item) => item.distanceKm <= MAX_DIST_KM)
-          .sort((a, b) => a.distanceKm - b.distanceKm);
-      }
-      case "topRated":
-        return [...filtered].sort((a, b) => b.rating - a.rating);
-      case "trending":
-      default:
-        return filtered;
-    }
-  }, [allBranches, sortOption, filters.appliedFilters, filters.ratingThreshold]);
-
-  // Definujeme presnú výšku položiek pre FlatList
-  // To umožňuje preskočiť výpočet rozloženia a zlepšuje plynulosť skrolovania
   const getItemLayout = useCallback(
-    (_: any, index: number) => ({
+    (_: unknown, index: number) => ({
       length: cardHeightWithMargin,
       offset: cardHeightWithMargin * index,
       index,
@@ -377,9 +218,8 @@ export default function DiscoverListScreen() {
     [cardHeightWithMargin]
   );
 
-  // Render funkcia pre FlatList (memoizovaná)
   const renderBranchItem = useCallback(
-    ({ item }: { item: NearbyBranch }) => (
+    ({ item }: { item: DiscoverListItem }) => (
       <BranchCard
         title={item.title}
         image={item.image}
@@ -397,58 +237,59 @@ export default function DiscoverListScreen() {
     []
   );
 
-  // Key extractor pre FlatList
-  const keyExtractor = useCallback((item: NearbyBranch) => item.id, []);
+  const keyExtractor = useCallback(
+    (item: DiscoverListItem) => item.id ?? item.title,
+    []
+  );
 
   return (
     <View style={styles.container}>
-      {/* Bočný filter panel */}
       <DiscoverSideFilterPanel
         visible={sideFilterOpen}
         onOpen={() => setSideFilterOpen(true)}
         onClose={() => setSideFilterOpen(false)}
-        filterOptions={FILTER_OPTIONS}
+        filterOptions={DISCOVER_FILTER_OPTIONS}
         appliedFilters={filters.appliedFilters}
         setAppliedFilters={filters.setAppliedFilters}
         rating={filters.ratingFilter}
         setRating={filters.setRatingFilter}
         setAppliedRatings={filters.setAppliedRatings}
-        subcategories={SUBCATEGORIES}
+        subcategories={DISCOVER_SUBCATEGORIES}
         sub={filters.sub}
         toggleSubcategory={filters.toggleSubcategory}
       />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.card} activeOpacity={0.85}>
           <Ionicons name="location-outline" size={18} color="#000" />
-            <Text style={styles.rowTextBold} numberOfLines={1}>
-              {t("yourLocation")}
-            </Text>
+          <Text style={styles.rowTextBold} numberOfLines={1}>
+            {t("yourLocation")}
+          </Text>
           <Ionicons name="chevron-down-outline" size={16} color="#000" style={styles.caret} />
-          </TouchableOpacity>
+        </TouchableOpacity>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.85} onPress={() => {}}>
             <Ionicons name="search-outline" size={18} color="#000" />
           </TouchableOpacity>
-        <TouchableOpacity
+          <TouchableOpacity
             style={styles.headerIconButton}
-          activeOpacity={0.85}
-          onPress={() => navigation.goBack()}
-        >
+            activeOpacity={0.85}
+            onPress={() => navigation.goBack()}
+          >
             <Ionicons name="map-outline" size={18} color="#000" />
-        </TouchableOpacity>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Sort dropdown */}
       <View
         style={[styles.sortContainer, { paddingTop: sortTopSpacing }]}
         onLayout={(event) => {
           const { x, y } = event.nativeEvent.layout;
           setSortContainerLayout((prev) => {
-            if (prev.x === x && prev.y === y) return prev;
+            if (prev.x === x && prev.y === y) {
+              return prev;
+            }
             return { x, y };
           });
         }}
@@ -457,7 +298,9 @@ export default function DiscoverListScreen() {
           onLayout={(event) => {
             const { x, y, height } = event.nativeEvent.layout;
             setSortTriggerLayout((prev) => {
-              if (prev.x === x && prev.y === y && prev.height === height) return prev;
+              if (prev.x === x && prev.y === y && prev.height === height) {
+                return prev;
+              }
               return { x, y, height };
             });
           }}
@@ -478,7 +321,6 @@ export default function DiscoverListScreen() {
         </View>
       </View>
 
-      {/* List */}
       {loading ? (
         <View style={styles.skeletonContainer}>
           <Skeleton width={120} height={14} borderRadius={4} style={{ marginBottom: 12 }} />
@@ -489,9 +331,11 @@ export default function DiscoverListScreen() {
       ) : visibleBranches.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {sortOption === "openNearYou"
-              ? t("noPlacesFoundWithin", { distance: "2 km" })
-              : t("noPlacesFound")}
+            {error
+              ? t("dataLoadFailed")
+              : sortOption === "openNearYou"
+                ? t("noPlacesFoundWithin", { distance: "2 km" })
+                : t("noPlacesFound")}
           </Text>
         </View>
       ) : (
@@ -506,7 +350,6 @@ export default function DiscoverListScreen() {
             { paddingBottom: insets.bottom + TAB_BAR_BASE_HEIGHT + 16 },
           ]}
           showsVerticalScrollIndicator={false}
-          // Nastavenia pre efektívne vykresľovanie zoznamu
           initialNumToRender={8}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}

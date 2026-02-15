@@ -1,3 +1,7 @@
+// discover constants: default hodnoty pre Discover mapu a detail.
+// Zodpovednost: zoom prahy, layout konstanty a dummy branch data.
+// Vstup/Vystup: exportuje konfig hodnoty pre Discover obrazovky.
+
 import { ImageSourcePropType } from "react-native";
 import type { BranchData } from "../../lib/interfaces";
 
@@ -42,8 +46,6 @@ const translateBranchOffers = (branch: BranchData, t: (key: string) => string): 
 // Režimy zobrazovania:
 // 1. zoom <= FORCE_CLUSTER_ZOOM  → len clustre (min 2)
 // 2. zoom >= SINGLE_MODE_ZOOM    → len single piny
-const CITY_CLUSTER_ZOOM = 11;           // pod týmto = city cluster
-const CLUSTER_MAX_ZOOM = 16;            // nad týmto = jednotlivé markery
 const FORCE_CLUSTER_ZOOM = 14;          // do tychto zoomov zobrazujeme iba clustre
 const SINGLE_MODE_ZOOM = 14;          // od tohto zoomu len single piny
 const DEFAULT_CAMERA_ZOOM = 14;
@@ -60,7 +62,6 @@ const IOS_CLUSTER_CELL_PX = 80;        // ~Android - 10px
 const STATIC_MAP_ZOOM = 14;
 
 // Inline marker label engine (no overlay projections)
-const MAP_INLINE_LABELS_ENABLED = true;
 const MAP_FULL_SPRITES_V1 = true;
 const MAP_FULL_SPRITES_LOGS_ENABLED = false;
 const MAP_LABEL_ENTER_ZOOM = 12.6;
@@ -77,8 +78,6 @@ export {
   DUMMY_BRANCH,
   translateBranchOffers,
   OFFER_KEYS,
-  CITY_CLUSTER_ZOOM,
-  CLUSTER_MAX_ZOOM,
   FORCE_CLUSTER_ZOOM,
   SINGLE_MODE_ZOOM,
   DEFAULT_CAMERA_ZOOM,
@@ -89,7 +88,6 @@ export {
   ANDROID_CLUSTER_CELL_PX,
   IOS_CLUSTER_CELL_PX,
   STATIC_MAP_ZOOM,
-  MAP_INLINE_LABELS_ENABLED,
   MAP_FULL_SPRITES_V1,
   MAP_FULL_SPRITES_LOGS_ENABLED,
   MAP_LABEL_ENTER_ZOOM,
@@ -102,3 +100,4 @@ export {
   MAP_LABEL_COLLISION_GAP_X,
   MAP_LABEL_COLLISION_GAP_Y,
 };
+

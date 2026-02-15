@@ -1,3 +1,7 @@
+// badgedIcons: resolver localnych ikon s rating badge pre mapu.
+// Zodpovednost: vyber spravneho sprite podla kategorie a ratingu.
+// Vstup/Vystup: vracia image source pre marker render.
+
 export const BADGED_RATING_KEYS = [
   "0.0",
   "0.1",

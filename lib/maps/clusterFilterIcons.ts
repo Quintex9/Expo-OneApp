@@ -1,4 +1,8 @@
-﻿import type { ClusterCountKey } from "./clusterIcons";
+// clusterFilterIcons: ikony pre cluster filter stavy na mape.
+// Zodpovednost: mapovanie stavu filtra na ikonovy asset.
+// Vstup/Vystup: helper na vyber cluster ikony podla filtra.
+
+import type { ClusterCountKey } from "./clusterIcons";
 
 export const FILTER_CLUSTER_ICON_SOURCES: Record<ClusterCountKey, number> = {
   "0": require("../../images/icons/cluster_orange/cluster_0.png"),

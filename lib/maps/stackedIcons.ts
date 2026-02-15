@@ -1,3 +1,7 @@
+// stackedIcons: helpery pre stacknute marker ikony.
+// Zodpovednost: priprava icon vrstiev pre stacked marker varianty.
+// Vstup/Vystup: vracia image source pre stacked map marker.
+
 import type { ClusterCountKey } from "./clusterIcons";
 
 export const STACKED_ICON_SOURCES: Partial<Record<ClusterCountKey, number>> = {
