@@ -35,6 +35,23 @@ const BADGED_ANCHOR_X = BASE_ANCHOR_X;
 const BADGED_ANCHOR_Y =
   (BADGED_PIN_OFFSET_Y + PIN_TRIM_HEIGHT) / BADGED_CANVAS_HEIGHT;
 
+const resolveLocalFullAnchor = (width: number, height: number) => {
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return FULL_MARKER_DEFAULT_ANCHOR;
+  }
+
+  // Align local full sprite pin tip to the same visual anchor used by compact icons.
+  const compactTipX = PIN_TRIM_X + PIN_TRIM_WIDTH / 2;
+  const fullPinOffsetX = (width - PIN_CANVAS_WIDTH) / 2;
+  const anchorX = clampRating((fullPinOffsetX + compactTipX) / width);
+  const anchorY = (BADGED_PIN_OFFSET_Y + PIN_TRIM_HEIGHT) / height;
+
+  return {
+    x: anchorX,
+    y: clampRating(anchorY),
+  };
+};
+
 const isUriSource = (value: unknown): value is ImageURISource => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -140,6 +157,22 @@ export const hasLocalFullMarkerSprite = (marker?: DiscoverMapMarker | null) =>
     hasLocalFullMarkerSpriteKey(key)
   );
 
+export const getMarkerFullSpriteMetrics = (marker?: DiscoverMapMarker | null) => {
+  const sprite = getMarkerSpriteKeyCandidates(marker)
+    .map((key) => getLocalFullMarkerSprite(key))
+    .find((candidate) => Boolean(candidate));
+
+  if (!sprite) {
+    return null;
+  }
+
+  return {
+    width: sprite.width,
+    height: sprite.height,
+    anchor: resolveLocalFullAnchor(sprite.width, sprite.height),
+  };
+};
+
 export const getMarkerRemoteSpriteUrl = (marker?: DiscoverMapMarker | null) =>
   normalizeRemoteSpriteUrl(marker?.markerSpriteUrl);
 
@@ -188,7 +221,7 @@ export const resolveMarkerImage = (
     if (localFull) {
       return {
         image: localFull.image,
-        anchor: localFull.anchor,
+        anchor: resolveLocalFullAnchor(localFull.width, localFull.height),
         variant: "local-full",
         spriteKey,
       };
