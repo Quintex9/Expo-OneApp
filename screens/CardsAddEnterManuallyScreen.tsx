@@ -19,10 +19,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { TAB_BAR_BASE_HEIGHT, TAB_BAR_MIN_INSET } from "../lib/constants/layout";
+import { useCardsSession } from "../lib/CardsSessionContext";
 
 interface RouteParams {
   cardName?: string;
   isOtherCardFlow?: boolean;
+  prefilledCardName?: string;
 }
 
 const formatCardNumber = (value: string): string => {
@@ -43,9 +45,10 @@ export default function CardsAddEnterManuallyScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute();
+  const { addCard } = useCardsSession();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { cardName = t("cardsNewCard"), isOtherCardFlow = false } =
+  const { cardName = t("cardsNewCard"), isOtherCardFlow = false, prefilledCardName } =
     (route.params as RouteParams) || {};
   const [cardNumberInput, setCardNumberInput] = useState("");
   const contentWidth = useMemo(
@@ -68,15 +71,17 @@ export default function CardsAddEnterManuallyScreen() {
       navigation.navigate("CardsAddOtherCardName", {
         cardName,
         cardNumber: formatted,
+        prefilledCardName,
       });
       return;
     }
 
+    addCard({ cardName, cardNumber: formatted });
     navigation.navigate("CardsSelectedCard", {
       cardName,
       cardNumber: formatted,
     });
-  }, [cardName, cardNumberInput, isOtherCardFlow, navigation]);
+  }, [addCard, cardName, cardNumberInput, isOtherCardFlow, navigation, prefilledCardName]);
 
   return (
     <KeyboardAvoidingView

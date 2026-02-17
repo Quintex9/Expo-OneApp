@@ -313,6 +313,8 @@
   "cardsEnterCardName": "Zadejte název karty",
   "cardsEnterOrEditCardName": "Zadejte nebo upravte název své karty.",
   "cardsCardName": "Název karty",
+  "cardsSearchNoResultsTitle": "Karta nebyla nalezena",
+  "cardsSearchNoResultsCta": "Přidat tuto kartu?",
   "cardsEditCard": "Upravit kartu",
   "cardsDeleteCard": "Odstranit kartu",
   "cardsEditSheetTitle": "Upravit kartu",

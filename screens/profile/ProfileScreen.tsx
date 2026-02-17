@@ -19,8 +19,10 @@ import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../lib/AuthContext";
 import { getFullNameFromEmail } from "../../lib/utils/userUtils";
+import { LOGGED_OUT_UI_STATE_ENABLED } from "../../lib/constants/auth";
 
 import BranchCard from "../../components/BranchCard";
+import SignInPromptSheet from "../../components/SignInPromptSheet";
 
 export default function ProfileScreen() {
   type SubscriptionType = "starter" | "medium" | "gold" | "none";
@@ -29,15 +31,41 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { signOut, user } = useAuth();
+  const isLoggedOut = LOGGED_OUT_UI_STATE_ENABLED && !user;
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const contentPadding = 16;
   const topPadding = Math.max(12, insets.top + 8);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   
   // Extrahujeme meno z emailu
-  const userName = getFullNameFromEmail(user?.email);
+  const userName = user ? getFullNameFromEmail(user.email) : "Martin Nov\u00E1k";
+
+  const handleCloseAuthPrompt = () => {
+    setShowAuthPrompt(false);
+  };
+
+  const handleOpenAuthPrompt = () => {
+    setMenuOpen(false);
+    setShowAuthPrompt(true);
+  };
+
+  const handleSignIn = () => {
+    setMenuOpen(false);
+    setShowAuthPrompt(false);
+    navigation.navigate("Login");
+  };
+
+  const handleSubscriptionPress = () => {
+    if (isLoggedOut) {
+      handleOpenAuthPrompt();
+      return;
+    }
+
+    navigation.navigate("SubscriptionActivation");
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -104,7 +132,7 @@ export default function ProfileScreen() {
               label={t("subscription")}
               onPress={() => {
                 setMenuOpen(false);
-                navigation.navigate("SubscriptionActivation");
+                handleSubscriptionPress();
               }}
             />
 
@@ -146,12 +174,20 @@ export default function ProfileScreen() {
 
             <View style={styles.divider} />
 
-            <DropdownItem
-              icon="log-out-outline"
-              label={t("logOut")}
-              danger
-              onPress={handleLogout}
-            />
+            {isLoggedOut ? (
+              <DropdownItem
+                icon="log-in-outline"
+                label={t("signIn")}
+                onPress={handleSignIn}
+              />
+            ) : (
+              <DropdownItem
+                icon="log-out-outline"
+                label={t("logOut")}
+                danger
+                onPress={handleLogout}
+              />
+            )}
           </View>
         </>
       )}
@@ -188,7 +224,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => navigation.navigate("SubscriptionActivation")}
+            onPress={handleSubscriptionPress}
             activeOpacity={0.85}
           >
             <Text style={styles.cardLabel}>
@@ -278,6 +314,12 @@ export default function ProfileScreen() {
           />
         </View>
       </ScrollView>
+
+      <SignInPromptSheet
+        visible={LOGGED_OUT_UI_STATE_ENABLED && showAuthPrompt}
+        onClose={handleCloseAuthPrompt}
+        onSignIn={handleSignIn}
+      />
     </SafeAreaView>
   );
 }

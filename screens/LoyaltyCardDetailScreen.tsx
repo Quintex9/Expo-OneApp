@@ -252,6 +252,9 @@ export default function LoyaltyCardDetailScreen() {
   const handleCloseActions = useCallback(() => {
     actionsSheetRef.current?.close();
   }, []);
+  const handleCloseEditCard = useCallback(() => {
+    editCardSheetRef.current?.close();
+  }, []);
 
   const handleEditCard = useCallback(() => {
     actionsSheetRef.current?.close();
@@ -281,11 +284,28 @@ export default function LoyaltyCardDetailScreen() {
         {...props}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        opacity={0}
+        opacity={0.15}
+        enableTouchThrough={false}
         pressBehavior="close"
+        onPress={handleCloseActions}
       />
     ),
-    []
+    [handleCloseActions]
+  );
+
+  const renderEditCardBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.15}
+        enableTouchThrough={false}
+        pressBehavior="close"
+        onPress={handleCloseEditCard}
+      />
+    ),
+    [handleCloseEditCard]
   );
 
   const handleActionsSheetChange = useCallback((index: number) => {
@@ -477,7 +497,7 @@ export default function LoyaltyCardDetailScreen() {
         enableDynamicSizing={false}
         enablePanDownToClose
         handleComponent={null}
-        backdropComponent={renderActionsBackdrop}
+        backdropComponent={renderEditCardBackdrop}
         backgroundStyle={styles.actionsSheetBackground}
         onChange={handleEditCardSheetChange}
       >

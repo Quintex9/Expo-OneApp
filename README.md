@@ -1,4 +1,4 @@
-﻿# Expo-OneApp
+# Expo-OneApp
 
 Mobilna Expo aplikacia (React Native) s mapovym Discover flow, detailom prevadzky, feedom,
 kartami a profilovou sekciou.
@@ -34,14 +34,10 @@ npm install
 1. Vytvor `.env` zo sablony:
 
 ```bash
-# macOS/Linux
 cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
 ```
 
-2. Dopln hodnoty:
+2. Dopl� hodnoty:
 
 ```env
 DATA_SOURCE=mock
@@ -116,7 +112,7 @@ Profily su definovane v `eas.json`:
 - `preview`: APK (internal)
 - `production`: Android App Bundle (AAB)
 
-## Data vrstva (struzne)
+## Data vrstva (struce)
 
 - DTO modely: `lib/data/models/dto.ts`
 - UI modely: `lib/data/models/viewModels.ts`

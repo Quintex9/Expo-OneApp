@@ -38,6 +38,7 @@ import "./i18n";
 import BusinessDetailScreen from "./screens/BusinessDetailScreen";
 
 import { AuthProvider } from "./lib/AuthContext";
+import { CardsSessionProvider } from "./lib/CardsSessionContext";
 
 if (typeof global.TextEncoder === "undefined") {
   // @ts-ignore
@@ -77,77 +78,79 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          {Platform.OS !== "web" && (
-            <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-          )}
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Tabs" component={Tabs} />
-              <Stack.Screen
-                name="SubscriptionActivation"
-                component={SubscriptionActivationScreen}
-              />
-              <Stack.Screen
-                name="FavoriteBranches"
-                component={FavoriteBranchesScreen}
-              />
-              <Stack.Screen
-                name="Settings"
-                component={SettingsScreen}
-              />
-              <Stack.Screen
-                name="UserAccount"
-                component={UserAccountScreen}
-              />
-              <Stack.Screen
-                name="Language"
-                component={LanguageScreen}
-              />
-              <Stack.Screen
-                name="Benefits"
-                component={BenefitsScreen}
-              />
-              <Stack.Screen
-                name="BusinessDetailScreen"
-                component={BusinessDetailScreen}
-              />
-              <Stack.Screen
-                name="Signup"
-                component={SignupScreen}
-              />
-              <Stack.Screen
-                name="ForgottenPassword"
-                component={ForgottenPasswordScreen}
-              />
-              <Stack.Screen
-                name="Login"
-                component={LoginScreen}
-              />
-              <Stack.Screen
-                name="Onboarding"
-                component={OnboardingScreen}
-              />
-              <Stack.Screen
-                name="SavedLocations"
-                component={SavedLocationsScreen}
-              />
-              <Stack.Screen name="Discover" component={DiscoverScreen} />
-              <Stack.Screen name="ShowMore" component={ShowMoreScreen} />
-              <Stack.Screen name="EditLocation" component={EditLocationScreen} />
-              <Stack.Screen
-                name="QRModal"
-                component={QRScreen}
-                options={{
-                  presentation: "modal",
-                  animation: "slide_from_bottom",
-                }}
-              />
-              <Stack.Screen
-                name="LoyaltyCardDetail"
-                component={LoyaltyCardDetailScreen}
-              />
-            </Stack.Navigator>
-          </NavigationContainer>
+          <CardsSessionProvider>
+            {Platform.OS !== "web" && (
+              <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+            )}
+            <NavigationContainer>
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Tabs" component={Tabs} />
+                <Stack.Screen
+                  name="SubscriptionActivation"
+                  component={SubscriptionActivationScreen}
+                />
+                <Stack.Screen
+                  name="FavoriteBranches"
+                  component={FavoriteBranchesScreen}
+                />
+                <Stack.Screen
+                  name="Settings"
+                  component={SettingsScreen}
+                />
+                <Stack.Screen
+                  name="UserAccount"
+                  component={UserAccountScreen}
+                />
+                <Stack.Screen
+                  name="Language"
+                  component={LanguageScreen}
+                />
+                <Stack.Screen
+                  name="Benefits"
+                  component={BenefitsScreen}
+                />
+                <Stack.Screen
+                  name="BusinessDetailScreen"
+                  component={BusinessDetailScreen}
+                />
+                <Stack.Screen
+                  name="Signup"
+                  component={SignupScreen}
+                />
+                <Stack.Screen
+                  name="ForgottenPassword"
+                  component={ForgottenPasswordScreen}
+                />
+                <Stack.Screen
+                  name="Login"
+                  component={LoginScreen}
+                />
+                <Stack.Screen
+                  name="Onboarding"
+                  component={OnboardingScreen}
+                />
+                <Stack.Screen
+                  name="SavedLocations"
+                  component={SavedLocationsScreen}
+                />
+                <Stack.Screen name="Discover" component={DiscoverScreen} />
+                <Stack.Screen name="ShowMore" component={ShowMoreScreen} />
+                <Stack.Screen name="EditLocation" component={EditLocationScreen} />
+                <Stack.Screen
+                  name="QRModal"
+                  component={QRScreen}
+                  options={{
+                    presentation: "modal",
+                    animation: "slide_from_bottom",
+                  }}
+                />
+                <Stack.Screen
+                  name="LoyaltyCardDetail"
+                  component={LoyaltyCardDetailScreen}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </CardsSessionProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

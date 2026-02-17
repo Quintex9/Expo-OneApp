@@ -2,7 +2,7 @@
 // Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
 // Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +32,7 @@ export default function QRScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { token } = useDynamicQRCode({ userId: user?.id });
+  const [isQrZoomOpen, setIsQrZoomOpen] = useState(false);
   const horizontalPadding = 16;
 
   const userName = extractNameFromEmail(user?.email);
@@ -47,6 +50,10 @@ export default function QRScreen() {
     const maxAllowed = Math.max(120, qrCardWidth - 24);
     return Math.min(maxAllowed, Math.max(140, Math.min(240, preferred)));
   }, [qrCardWidth]);
+  const zoomedQrSize = useMemo(
+    () => Math.min(Math.max(260, screenWidth - 40), 360),
+    [screenWidth]
+  );
   const cardNumberLineHeight = 22;
   const cardNumberTopGap = 14;
   const sideInset = useMemo(
@@ -61,39 +68,76 @@ export default function QRScreen() {
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + 8, paddingBottom: bottomPadding },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <TouchableOpacity
-        style={styles.backButton}
-        activeOpacity={0.75}
-        onPress={() => navigation.goBack()}
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 8, paddingBottom: bottomPadding },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons name="chevron-back" size={30} color="#000000" />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.75}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={30} color="#000000" />
+        </TouchableOpacity>
 
-      <View style={styles.profileBlock}>
-        <Image source={USER_AVATAR} style={styles.avatar} />
-        <Text style={styles.userName}>{fullName}</Text>
-      </View>
-
-      <View style={[styles.qrCard, { width: qrCardWidth, height: qrCardHeight }]}>
-        <View style={styles.qrContent}>
-          <QRCode
-            value={token}
-            size={qrSize}
-            backgroundColor="#FFFFFF"
-            color="#000000"
-          />
-          <Text style={styles.cardNumber}>{cardNumber}</Text>
+        <View style={styles.profileBlock}>
+          <Image source={USER_AVATAR} style={styles.avatar} />
+          <Text style={styles.userName}>{fullName}</Text>
         </View>
-      </View>
-    </ScrollView>
+
+        <View style={[styles.qrCard, { width: qrCardWidth, height: qrCardHeight }]}>
+          <View style={styles.qrContent}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsQrZoomOpen(true)}
+              style={styles.qrTapArea}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Zvacsit QR kod"
+            >
+              <QRCode
+                value={token}
+                size={qrSize}
+                backgroundColor="#FFFFFF"
+                color="#000000"
+              />
+            </TouchableOpacity>
+            <Text style={styles.cardNumber}>{cardNumber}</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      <Modal
+        transparent
+        visible={isQrZoomOpen}
+        animationType="fade"
+        onRequestClose={() => setIsQrZoomOpen(false)}
+      >
+        <View style={styles.qrZoomOverlay} accessibilityViewIsModal>
+          <Pressable
+            style={styles.qrZoomBackdrop}
+            onPress={() => setIsQrZoomOpen(false)}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Zavriet zvacseny QR kod"
+          />
+          <View style={styles.qrZoomCard}>
+            <QRCode
+              value={token}
+              size={zoomedQrSize}
+              backgroundColor="#FFFFFF"
+              color="#000000"
+            />
+            <Text style={styles.cardNumber}>{cardNumber}</Text>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -152,6 +196,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  qrTapArea: {
+    borderRadius: 12,
+  },
   cardNumber: {
     marginTop: 14,
     fontSize: 18,
@@ -159,5 +206,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#767676",
     textAlign: "center",
+  },
+  qrZoomOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  qrZoomBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+  },
+  qrZoomCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    alignItems: "center",
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 10px 24px rgba(0, 0, 0, 0.2)" }
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.25,
+          shadowRadius: 18,
+          elevation: 8,
+        }),
   },
 });

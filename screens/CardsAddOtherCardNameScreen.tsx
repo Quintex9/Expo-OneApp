@@ -19,20 +19,24 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { TAB_BAR_BASE_HEIGHT, TAB_BAR_MIN_INSET } from "../lib/constants/layout";
+import { useCardsSession } from "../lib/CardsSessionContext";
 
 interface RouteParams {
   cardName?: string;
   cardNumber?: string;
+  prefilledCardName?: string;
 }
 
 export default function CardsAddOtherCardNameScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute();
+  const { addCard } = useCardsSession();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { cardName = t("cardsOtherCard"), cardNumber = "" } = (route.params as RouteParams) || {};
-  const [cardNameInput, setCardNameInput] = useState("");
+  const { cardName = t("cardsOtherCard"), cardNumber = "", prefilledCardName } =
+    (route.params as RouteParams) || {};
+  const [cardNameInput, setCardNameInput] = useState(prefilledCardName || "");
   const contentWidth = useMemo(
     () => Math.min(361, Math.max(0, screenWidth - 32)),
     [screenWidth]
@@ -49,11 +53,21 @@ export default function CardsAddOtherCardNameScreen() {
     }
 
     const resolvedName = cardNameInput.trim() || cardName;
-    navigation.navigate("CardsSelectedCard", {
-      cardName: resolvedName,
-      cardNumber,
+    addCard({ cardName: resolvedName, cardNumber });
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: "CardsList" },
+        {
+          name: "CardsSelectedCard",
+          params: {
+            cardName: resolvedName,
+            cardNumber,
+          },
+        },
+      ],
     });
-  }, [cardName, cardNameInput, cardNumber, navigation]);
+  }, [addCard, cardName, cardNameInput, cardNumber, navigation]);
 
   return (
     <KeyboardAvoidingView

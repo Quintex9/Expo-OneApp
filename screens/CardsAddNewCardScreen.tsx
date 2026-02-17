@@ -21,21 +21,24 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { TAB_BAR_BASE_HEIGHT, TAB_BAR_MIN_INSET } from "../lib/constants/layout";
+import { useCardsSession } from "../lib/CardsSessionContext";
 
 interface RouteParams {
   cardName?: string;
   isOtherCardFlow?: boolean;
+  prefilledCardName?: string;
 }
 
 export default function CardsAddNewCardScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const route = useRoute();
+  const { addCard } = useCardsSession();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanned, setIsScanned] = useState(false);
-  const { cardName = t("cardsNewCard"), isOtherCardFlow = false } =
+  const { cardName = t("cardsNewCard"), isOtherCardFlow = false, prefilledCardName } =
     (route.params as RouteParams) || {};
   const contentWidth = useMemo(
     () => Math.min(362, Math.max(0, screenWidth - 32)),
@@ -76,19 +79,20 @@ export default function CardsAddNewCardScreen() {
 
       setIsScanned(true);
       const parsedNumber = data?.trim() || "123 456 7890";
+      addCard({ cardName, cardNumber: parsedNumber });
 
       navigation.navigate("CardsSelectedCard", {
         cardName,
         cardNumber: parsedNumber,
       });
     },
-    [cardName, isScanned, navigation]
+    [addCard, cardName, isScanned, navigation]
   );
 
   const hasCameraPermission = permission?.granted ?? false;
   const handleEnterManually = useCallback(() => {
-    navigation.push("CardsAddEnterManually", { cardName, isOtherCardFlow });
-  }, [cardName, isOtherCardFlow, navigation]);
+    navigation.push("CardsAddEnterManually", { cardName, isOtherCardFlow, prefilledCardName });
+  }, [cardName, isOtherCardFlow, navigation, prefilledCardName]);
 
   return (
     <ScrollView
