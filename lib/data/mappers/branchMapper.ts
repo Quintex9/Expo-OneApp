@@ -9,6 +9,10 @@ import { formatTitleFromId, getRatingForId } from "../normalizers";
 import { canonicalOrFallbackId, normalizeId } from "../utils/id";
 import { getMockBranchSearchMetadata } from "../search/mockBranchSearchMetadata";
 import {
+  getMockBranchMenuItems,
+  resolveBranchMenuLabelMode,
+} from "../menu/mockBranchMenu";
+import {
   mergeBranchImages,
   toBranchOverride,
   toNonEmptyString,
@@ -110,6 +114,58 @@ const toSearchStringArray = (value?: string[] | null): string[] | undefined => {
   return Array.from(new Set(normalized));
 };
 
+const resolveTranslatedString = (
+  context: MapperContext,
+  value?: string | null
+): string | undefined => {
+  const normalized = toNonEmptyString(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  const translated = context.translateKey(normalized);
+  if (translated && translated.trim().length > 0 && translated !== normalized) {
+    return translated;
+  }
+
+  return normalized;
+};
+
+const toMenuItems = (
+  value: BranchDto["menuItems"] | undefined,
+  context: MapperContext
+) => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const mapped = value
+    .map((item, index) => {
+      const id = toNonEmptyString(item?.id) ?? `menu-${index + 1}`;
+      const name = resolveTranslatedString(context, item?.name);
+      const details = resolveTranslatedString(context, item?.details);
+      const price = toNonEmptyString(item?.price);
+
+      if (!name) {
+        return undefined;
+      }
+
+      return {
+        id,
+        name,
+        details,
+        price,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  if (mapped.length === 0) {
+    return undefined;
+  }
+
+  return mapped;
+};
+
 export const mapBranchDtoToViewModel = (
   dto: BranchDto,
   context: MapperContext
@@ -182,6 +238,16 @@ export const mapBranchDtoToViewModel = (
     toSearchStringArray(mockSearchMetadata.searchAliases) ??
     toSearchStringArray(context.defaultBranch.searchAliases);
 
+  const menuItems =
+    toMenuItems(override.menuItems, context) ??
+    toMenuItems(dto.menuItems, context) ??
+    toMenuItems(getMockBranchMenuItems(category), context);
+
+  const menuLabelMode =
+    override.menuLabelMode ??
+    dto.menuLabelMode ??
+    resolveBranchMenuLabelMode(category);
+
   return {
     ...context.defaultBranch,
     ...override,
@@ -202,6 +268,8 @@ export const mapBranchDtoToViewModel = (
     phone: override.phone ?? dto.phone ?? context.defaultBranch.phone,
     email: override.email ?? dto.email ?? context.defaultBranch.email,
     website: override.website ?? dto.website ?? context.defaultBranch.website,
+    menuItems,
+    menuLabelMode,
     searchTags,
     searchMenuItems,
     searchAliases,

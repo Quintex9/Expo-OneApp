@@ -221,7 +221,6 @@ function LocationMapStep({
   const initialRegionRef = useRef(
     zoomToRegion([selectedCoord[0], selectedCoord[1]], STATIC_MAP_ZOOM)
   );
-  // Web fallback - map is not available on web
   if (Platform.OS === 'web') {
     return (
       <>

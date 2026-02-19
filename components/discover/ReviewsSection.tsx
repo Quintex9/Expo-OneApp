@@ -5,10 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Image,
+  type ImageSourcePropType,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddReviewModal } from "./AddReviewModal";
+import { BusinessGalleryModal } from "./BusinessGalleryModal";
+import type { ReviewPhotoDraft } from "../../lib/reviews/types";
 
 export type ReviewComment = {
   id: string;
@@ -25,6 +30,7 @@ export type Review = {
   daysAgo: number;
   likes?: number;
   comments?: ReviewComment[];
+  photos?: ReviewPhotoDraft[];
 };
 
 export type ReviewItemProps = {
@@ -38,6 +44,7 @@ export type ReviewItemProps = {
   onReplyToggle: (reviewId: string) => void;
   onReplyDraftChange: (reviewId: string, text: string) => void;
   onSubmitReply: (reviewId: string) => void;
+  onPhotoPress: (photos: ReviewPhotoDraft[], index: number) => void;
 };
 
 type Props = {
@@ -45,7 +52,8 @@ type Props = {
   total: number;
   reviews: Review[];
   branchName?: string;
-  onAddReview?: (rating: number, text: string) => void;
+  onAddReview?: (rating: number, text: string, photos?: ReviewPhotoDraft[]) => void;
+  photosEnabled?: boolean;
 };
 
 const EMPTY_COMMENTS: ReviewComment[] = [];
@@ -68,8 +76,10 @@ const ReviewItem = memo(function ReviewItem({
   onReplyToggle,
   onReplyDraftChange,
   onSubmitReply,
+  onPhotoPress,
 }: ReviewItemProps) {
   const { t } = useTranslation();
+  const hasPhotos = Array.isArray(review.photos) && review.photos.length > 0;
 
   return (
     <View style={styles.reviewCard}>
@@ -97,6 +107,21 @@ const ReviewItem = memo(function ReviewItem({
       </View>
 
       <Text style={styles.text}>{review.text}</Text>
+
+      {hasPhotos ? (
+        <View style={styles.photosGrid}>
+          {review.photos?.map((photo, index) => (
+            <TouchableOpacity
+              key={photo.id}
+              activeOpacity={0.9}
+              onPress={() => onPhotoPress(review.photos ?? [], index)}
+              accessibilityLabel={t("reviewPhotoPreviewA11y")}
+            >
+              <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.action} onPress={() => onLike(review.id)} activeOpacity={0.7}>
@@ -163,18 +188,29 @@ const ReviewItem = memo(function ReviewItem({
   );
 });
 
-export function ReviewsSection({ rating, total, reviews, branchName, onAddReview }: Props) {
+export function ReviewsSection({
+  rating,
+  total,
+  reviews,
+  branchName,
+  onAddReview,
+  photosEnabled = false,
+}: Props) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [showAddModal, setShowAddModal] = useState(false);
   const [displayCount, setDisplayCount] = useState(3);
   const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [localComments, setLocalComments] = useState<Record<string, ReviewComment[]>>({});
+  const [galleryVisible, setGalleryVisible] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [galleryImages, setGalleryImages] = useState<Array<{ id: string; image: ImageSourcePropType }>>([]);
 
   const handleAddReview = useCallback(
-    (reviewRating: number, text: string) => {
-      onAddReview?.(reviewRating, text);
+    (reviewRating: number, text: string, photos?: ReviewPhotoDraft[]) => {
+      onAddReview?.(reviewRating, text, photos);
       setShowAddModal(false);
     },
     [onAddReview]
@@ -195,6 +231,34 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
   const handleLoadMore = useCallback(() => {
     setDisplayCount((prev) => Math.min(prev + 3, reviews.length));
   }, [reviews.length]);
+
+  const handleOpenPhotoGallery = useCallback((photos: ReviewPhotoDraft[], initialIndex: number) => {
+    const mappedImages = photos
+      .map((photo) => {
+        const uri = photo.remoteUrl ?? photo.uri;
+        if (!uri) {
+          return undefined;
+        }
+        return {
+          id: photo.id,
+          image: { uri } as ImageSourcePropType,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+    if (mappedImages.length === 0) {
+      return;
+    }
+
+    const clampedIndex = Math.max(0, Math.min(initialIndex, mappedImages.length - 1));
+    setGalleryImages(mappedImages);
+    setGalleryStartIndex(clampedIndex);
+    setGalleryVisible(true);
+  }, []);
+
+  const handleClosePhotoGallery = useCallback(() => {
+    setGalleryVisible(false);
+  }, []);
 
   const handleReplyToggle = useCallback((reviewId: string) => {
     setReplyingTo((prev) => (prev === reviewId ? null : reviewId));
@@ -311,6 +375,7 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
               onReplyToggle={handleReplyToggle}
               onReplyDraftChange={handleReplyDraftChange}
               onSubmitReply={handleSubmitReply}
+              onPhotoPress={handleOpenPhotoGallery}
             />
             {index < displayedReviews.length - 1 && <View style={styles.separator} />}
           </View>
@@ -328,6 +393,15 @@ export function ReviewsSection({ rating, total, reviews, branchName, onAddReview
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddReview}
         branchName={branchName}
+        photosEnabled={photosEnabled}
+      />
+
+      <BusinessGalleryModal
+        visible={galleryVisible}
+        images={galleryImages}
+        initialIndex={galleryStartIndex}
+        topInset={insets.top}
+        onClose={handleClosePhotoGallery}
       />
     </View>
   );
@@ -434,6 +508,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#000000",
     marginTop: 6,
+  },
+  photosGrid: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  photoImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    backgroundColor: "#E5E7EB",
   },
   actions: {
     flexDirection: "row",

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, type ImageSourcePropType } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { BenefitsSection } from "./BenefitsSection";
-import { CategoryMenuSection } from "./CategoryMenuSection";
 import { NewsSection } from "./NewsSection";
 
 type Props = {
@@ -39,8 +38,6 @@ export const HomeSection = memo(function HomeSection({
     <View style={styles.container}>
       <Text style={styles.heading}>{bestOffersLabel}</Text>
       <BenefitsSection onActivate={onActivateBenefit} limit={2} onShowAll={onShowAllBenefits} />
-
-      <CategoryMenuSection category={category} />
 
       <Text style={styles.headingLatest}>{latestFeedLabel}</Text>
       <NewsSection title={title} branchImage={branchImage} />

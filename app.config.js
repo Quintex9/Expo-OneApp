@@ -32,6 +32,12 @@ export default ({ config }) => ({
         recordAudioAndroid: false,
       },
     ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "Allow $(PRODUCT_NAME) to access your photos.",
+      },
+    ],
     "expo-video",
     "expo-localization",
     "expo-asset",

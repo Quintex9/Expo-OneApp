@@ -11,6 +11,15 @@ export type MapViewRef = RefObject<MapView | null>;
 
 export type DiscoverCategory = "Fitness" | "Gastro" | "Relax" | "Beauty";
 
+export type BranchMenuLabelMode = "menu" | "pricelist";
+
+export interface BranchMenuItem {
+  id: string;
+  name: string;
+  details?: string;
+  price?: string;
+}
+
 export interface User {
 
     id : string;
@@ -51,6 +60,8 @@ export type BranchData = {
   category?: string;
   discount?: string;
   offers?: string[];
+  menuItems?: BranchMenuItem[];
+  menuLabelMode?: BranchMenuLabelMode;
   searchTags?: string[];
   searchMenuItems?: string[];
   searchAliases?: string[];
@@ -137,11 +148,20 @@ export interface DiscoverTopControlsProps {
   t: (key: string) => string;
   onLocationSheetChange?: (index: number) => void;
   hasActiveFilter?: boolean;
+  isSearchOpen?: boolean;
+  onCloseSearch?: () => void;
 }
 
 export interface DiscoverLocationSearchResult {
   title: string;
   subtitle: string;
+}
+
+export interface DiscoverFavoritePlace {
+  id: string;
+  label: string;
+  coord: [number, number];
+  isSaved?: boolean;
 }
 
 export interface DiscoverLocationSheetProps {
@@ -201,11 +221,17 @@ export interface LocationMapStepProps {
 }
 
 export interface DiscoverSearchSheetProps {
-  onSheetChange: (index: number) => void;
+  onSheetChange?: (index: number) => void;
+  onClose: () => void;
   sheetIndex: number;
   text: string;
   setText: Dispatch<SetStateAction<string>>;
   filtered: BranchCardProps[];
+  onSelectBranch: (branch: BranchData) => void;
+  favoritePlaces: DiscoverFavoritePlace[];
+  onSelectFavorite: (place: DiscoverFavoritePlace) => void;
+  autoFocus?: boolean;
+  showFavorites?: boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 

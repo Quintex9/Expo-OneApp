@@ -37,12 +37,12 @@ export function BenefitsBottomSheet({
           {t("needAccountForBenefits")}
         </Text>
 
-        {/* SIGN IN */}
+        
         <TouchableOpacity style={styles.loginBtn} onPress={onLogin}>
           <Text style={styles.loginText}>{t("signIn")}</Text>
         </TouchableOpacity>
 
-        {/* NO THANKS */}
+        
         <TouchableOpacity onPress={() => sheetRef.current?.close()}>
           <Text style={styles.noThanks}>{t("noThanks")}</Text>
         </TouchableOpacity>

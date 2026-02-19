@@ -1,9 +1,3 @@
-/**
- * AddReviewModal.tsx
- * 
- * Modal pre pridávanie novej recenzie s hodnotením.
- */
-
 import React, { useState, useCallback } from "react";
 import {
   View,
@@ -15,25 +9,66 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Animated,
+  Image,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import type { ReviewPhotoDraft } from "../../lib/reviews/types";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (rating: number, text: string) => void;
+  onSubmit: (rating: number, text: string, photos?: ReviewPhotoDraft[]) => void;
   branchName?: string;
+  photosEnabled?: boolean;
+  maxPhotos?: number;
 };
 
-export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props) {
+const createPhotoDraft = (asset: ImagePicker.ImagePickerAsset): ReviewPhotoDraft => ({
+  id: `photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  uri: asset.uri,
+  fileName: asset.fileName ?? undefined,
+  fileSize: asset.fileSize ?? undefined,
+  width: asset.width,
+  height: asset.height,
+  mimeType: asset.mimeType ?? undefined,
+  status: "local",
+});
+
+const dedupePhotosByUri = (photos: ReviewPhotoDraft[]) => {
+  const unique = new Map<string, ReviewPhotoDraft>();
+  photos.forEach((photo) => {
+    if (!unique.has(photo.uri)) {
+      unique.set(photo.uri, photo);
+    }
+  });
+  return Array.from(unique.values());
+};
+
+export function AddReviewModal({
+  visible,
+  onClose,
+  onSubmit,
+  branchName,
+  photosEnabled = false,
+  maxPhotos = 3,
+}: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [photos, setPhotos] = useState<ReviewPhotoDraft[]>([]);
+
+  const resetState = useCallback(() => {
+    setRating(0);
+    setReviewText("");
+    setPhotos([]);
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (rating === 0) {
@@ -44,23 +79,53 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
       Alert.alert(t("error"), t("reviewRequired"));
       return;
     }
-    
-    onSubmit(rating, reviewText.trim());
-    
-    // Reset form
-    setRating(0);
-    setReviewText("");
-    
-    // Show success message
+
+    onSubmit(rating, reviewText.trim(), photosEnabled ? photos : undefined);
+    resetState();
     Alert.alert(t("success"), t("thankYouReview"));
     onClose();
-  }, [rating, reviewText, onSubmit, onClose, t]);
+  }, [onClose, onSubmit, photos, photosEnabled, rating, resetState, reviewText, t]);
 
   const handleClose = useCallback(() => {
-    setRating(0);
-    setReviewText("");
+    resetState();
     onClose();
-  }, [onClose]);
+  }, [onClose, resetState]);
+
+  const handlePickPhotos = useCallback(async () => {
+    if (!photosEnabled) {
+      return;
+    }
+
+    const remainingSlots = Math.max(0, maxPhotos - photos.length);
+    if (remainingSlots === 0) {
+      Alert.alert(t("error"), t("reviewPhotoLimitReached", { count: maxPhotos }));
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: remainingSlots > 1,
+        selectionLimit: remainingSlots,
+        quality: 0.82,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const drafts = result.assets.map(createPhotoDraft);
+      setPhotos((prev) =>
+        dedupePhotosByUri([...prev, ...drafts]).slice(0, maxPhotos)
+      );
+    } catch {
+      Alert.alert(t("error"), t("reviewPhotoPickerError"));
+    }
+  }, [maxPhotos, photos.length, photosEnabled, t]);
+
+  const handleRemovePhoto = useCallback((photoId: string) => {
+    setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
+  }, []);
 
   const getRatingLabel = useCallback(
     (value: number) => {
@@ -75,7 +140,7 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
 
   const renderStars = () => {
     const stars = [];
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 5; i += 1) {
       const isActive = i <= (hoveredStar || rating);
       stars.push(
         <TouchableOpacity
@@ -85,6 +150,7 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
           onPressOut={() => setHoveredStar(0)}
           activeOpacity={0.7}
           style={styles.starButton}
+          accessibilityLabel={t("selectRating")}
         >
           <Ionicons
             name={isActive ? "star" : "star-outline"}
@@ -97,13 +163,10 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
     return stars;
   };
 
+  const photoSectionVisible = photosEnabled;
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.overlay}
@@ -113,12 +176,10 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
         </View>
 
         <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
-          {/* Handle */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
           </View>
 
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>{t("writeReview")}</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -126,25 +187,14 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
             </TouchableOpacity>
           </View>
 
-          {/* Branch name */}
-          {branchName && (
-            <Text style={styles.branchName}>{branchName}</Text>
-          )}
+          {branchName ? <Text style={styles.branchName}>{branchName}</Text> : null}
 
-          {/* Rating */}
           <View style={styles.ratingSection}>
             <Text style={styles.sectionLabel}>{t("selectRating")}</Text>
-            <View style={styles.starsContainer}>
-              {renderStars()}
-            </View>
-            {rating > 0 && (
-              <Text style={styles.ratingText}>
-                {getRatingLabel(rating)}
-              </Text>
-            )}
+            <View style={styles.starsContainer}>{renderStars()}</View>
+            {rating > 0 ? <Text style={styles.ratingText}>{getRatingLabel(rating)}</Text> : null}
           </View>
 
-          {/* Review text */}
           <View style={styles.textSection}>
             <Text style={styles.sectionLabel}>{t("yourReview")}</Text>
             <TextInput
@@ -161,11 +211,56 @@ export function AddReviewModal({ visible, onClose, onSubmit, branchName }: Props
             <Text style={styles.charCount}>{reviewText.length}/500</Text>
           </View>
 
-          {/* Submit button */}
+          {photoSectionVisible ? (
+            <View style={styles.photoSection}>
+              <View style={styles.photoSectionHeader}>
+                <Text style={styles.sectionLabel}>{t("reviewPhotosTitle")}</Text>
+                <Text style={styles.photoCount}>
+                  {photos.length}/{maxPhotos}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.photoPickerButton,
+                  photos.length >= maxPhotos && styles.photoPickerButtonDisabled,
+                ]}
+                onPress={handlePickPhotos}
+                activeOpacity={0.8}
+                disabled={photos.length >= maxPhotos}
+                accessibilityLabel={t("reviewPhotoAddA11y")}
+              >
+                <Ionicons name="images-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.photoPickerButtonText}>{t("reviewPhotoAdd")}</Text>
+              </TouchableOpacity>
+
+              {photos.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.photoPreviewRow}
+                >
+                  {photos.map((photo) => (
+                    <View key={photo.id} style={styles.photoPreviewItem}>
+                      <Image source={{ uri: photo.uri }} style={styles.photoPreviewImage} />
+                      <TouchableOpacity
+                        style={styles.photoRemoveButton}
+                        onPress={() => handleRemovePhoto(photo.id)}
+                        accessibilityLabel={t("reviewPhotoRemoveA11y")}
+                      >
+                        <Ionicons name="close" size={14} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : null}
+            </View>
+          ) : null}
+
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (rating === 0 || reviewText.trim().length < 10) && styles.submitButtonDisabled
+              (rating === 0 || reviewText.trim().length < 10) && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
             activeOpacity={0.8}
@@ -259,7 +354,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   textSection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   textInput: {
     backgroundColor: "#F9FAFB",
@@ -276,6 +371,65 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "right",
     marginTop: 6,
+  },
+  photoSection: {
+    marginBottom: 18,
+  },
+  photoSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  photoCount: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  photoPickerButton: {
+    backgroundColor: "#F97316",
+    borderRadius: 10,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  photoPickerButtonDisabled: {
+    backgroundColor: "#D1D5DB",
+  },
+  photoPickerButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  photoPreviewRow: {
+    gap: 10,
+    paddingTop: 10,
+  },
+  photoPreviewItem: {
+    width: 74,
+    height: 74,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#E5E7EB",
+    position: "relative",
+  },
+  photoPreviewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  photoRemoveButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   submitButton: {
     backgroundColor: "#F97316",

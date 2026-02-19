@@ -20,7 +20,7 @@ export default function Tabs() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      {/* Protected - requires login */}
+      
       <Tab.Screen name={t("Cards")}>
         {() => (
           <ProtectedRoute>
@@ -29,7 +29,7 @@ export default function Tabs() {
         )}
       </Tab.Screen>
 
-      {/* Public */}
+      
       <Tab.Screen name={t("Feed")} component={FeedScreen} />
       <Tab.Screen name={t("Home")} component={HomeScreen} />
       <Tab.Screen name={t("Discover")} component={DiscoverScreen} />
@@ -39,7 +39,7 @@ export default function Tabs() {
         options={{ tabBarButton: () => null }}
       />
 
-      {/* Protected - requires login */}
+      
       <Tab.Screen name={t("Profile")}>
         {() => (
           <ProtectedRoute>

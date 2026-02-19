@@ -2,5 +2,5 @@
 // Zodpovednost: centralizovat importy modelov cez jedno miesto.
 // Vstup/Vystup: re-export DTO aj ViewModel typov.
 
-export type { DataSourceMode, BranchDto, MarkerDto } from "./dto";
+export type { DataSourceMode, BranchDto, MarkerDto, BranchMenuItemDto } from "./dto";
 export type { BranchViewModel, MarkerViewModel } from "./viewModels";

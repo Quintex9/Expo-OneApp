@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Pressable, Text, View, StyleSheet, Platform, TouchableOpacity, useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,12 @@ import { styles } from "./discoverStyles";
 import type { DiscoverTopControlsProps } from "../../lib/interfaces";
 import DiscoverLocationSheet from "./DiscoverLocationSheet";
 import { setMapCamera } from "../../lib/maps/camera";
+import {
+  DISCOVER_TOP_CONTROL_GAP,
+  DISCOVER_TOP_CONTROL_HEIGHT,
+  DISCOVER_TOP_HORIZONTAL_PADDING,
+  DISCOVER_TOP_OFFSET,
+} from "../../lib/constants/discoverUi";
 
 export default function DiscoverTopControls({
   insetsTop,
@@ -25,6 +31,8 @@ export default function DiscoverTopControls({
   t,
   onLocationSheetChange,
   hasActiveFilter,
+  isSearchOpen = false,
+  onCloseSearch,
 }: DiscoverTopControlsProps) {
   const navigation = useNavigation<any>();
   const locationRef = useRef<BottomSheet>(null);
@@ -82,11 +90,11 @@ export default function DiscoverTopControls({
     [cameraRef, centerYourLocation, setOpen, setOption]
   );
   const topBarWidth = useMemo(
-    () => Math.max(0, screenWidth - 34),
+    () => Math.max(0, screenWidth - DISCOVER_TOP_HORIZONTAL_PADDING * 2),
     [screenWidth]
   );
   const openCardWidth = useMemo(
-    () => Math.max(0, topBarWidth - 42 - 14),
+    () => Math.max(0, topBarWidth - DISCOVER_TOP_CONTROL_HEIGHT - DISCOVER_TOP_CONTROL_GAP),
     [topBarWidth]
   );
   const openCardStyle = useMemo(
@@ -101,13 +109,31 @@ export default function DiscoverTopControls({
     }),
     [openCardWidth]
   );
+
+  useEffect(() => {
+    if (isSearchOpen && open) {
+      setOpen(false);
+    }
+  }, [isSearchOpen, open, setOpen]);
+
+  const navigateToDiscoverList = useCallback(() => {
+    const state = navigation.getState?.();
+    const activeRouteName =
+      state?.routes?.[typeof state?.index === "number" ? state.index : 0]?.name;
+
+    navigation.navigate("DiscoverList", {
+      userCoord,
+      originRouteName: activeRouteName,
+    });
+  }, [navigation, userCoord]);
+
   return (
     <>
-      <View style={[styles.dropdown_main, { top: insetsTop + 16 }]} pointerEvents="box-none">
+      <View style={[styles.dropdown_main, { top: insetsTop + DISCOVER_TOP_OFFSET }]} pointerEvents="box-none">
         {open && <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />}
 
-        {/* Default mode: Location icon | Search bar | List icon */}
-        {o && !open && (
+        
+        {o && !open && !isSearchOpen && (
           <View style={localStyles.topBarRowWrap}>
             <View style={[localStyles.topBarRow, { width: topBarWidth }]}>
               <View style={localStyles.searchBar}>
@@ -121,17 +147,17 @@ export default function DiscoverTopControls({
                 <TouchableOpacity
                   style={localStyles.searchInputButton}
                   activeOpacity={0.9}
-                  onPress={onOpenSearch}
+                  onPress={isSearchOpen ? onCloseSearch ?? onOpenSearch : onOpenSearch}
                 >
                   <Text style={localStyles.searchPlaceholder}>{t("searchbranches")}</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* List button */}
+              
               <TouchableOpacity
                 style={localStyles.iconOnlyBtn}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate("DiscoverList", { userCoord })}
+                onPress={navigateToDiscoverList}
               >
                 <Ionicons name="list-outline" size={18} color="#000" />
               </TouchableOpacity>
@@ -139,8 +165,8 @@ export default function DiscoverTopControls({
           </View>
         )}
 
-        {/* Dropdown mode: Location dropdown */}
-        {open && (
+        
+        {open && !isSearchOpen && (
           <>
             <View style={[styles.card, openCardStyle]}>
               <TouchableOpacity
@@ -213,7 +239,7 @@ export default function DiscoverTopControls({
               <TouchableOpacity
                 style={localStyles.roundBtn}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate("DiscoverList", { userCoord })}
+                onPress={navigateToDiscoverList}
               >
                 <Ionicons name="list-outline" size={18} color="#000" />
               </TouchableOpacity>
@@ -243,14 +269,14 @@ const localStyles = StyleSheet.create({
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    height: 42,
-    gap: 14,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
+    gap: DISCOVER_TOP_CONTROL_GAP,
   },
   roundBtn: {
     flexGrow: 0,
     flexShrink: 0,
-    width: 42,
-    height: 42,
+    width: DISCOVER_TOP_CONTROL_HEIGHT,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
     borderRadius: 999,
     padding: 12,
     backgroundColor: "#FFFFFF",
@@ -267,8 +293,8 @@ const localStyles = StyleSheet.create({
         }),
   },
   iconOnlyBtn: {
-    width: 42,
-    height: 42,
+    width: DISCOVER_TOP_CONTROL_HEIGHT,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
     borderRadius: 999,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
@@ -287,7 +313,7 @@ const localStyles = StyleSheet.create({
     flex: 1,
     minWidth: 120,
     maxWidth: 458,
-    height: 42,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
@@ -328,7 +354,7 @@ const localStyles = StyleSheet.create({
     position: "absolute",
     right: 16,
     width: 97,
-    height: 42,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
     flexDirection: "row",
     gap: 13,
     alignItems: "center",

@@ -1278,7 +1278,6 @@ function DiscoverMap({
         }
         setStackedTooltipPoint({ x: point.x, y: point.y });
       } catch {
-        // Ignore map projection errors and keep tooltip hidden.
       }
     },
     [cameraRef]
@@ -1528,7 +1527,6 @@ function DiscoverMap({
             nextZoom = regionToZoom({ longitudeDelta });
           }
         } catch {
-          // Ignore boundary read failures.
         }
       }
 
@@ -1543,7 +1541,6 @@ function DiscoverMap({
       applyRenderCamera(normalizedCenter, nextZoom);
       onCameraChanged(normalizedCenter, nextZoom, false);
     } catch {
-      // Ignore native camera read failures.
     }
   }, [applyRenderCamera, cameraRef, fallbackZoom, onCameraChanged]);
 
@@ -1892,8 +1889,6 @@ function DiscoverMap({
             !marker.isCluster && !marker.isStacked
               ? clampNumber(fullSpriteOpacityById[marker.id] ?? 0, 0, 1)
               : 0;
-          // Keep base pin visually stable during full-sprite fade.
-          // We hide compact only when full sprite is effectively fully visible.
           const compactMarkerOpacity =
             useOverlayFullSprites && fullOpacityForMarker >= 1 - FULL_SPRITE_FADE_EPSILON
               ? 0

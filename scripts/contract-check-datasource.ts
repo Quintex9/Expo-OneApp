@@ -31,6 +31,33 @@ const isOptionalStringArray = (value: unknown) =>
   value === null ||
   (Array.isArray(value) && value.every((item) => typeof item === "string"));
 
+const isOptionalMenuLabelMode = (value: unknown) =>
+  value === undefined || value === null || value === "menu" || value === "pricelist";
+
+const isOptionalMenuItems = (value: unknown) =>
+  value === undefined ||
+  value === null ||
+  (Array.isArray(value) &&
+    value.every((item) => {
+      if (!item || typeof item !== "object") {
+        return false;
+      }
+
+      const menuItem = item as {
+        id?: unknown;
+        name?: unknown;
+        details?: unknown;
+        price?: unknown;
+      };
+
+      return (
+        isOptionalString(menuItem.id) &&
+        isOptionalString(menuItem.name) &&
+        isOptionalString(menuItem.details) &&
+        isOptionalString(menuItem.price)
+      );
+    }));
+
 const fail = (message: string): never => {
   throw new Error(message);
 };
@@ -70,6 +97,14 @@ const validateBranch = (sourceName: string, branch: BranchDto, index: number) =>
 
   if (!isOptionalStringArray(branch.searchAliases)) {
     fail(`[${sourceName}] branch[${index}] searchAliases must be string[]/null`);
+  }
+
+  if (!isOptionalMenuItems(branch.menuItems)) {
+    fail(`[${sourceName}] branch[${index}] menuItems must be array/object/null`);
+  }
+
+  if (!isOptionalMenuLabelMode(branch.menuLabelMode)) {
+    fail(`[${sourceName}] branch[${index}] menuLabelMode must be menu/pricelist/null`);
   }
 
   if (
@@ -121,6 +156,8 @@ const descriptorForBranch = (branch: BranchDto) => ({
   searchTags: Array.isArray(branch.searchTags) ? "array" : typeof branch.searchTags,
   searchMenuItems: Array.isArray(branch.searchMenuItems) ? "array" : typeof branch.searchMenuItems,
   searchAliases: Array.isArray(branch.searchAliases) ? "array" : typeof branch.searchAliases,
+  menuItems: Array.isArray(branch.menuItems) ? "array" : typeof branch.menuItems,
+  menuLabelMode: typeof branch.menuLabelMode,
 });
 
 const descriptorForMarker = (marker: MarkerDto) => ({

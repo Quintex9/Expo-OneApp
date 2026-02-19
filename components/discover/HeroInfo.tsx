@@ -9,16 +9,13 @@ type Props = {
   hours: string;
 };
 
-// memo() zabraňuje zbytočným renderom ak sa props nezmenia
 export const HeroInfo = memo(function HeroInfo({ title, rating, ratingCount, distance, hours }: Props) {
   return (
     <View style={styles.container}>
-      {/* TITLE */}
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
       </View>
 
-      {/* META - rating, vzdialenosť, hodiny */}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
           <Image

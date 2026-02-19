@@ -184,6 +184,13 @@ export default function DiscoverListScreen() {
   }, [screenHeight, insets.top, cardHeightWithMargin]);
 
   const userLocation: [number, number] = route.params?.userCoord ?? NITRA_CENTER;
+  const discoverRouteName = useMemo(() => {
+    const rawRouteName = route.params?.originRouteName;
+    if (typeof rawRouteName === "string" && rawRouteName.length > 0 && rawRouteName !== "DiscoverList") {
+      return rawRouteName;
+    }
+    return t("Discover");
+  }, [route.params?.originRouteName, t]);
 
   const allBranches = useMemo(
     () =>
@@ -206,7 +213,7 @@ export default function DiscoverListScreen() {
       ratingThreshold: filters.ratingThreshold,
     });
 
-    return sortDiscoverListItems(filtered, sortOption, 2);
+    return sortDiscoverListItems(filtered, sortOption);
   }, [allBranches, filters.appliedFilters, filters.ratingThreshold, sortOption]);
 
   const getItemLayout = useCallback(
@@ -242,6 +249,10 @@ export default function DiscoverListScreen() {
     []
   );
 
+  const handleBackToMap = useCallback(() => {
+    navigation.navigate(discoverRouteName);
+  }, [discoverRouteName, navigation]);
+
   return (
     <View style={styles.container}>
       <DiscoverSideFilterPanel
@@ -275,7 +286,7 @@ export default function DiscoverListScreen() {
           <TouchableOpacity
             style={styles.headerIconButton}
             activeOpacity={0.85}
-            onPress={() => navigation.goBack()}
+            onPress={handleBackToMap}
           >
             <Ionicons name="map-outline" size={18} color="#000" />
           </TouchableOpacity>
@@ -331,11 +342,7 @@ export default function DiscoverListScreen() {
       ) : visibleBranches.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {error
-              ? t("dataLoadFailed")
-              : sortOption === "openNearYou"
-                ? t("noPlacesFoundWithin", { distance: "2 km" })
-                : t("noPlacesFound")}
+            {error ? t("dataLoadFailed") : t("noPlacesFound")}
           </Text>
         </View>
       ) : (

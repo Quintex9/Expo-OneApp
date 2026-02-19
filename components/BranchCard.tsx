@@ -1,14 +1,3 @@
-/**
- * BranchCard.tsx
- * 
- * Karta pobočky zobrazovaná v zoznamoch.
- * Obsahuje obrázok, názov, hodnotenie, vzdialenosť a otváracie hodiny.
- * 
- * OPTIMALIZÁCIE:
- * - memo() zabraňuje zbytočným renderom keď sa zmení parent
- * - useMemo() pre dynamické štýly (imageSize)
- */
-
 import React, { memo, useMemo } from "react";
 import {
   View,
@@ -26,7 +15,6 @@ import { useTranslation } from "react-i18next";
 
 function BranchCard(props: BranchCardProps) {
   const { t } = useTranslation();
-  // Rozbalíme všetky props
   const {
     title,
     image,
@@ -51,15 +39,10 @@ function BranchCard(props: BranchCardProps) {
     onPress,
   } = props;
 
-  // Šírka obrazovky pre responzívny obrázok
   const { width } = useWindowDimensions();
   const navigation = useNavigation<any>();
 
-  /**
-   * Vypočítame veľkosť obrázka podľa šírky obrazovky
-   * Minimum 80px, maximum 96px, inak 20% šírky obrazovky
-   * useMemo zabezpečí, že sa prepočíta len keď sa zmení width
-   */
+  // Skalovanie drzi kartu citatelnu na mensich displejoch bez rozbitia layoutu na sirsich.
   const scale = useMemo(() => Math.min(1, Math.max(0.82, width / 393)), [width]);
   const imageSize = useMemo(() => Math.round(80 * scale), [scale]);
   const cardHeight = useMemo(() => Math.round(112 * scale), [scale]);
@@ -98,10 +81,7 @@ function BranchCard(props: BranchCardProps) {
     if (typeof moreCount === "number") return moreCount;
     return Math.max(0, resolvedOffers.length - (resolvedOffers.length > 0 ? 1 : 0));
   }, [moreCount, resolvedOffers.length]);
-  /**
-   * Štýl pre obrázok - kombinujeme základný štýl s dynamickou veľkosťou
-   * useMemo zabezpečí, že sa nevytvára nový objekt pri každom renderi
-   */
+  // Stabilna referencia style objektu znizuje re-render overhead vo zoznamoch.
   const imageStyle = useMemo(
     () => [
       styles.branchImage,
@@ -125,14 +105,10 @@ function BranchCard(props: BranchCardProps) {
     [cardHeight, cardPadding, cardPaddingBottomScaled, cardRadius, noElevation]
   );
 
-  /**
-   * Handler pre kliknutie na kartu
-   * Ak je poskytnutý vlastný onPress, použijeme ho
-   * Inak navigujeme na detail pobočky
-   */
+  // Jeden branch payload pre custom onPress aj default navigaciu drzi spravanie konzistentne.
   const handlePress = () => {
-    // Vytvoríme objekt pobočky z props
     const branch: BranchData = {
+      id: props.id,
       title,
       image,
       images,
@@ -143,6 +119,8 @@ function BranchCard(props: BranchCardProps) {
       discount,
       offers,
       moreCount: props.moreCount,
+      menuItems: props.menuItems,
+      menuLabelMode: props.menuLabelMode,
       address,
       phone,
       email,
@@ -165,18 +143,12 @@ function BranchCard(props: BranchCardProps) {
       onPress={handlePress}
       style={cardStyle}
     >
-      {/* Obrázok pobočky */}
       <Image source={image} style={imageStyle} resizeMode="cover" />
-
-      {/* Obsah karty */}
       <View style={[styles.branchContent, inlineBadges && styles.branchContentInline]}>
         <View style={styles.topContent}>
-          {/* Title */}
           <Text style={[styles.branchTitle, { fontSize: titleSize }]} numberOfLines={1}>
             {title}
           </Text>
-
-          {/* Meta row */}
           <View style={[styles.metaRow, inlineBadges && styles.metaRowInline]}>
             <View style={styles.metaItem}>
               <Ionicons name="star" size={Math.round(13 * scale)} color="#FFD000" />
@@ -193,7 +165,7 @@ function BranchCard(props: BranchCardProps) {
           </View>
         </View>
 
-        {/* Offers row */}
+        
         {resolvedOffers.length > 0 && (
           <View
             style={[
@@ -227,19 +199,15 @@ function BranchCard(props: BranchCardProps) {
   );
 }
 
-// memo() zabraňuje zbytočným renderom - komponent sa prerenderuje len ak sa zmenia props
 export default memo(BranchCard);
 
-// === ŠTÝLY ===
 const styles = StyleSheet.create({
-  // Hlavný kontajner karty
   branchCard: {
     flexDirection: "row",
     backgroundColor: "#fff",
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E4E4E7",
-    // Tieň - rôzny pre web a native
     ...Platform.select({
       web: { boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)" },
       default: {
@@ -247,7 +215,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
-        elevation: 3,  // Android tieň
+        elevation: 3,
       },
     }),
     width: "100%",
@@ -259,12 +227,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
 
-  // Obrázok pobočky
   branchImage: {
     borderRadius: 6,
   },
 
-  // Obsahová časť (pravá strana)
   branchContent: {
     flex: 1,
     minWidth: 0,
@@ -279,14 +245,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  // Názov pobočky
   branchTitle: {
     fontWeight: "700",
     marginBottom: 6,
     color: "#000",
   },
 
-  // Riadok s metadátami (hviezdičky, vzdialenosť, čas)
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -311,12 +275,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
   },
-  // Text metadát
   metaText: {
     color: "#7C7C7C",
   },
 
-  // Spodný riadok (zľava, +X more)
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,13 +291,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Badge so zľavou (oranžový)
   badge: {
     backgroundColor: "#EB8100",
     borderRadius: 9999,
   },
 
-  // Text v badge
   badgeText: {
     color: "#fff",
     fontWeight: "600",
@@ -353,5 +313,4 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // Text "+X more"
 });

@@ -1,79 +1,125 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useTranslation } from "react-i18next";
 
+export interface TabMenuItem {
+  key: string;
+  labelKey?: string;
+  fallbackLabel?: string;
+}
+
 type Props = {
-  items: string[];
+  items: TabMenuItem[];
   active: string;
   onChange: (val: string) => void;
-  width: number;
+  width?: number;
+  minItemWidth?: number;
 };
 
-// memo() zabraňuje zbytočným renderom ak sa props nezmenia
-export const TabMenu = memo(function TabMenu({ items, active, onChange, width }: Props) {
+const FALLBACK_LABELS: Record<string, string> = {
+  home: "Home",
+  benefits: "Benefits",
+  menu: "Menu",
+  pricelist: "Price list",
+  info: "Info",
+  reviews: "Reviews",
+};
+
+const resolveLabel = (
+  t: (value: string) => string,
+  item: TabMenuItem
+) => {
+  const labelKey = item.labelKey ?? `tab_${item.key}`;
+  const translated = t(labelKey);
+  if (translated !== labelKey) {
+    return translated;
+  }
+
+  return item.fallbackLabel ?? FALLBACK_LABELS[item.key] ?? item.key;
+};
+
+export const TabMenu = memo(function TabMenu({
+  items,
+  active,
+  onChange,
+  width,
+  minItemWidth = 82,
+}: Props) {
   const { t } = useTranslation();
-  const fallbackLabels: Record<string, string> = {
-    home: "Home",
-    news: "News",
-    benefits: "Benefits",
-    info: "Info",
-    reviews: "Reviews",
-  };
-  
+
   return (
-    <View style={styles.container}>
-      {items.map((x) => {
-        const isActive = active === x;
-        const translationKey = `tab_${x}`;
-        const translated = t(translationKey);
-        const label = translated === translationKey ? fallbackLabels[x] ?? x : translated;
-  return (
-        <TouchableOpacity
-          key={x}
-          onPress={() => onChange(x)}
-            style={[
-              styles.tab,
-              { width },
-              isActive && styles.tabActive,
-            ]}
-        >
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-              {label}
-            </Text>
-        </TouchableOpacity>
-        );
-      })}
+    <View style={styles.frame}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {items.map((item) => {
+          const isActive = active === item.key;
+          const label = resolveLabel(t, item);
+          const hasExplicitWidth = typeof width === "number" && width > 0;
+
+          return (
+            <TouchableOpacity
+              key={item.key}
+              onPress={() => onChange(item.key)}
+              style={[
+                styles.tab,
+                !isActive && styles.tabIdle,
+                hasExplicitWidth ? { width } : { minWidth: minItemWidth },
+                isActive && styles.tabActive,
+              ]}
+              activeOpacity={0.85}
+              accessibilityLabel={label}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    height: 48,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 0.5,
+  frame: {
+    height: 50,
+    borderRadius: 22,
+    backgroundColor: "#FAFAFA",
+    borderWidth: 1,
     borderColor: "#E4E4E7",
-    padding: 4,
-    alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  scrollContent: {
+    alignItems: "center",
+    paddingHorizontal: 5,
+    gap: 6,
   },
   tab: {
-    height: 37,
-    borderRadius: 20,
+    height: 40,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 14,
+  },
+  tabIdle: {
+    backgroundColor: "#FFFFFF",
   },
   tabActive: {
     backgroundColor: "#EB8100",
   },
   tabText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    lineHeight: 17,
-    color: "#71717A",
+    fontSize: 13,
+    lineHeight: 16,
+    color: "#3F3F46",
     textAlign: "center",
   },
   tabTextActive: {

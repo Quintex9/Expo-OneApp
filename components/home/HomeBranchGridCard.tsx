@@ -1,7 +1,3 @@
-// HomeBranchGridCard: shared Home style card for horizontal and grid lists.
-// Zodpovednost: render Home-like card layout for branch previews.
-// Vstup/Vystup: BranchData + width, optional onPress callback.
-
 import React, { memo, useCallback } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

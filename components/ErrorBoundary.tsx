@@ -12,7 +12,6 @@ type State = {
     error: Error | null;
 };
 
-// Zachytáva chyby v komponentoch a zobrazí fallback namiesto crashu
 export class ErrorBoundary extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
@@ -26,7 +25,6 @@ export class ErrorBoundary extends Component<Props, State> {
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
         console.error("ErrorBoundary:", error);
         console.error("Stack:", errorInfo.componentStack);
-        // Tu pridať Sentry alebo iný error tracking
     }
 
     handleRetry = () => {
@@ -71,7 +69,6 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 }
 
-// HOC wrapper - obalí komponent error boundariou
 export function withErrorBoundary<P extends object>(
     WrappedComponent: React.ComponentType<P>,
     fallback?: ReactNode

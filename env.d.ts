@@ -4,7 +4,10 @@ declare module '@env' {
   export const SUPABASE_ANON_KEY: string;
   export const SUPABASE_URL: string;
   export const EXPO_PUBLIC_HOME_SEARCH_V2: string | undefined;
+  export const EXPO_PUBLIC_DISCOVER_SEARCH_V2: string | undefined;
   export const EXPO_PUBLIC_SHOW_MORE_V2: string | undefined;
+  export const EXPO_PUBLIC_BUSINESS_DETAIL_V2: string | undefined;
+  export const EXPO_PUBLIC_REVIEW_PHOTOS: string | undefined;
 }
 
 declare module 'text-encoding' {

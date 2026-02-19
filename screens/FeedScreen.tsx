@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     Platform,
     useWindowDimensions,
-    FlatList,
+    FlatList as RNFlatList,
     StatusBar,
     Share,
     Alert,
@@ -25,7 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import BranchCard from "../components/BranchCard";
 import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { FlatList as GHFlatList, Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import {
     BRANCH_CARD_BASELINE_OFFSET,
@@ -42,7 +42,7 @@ import {
     type FeedReelItem,
 } from "../lib/fixtures/feedReels";
 const OVERLAY_CARD_GAP = 12;
-const PINCH_SCALE_ACTIVATION_THRESHOLD = 0.06;
+const PINCH_SCALE_ACTIVATION_THRESHOLD = 0.015;
 const TAP_MAX_DISTANCE = 12;
 const DOUBLE_TAP_MAX_DELAY = 250;
 const TAP_MAX_DURATION = 180;
@@ -111,9 +111,11 @@ const ReelItemComponent = memo(
         isSourceCandidate,
         isPlaybackAllowed,
         isZooming,
+        isPinchTouchActive,
         onZoomStateChange,
         onPinchTouchStateChange,
         onSpeedBoostStateChange,
+        externalScrollRef,
     }: {
         item: FeedReelItem;
         height: number;
@@ -128,9 +130,11 @@ const ReelItemComponent = memo(
         isSourceCandidate: boolean;
         isPlaybackAllowed: boolean;
         isZooming: boolean;
+        isPinchTouchActive: boolean;
         onZoomStateChange: (value: boolean) => void;
         onPinchTouchStateChange: (value: boolean) => void;
         onSpeedBoostStateChange: (value: boolean) => void;
+        externalScrollRef: React.RefObject<React.ComponentType | undefined>;
     }) => {
         const { t } = useTranslation();
         // Keep source attached on iOS while the cell is mounted.
@@ -446,12 +450,11 @@ const ReelItemComponent = memo(
         const pinchGesture = useMemo(
             () =>
                 Gesture.Pinch()
-                    .enabled(isVisible)
-                    .cancelsTouchesInView(false)
-                    .onTouchesDown((event) => {
-                        if (event.numberOfTouches >= 2) {
-                            runOnJS(onPinchTouchStateChange)(true);
-                        }
+                    .enabled(!isSpeedBoosting)
+                    // Official RNGH ref-based interop: child pinch blocks parent feed scroll on iOS.
+                    .blocksExternalGesture(externalScrollRef)
+                    .onBegin(() => {
+                        runOnJS(onPinchTouchStateChange)(true);
                     })
                     .onStart((event) => {
                         pinchFocalX.value = event.focalX;
@@ -474,14 +477,6 @@ const ReelItemComponent = memo(
 
                         pinchScale.value = nextScale;
                     })
-                    .onTouchesUp((event) => {
-                        if (event.numberOfTouches < 2) {
-                            runOnJS(onPinchTouchStateChange)(false);
-                        }
-                    })
-                    .onTouchesCancelled(() => {
-                        runOnJS(onPinchTouchStateChange)(false);
-                    })
                     .onFinalize(() => {
                         pinchScale.value = withTiming(1, { duration: 180 });
                         if (zoomGestureActivated.value) {
@@ -491,7 +486,8 @@ const ReelItemComponent = memo(
                         runOnJS(onPinchTouchStateChange)(false);
                     }),
             [
-                isVisible,
+                externalScrollRef,
+                isSpeedBoosting,
                 onPinchTouchStateChange,
                 onZoomStateChange,
                 pinchFocalX,
@@ -555,7 +551,7 @@ const ReelItemComponent = memo(
 
         const mediaGesture = useMemo(
             () =>
-                Gesture.Simultaneous(
+                Gesture.Race(
                     pinchGesture,
                     Gesture.Exclusive(doubleTapGesture, singleTapGesture, longPressGesture)
                 ),
@@ -666,7 +662,7 @@ const ReelItemComponent = memo(
                         <View
                             style={styles.branchCardOverlayContent}
                         >
-                            <FlatList
+                            <RNFlatList
                                 horizontal
                                 data={overlayCards}
                                 keyExtractor={(overlayCard) => overlayCard.id}
@@ -675,6 +671,8 @@ const ReelItemComponent = memo(
                                 directionalLockEnabled
                                 bounces={false}
                                 nestedScrollEnabled
+                                pinchGestureEnabled={false}
+                                scrollEnabled={!isZooming && !isPinchTouchActive}
                                 style={{ width: overlayViewportWidth }}
                                 contentContainerStyle={[
                                     styles.overlayCardsContent,
@@ -706,6 +704,7 @@ const ReelItemComponent = memo(
                                     key={`${item.id}-active`}
                                     player={videoPlayer}
                                     style={styles.video}
+                                    pointerEvents="none"
                                     nativeControls={false}
                                     contentFit="cover"
                                     useExoShutter={false}
@@ -732,13 +731,13 @@ const ReelItemComponent = memo(
                                     <Ionicons name={volumeIconName} size={36} color="#fff" />
                                 </View>
                             </Animated.View>
-                            {!isZooming && !isSpeedBoosting ? (
-                                <View style={styles.videoOverlay}>
-                                    {OverlayContent}
-                                </View>
-                            ) : null}
                         </Animated.View>
                     </GestureDetector>
+                    {!isZooming && !isSpeedBoosting ? (
+                        <View style={styles.videoOverlay} pointerEvents="box-none">
+                            {OverlayContent}
+                        </View>
+                    ) : null}
                 </View>
             );
         }
@@ -747,14 +746,20 @@ const ReelItemComponent = memo(
             <View style={[styles.reel, { height }]}>
                 <GestureDetector gesture={mediaGesture}>
                     <Animated.View style={[styles.hero, zoomStyle]}>
-                        <ImageBackground source={item.background} style={styles.hero} resizeMode="cover">
-                            <Animated.View style={[styles.likeBurst, likeBurstStyle]} pointerEvents="none">
-                                <Ionicons name="heart" size={LIKE_BURST_SIZE} color="#FF2D55" style={styles.likeBurstIcon} />
-                            </Animated.View>
-                            {!isZooming && !isSpeedBoosting ? OverlayContent : null}
-                        </ImageBackground>
+                        <View style={styles.hero} pointerEvents="none">
+                            <ImageBackground source={item.background} style={styles.hero} resizeMode="cover">
+                                <Animated.View style={[styles.likeBurst, likeBurstStyle]} pointerEvents="none">
+                                    <Ionicons name="heart" size={LIKE_BURST_SIZE} color="#FF2D55" style={styles.likeBurstIcon} />
+                                </Animated.View>
+                            </ImageBackground>
+                        </View>
                     </Animated.View>
                 </GestureDetector>
+                {!isZooming && !isSpeedBoosting ? (
+                    <View style={styles.videoOverlay} pointerEvents="box-none">
+                        {OverlayContent}
+                    </View>
+                ) : null}
             </View>
         );
     }
@@ -777,7 +782,8 @@ export default function FeedScreen() {
     const [isZooming, setIsZooming] = React.useState(false);
     const [isPinchTouchActive, setIsPinchTouchActive] = React.useState(false);
     const [isSpeedBoosting, setIsSpeedBoosting] = React.useState(false);
-    const listRef = useRef<FlatList<ReelLoopItem>>(null);
+    const listRef = useRef<RNFlatList<ReelLoopItem>>(null);
+    const feedScrollRef = useRef<React.ComponentType | undefined>(undefined);
     const isScrollingRef = useRef(false);
     const momentumInProgressRef = useRef(false);
     const scrollReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1040,8 +1046,11 @@ export default function FeedScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.feedListContainer} onLayout={handleFeedLayout}>
-                <FlatList<ReelLoopItem>
-                    ref={listRef}
+                <GHFlatList<ReelLoopItem>
+                    ref={(node) => {
+                        listRef.current = node;
+                        feedScrollRef.current = (node ?? undefined) as unknown as React.ComponentType | undefined;
+                    }}
                     data={REELS_LOOP_DATA}
                     keyExtractor={(item) => item.key}
                     renderItem={({ item, index }) => (
@@ -1059,12 +1068,15 @@ export default function FeedScreen() {
                             isSourceCandidate={Math.abs(index - sourceCandidateCenterIndex) <= 1}
                             isPlaybackAllowed={isPlaybackAllowed}
                             isZooming={isZooming}
+                            isPinchTouchActive={isPinchTouchActive}
                             onZoomStateChange={handleZoomStateChange}
                             onPinchTouchStateChange={handlePinchTouchStateChange}
                             onSpeedBoostStateChange={handleSpeedBoostStateChange}
+                            externalScrollRef={feedScrollRef}
                         />
                     )}
                     showsVerticalScrollIndicator={false}
+                    pinchGestureEnabled={false}
                     pagingEnabled
                     snapToInterval={useAndroidNativePaging ? undefined : reelHeight}
                     snapToAlignment={useAndroidNativePaging ? undefined : "start"}
@@ -1414,5 +1426,3 @@ const styles = StyleSheet.create({
         textShadowRadius: 6,
     },
 });
-
-

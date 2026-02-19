@@ -6,6 +6,10 @@ import type { BranchViewModel, MarkerViewModel } from "../models";
 import { formatTitleFromId } from "../normalizers";
 import { canonicalOrFallbackId, normalizeId } from "../utils/id";
 import { getMockBranchSearchMetadata } from "../search/mockBranchSearchMetadata";
+import {
+  getMockBranchMenuItems,
+  resolveBranchMenuLabelMode,
+} from "../menu/mockBranchMenu";
 import { toBranchOverride, type MapperContext } from "./context";
 import type { DiscoverCategory } from "../../interfaces";
 
@@ -117,6 +121,31 @@ export const buildBranchFromMarkerViewModel = (
     title,
   ]);
 
+  const menuItems = getMockBranchMenuItems(category)
+    .map((item, index) => {
+      const id = item.id?.trim() || `menu-${index + 1}`;
+      const rawName = item.name?.trim();
+      if (!rawName) {
+        return undefined;
+      }
+
+      const translatedName = context.translateKey(rawName);
+      const rawDetails = item.details?.trim();
+      const translatedDetails =
+        rawDetails && rawDetails.length > 0 ? context.translateKey(rawDetails) : undefined;
+
+      return {
+        id,
+        name: translatedName && translatedName !== rawName ? translatedName : rawName,
+        details:
+          translatedDetails && rawDetails && translatedDetails !== rawDetails
+            ? translatedDetails
+            : rawDetails,
+        price: item.price?.trim() || undefined,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
   return {
     ...context.defaultBranch,
     ...override,
@@ -129,6 +158,8 @@ export const buildBranchFromMarkerViewModel = (
     rating: override.rating ?? normalizedRating,
     distance: override.distance ?? getDerivedDistance(markerId),
     hours: override.hours ?? context.defaultBranch.hours,
+    menuItems: override.menuItems ?? (menuItems.length > 0 ? menuItems : undefined),
+    menuLabelMode: override.menuLabelMode ?? resolveBranchMenuLabelMode(category),
     searchTags:
       toSearchStringArray(override.searchTags) ??
       toSearchStringArray(mockSearchMetadata.searchTags) ??

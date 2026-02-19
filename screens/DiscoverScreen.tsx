@@ -5,10 +5,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageSourcePropType, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
-import type { BranchData, DiscoverCategory, DiscoverMapMarker, Location } from "../lib/interfaces";
+import type {
+  BranchData,
+  DiscoverCategory,
+  DiscoverFavoritePlace,
+  DiscoverMapMarker,
+  Location,
+} from "../lib/interfaces";
 import DiscoverMap from "../components/discover/DiscoverMap";
 import DiscoverTopControls from "../components/discover/DiscoverTopControls";
 import DiscoverSearchSheet from "../components/discover/DiscoverSearchSheet";
@@ -25,11 +31,18 @@ import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPa
 import DiscoverGroupSheet from "../components/discover/DiscoverGroupSheet";
 import { setMapCamera } from "../lib/maps/camera";
 import { SINGLE_MODE_ZOOM } from "../lib/constants/discover";
+import { AppConfig } from "../lib/config/AppConfig";
+import { appendDerivedBranchesFromMarkers } from "../lib/data/mappers";
+import { normalizeId } from "../lib/data/utils/id";
 import {
   DISCOVER_FILTER_OPTIONS,
   DISCOVER_SUBCATEGORIES,
   NITRA_CENTER,
 } from "../lib/constants/discoverUi";
+import {
+  buildDiscoverFavoritePlaces,
+  filterDiscoverBranchesByQuery,
+} from "../lib/discover/discoverSearchUtils";
 
 /**
  * Vypočíta približnú veľkosť viditeľnej oblasti mapy v stupňoch
@@ -84,7 +97,6 @@ const FILTER_ICONS: Record<DiscoverCategory, ImageSourcePropType> = {
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
@@ -135,7 +147,6 @@ export default function DiscoverScreen() {
   // UI state
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [o, setO] = useState<boolean>(true);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchSheetIndex, setSearchSheetIndex] = useState(-1);
@@ -149,11 +160,11 @@ export default function DiscoverScreen() {
   // Hide/show tab bar based on sheet state
   useFocusEffect(
     useCallback(() => {
-      const shouldHideTabBar = sideFilterOpen || (isSheetOpen && searchSheetIndex === -1);
+      const shouldHideTabBar = sideFilterOpen || isSheetOpen;
       navigation.setOptions({
         tabBarStyle: { display: shouldHideTabBar ? "none" : "flex" },
       });
-    }, [navigation, sideFilterOpen, isSheetOpen, searchSheetIndex])
+    }, [navigation, sideFilterOpen, isSheetOpen])
   );
 
   // Open/close group sheet based on selected group
@@ -168,17 +179,7 @@ export default function DiscoverScreen() {
   // Handle tab navigation and camera preservation
   useFocusEffect(
     useCallback(() => {
-      if (route.name === "Search") {
-        setSearchSheetIndex(0);
-        setO(false);
-        setIsSheetOpen(true);
-        const lastState = camera.getLastCameraState();
-        const target = lastState?.center ?? camera.userCoord ?? NITRA_CENTER;
-        const zoomLevel = lastState?.zoom ?? 14;
-        setMapCamera(camera.cameraRef, { center: target, zoom: zoomLevel, durationMs: 0 });
-      } else {
-        camera.restoreCameraIfNeeded();
-      }
+      camera.restoreCameraIfNeeded();
 
       return () => {
         camera.setPreserveCamera(true);
@@ -189,9 +190,6 @@ export default function DiscoverScreen() {
         });
       };
     }, [
-      route.name,
-      camera.userCoord,
-      camera.getLastCameraState,
       camera.syncCameraFromNative,
       camera.restoreCameraIfNeeded,
       camera.setPreserveCamera,
@@ -214,18 +212,31 @@ export default function DiscoverScreen() {
     return filteredBranches.length > 0 ? filteredBranches : branches;
   }, [filters.hasActiveFilter, filteredBranches, branches]);
   const searchBranchCandidates = useMemo(
-    () => markers.map((marker) => buildBranchFromMarker(marker)),
-    [markers, buildBranchFromMarker]
+    () => appendDerivedBranchesFromMarkers(branches, markers, buildBranchFromMarker),
+    [branches, markers, buildBranchFromMarker]
   );
   const searchBranches = useMemo(() => {
-    const query = text.trim().toLowerCase();
-    if (!query) {
-      return searchBranchCandidates;
-    }
-    return searchBranchCandidates.filter((branch) =>
-      branch.title.toLowerCase().includes(query)
-    );
+    return filterDiscoverBranchesByQuery(searchBranchCandidates, text);
   }, [searchBranchCandidates, text]);
+  const markerLookup = useMemo(() => {
+    const lookup = new Map<string, DiscoverMapMarker>();
+    markers.forEach((marker) => {
+      const key = normalizeId(marker.id);
+      if (key) {
+        lookup.set(key, marker);
+      }
+    });
+    return lookup;
+  }, [markers]);
+  const favoritePlaces = useMemo(
+    () =>
+      buildDiscoverFavoritePlaces({
+        locations: location,
+        userCoord: camera.userCoord,
+        t: (key: string) => t(key),
+      }),
+    [camera.userCoord, location, t]
+  );
   const filteredMarkers = useMemo(
     () => filters.filterMarkers(markers),
     [filters.filterMarkers, markers]
@@ -256,29 +267,51 @@ export default function DiscoverScreen() {
   const handleSearchSheetChange = useCallback(
     (index: number) => {
       setSearchSheetIndex(index);
-      setO(index === -1);
       setIsSheetOpen(index !== -1);
-      if (index === -1 && route.name === "Search") {
-        camera.setPreserveCamera(true);
-        navigation.navigate(t("Discover"));
-      }
     },
-    [route.name, navigation, t]
+    []
+  );
+
+  const handleCloseSearch = useCallback(() => {
+    setSearchSheetIndex(-1);
+    setIsSheetOpen(false);
+    setOpen(false);
+  }, []);
+
+  const handleSelectFavorite = useCallback(
+    (place: DiscoverFavoritePlace) => {
+      const matchingLocation = location.find((item) => item.label === place.label);
+      if (matchingLocation) {
+        setOption(matchingLocation.label);
+      } else if (place.id === "favorite-your-location") {
+        setOption("yourLocation");
+      }
+
+      setMapCamera(camera.cameraRef, { center: place.coord, zoom: 14, durationMs: 800 });
+      handleCloseSearch();
+    },
+    [camera.cameraRef, handleCloseSearch, location]
   );
 
   const handleOpenSearch = useCallback(() => {
-    handleSearchSheetChange(0);
-  }, [handleSearchSheetChange]);
-
-  const handleFilterSheetChange = useCallback((index: number) => {
-    setO(index === -1);
-    setIsSheetOpen(index !== -1);
+    setOpen(false);
+    setSearchSheetIndex(0);
+    setIsSheetOpen(true);
   }, []);
 
-  const handleLocationSheetChange = useCallback((index: number) => {
-    setO(index === -1);
-    setIsSheetOpen(index !== -1);
-  }, []);
+  const handleFilterSheetChange = useCallback(
+    (index: number) => {
+      setIsSheetOpen(index !== -1 || searchSheetIndex !== -1);
+    },
+    [searchSheetIndex]
+  );
+
+  const handleLocationSheetChange = useCallback(
+    (index: number) => {
+      setIsSheetOpen(index !== -1 || searchSheetIndex !== -1);
+    },
+    [searchSheetIndex]
+  );
 
   // Camera change handler
   const handleCameraChanged = useCallback(
@@ -298,6 +331,29 @@ export default function DiscoverScreen() {
       navigation.navigate("BusinessDetailScreen", { branch });
     },
     [camera.syncCameraFromNative, camera.setPreserveCamera, navigation]
+  );
+
+  const handleSelectSearchBranch = useCallback(
+    async (branch: BranchData) => {
+      handleCloseSearch();
+
+      const branchId = typeof branch.id === "string" ? branch.id : branch.title;
+      const markerKey = normalizeId(branchId);
+      const marker = markerKey ? markerLookup.get(markerKey) : undefined;
+
+      if (!marker) {
+        void navigateToBranchDetail(branch);
+        return;
+      }
+
+      try {
+        const fullBranch = await fetchBranchForMarker(marker);
+        void navigateToBranchDetail(fullBranch);
+      } catch {
+        void navigateToBranchDetail(branch);
+      }
+    },
+    [fetchBranchForMarker, handleCloseSearch, markerLookup, navigateToBranchDetail]
   );
 
   // Marker press handler
@@ -377,7 +433,7 @@ export default function DiscoverScreen() {
         setLocation={setLocation}
         option={option}
         setOption={setOption}
-        o={o}
+        o={!isSheetOpen}
         filterRef={filterRef}
         onOpenSearch={handleOpenSearch}
         userCoord={camera.userCoord}
@@ -386,14 +442,22 @@ export default function DiscoverScreen() {
         t={t}
         onLocationSheetChange={handleLocationSheetChange}
         hasActiveFilter={filters.hasActiveFilter}
+        isSearchOpen={searchSheetIndex !== -1}
+        onCloseSearch={handleCloseSearch}
       />
 
       <DiscoverSearchSheet
         onSheetChange={handleSearchSheetChange}
+        onClose={handleCloseSearch}
         sheetIndex={searchSheetIndex}
         text={text}
         setText={setText}
         filtered={searchBranches}
+        onSelectBranch={handleSelectSearchBranch}
+        favoritePlaces={favoritePlaces}
+        onSelectFavorite={handleSelectFavorite}
+        autoFocus={AppConfig.discoverSearchV2Enabled}
+        showFavorites={AppConfig.discoverSearchV2Enabled}
         t={t}
       />
 

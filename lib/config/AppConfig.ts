@@ -5,7 +5,10 @@
 import {
   API_BASE_URL,
   DATA_SOURCE,
+  EXPO_PUBLIC_BUSINESS_DETAIL_V2,
+  EXPO_PUBLIC_DISCOVER_SEARCH_V2,
   EXPO_PUBLIC_HOME_SEARCH_V2,
+  EXPO_PUBLIC_REVIEW_PHOTOS,
   EXPO_PUBLIC_SHOW_MORE_V2,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
@@ -19,7 +22,10 @@ export interface AppConfigValue {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   homeSearchV2Enabled: boolean;
+  discoverSearchV2Enabled: boolean;
   showMoreV2Enabled: boolean;
+  businessDetailV2Enabled: boolean;
+  reviewPhotosEnabled: boolean;
 }
 
 const getTrimmedValue = (value?: string | null) => {
@@ -83,8 +89,20 @@ const appConfig: AppConfigValue = Object.freeze({
     getEnvValue("EXPO_PUBLIC_HOME_SEARCH_V2", EXPO_PUBLIC_HOME_SEARCH_V2),
     true
   ),
+  discoverSearchV2Enabled: parseBooleanFlag(
+    getEnvValue("EXPO_PUBLIC_DISCOVER_SEARCH_V2", EXPO_PUBLIC_DISCOVER_SEARCH_V2),
+    true
+  ),
   showMoreV2Enabled: parseBooleanFlag(
     getEnvValue("EXPO_PUBLIC_SHOW_MORE_V2", EXPO_PUBLIC_SHOW_MORE_V2),
+    true
+  ),
+  businessDetailV2Enabled: parseBooleanFlag(
+    getEnvValue("EXPO_PUBLIC_BUSINESS_DETAIL_V2", EXPO_PUBLIC_BUSINESS_DETAIL_V2),
+    true
+  ),
+  reviewPhotosEnabled: parseBooleanFlag(
+    getEnvValue("EXPO_PUBLIC_REVIEW_PHOTOS", EXPO_PUBLIC_REVIEW_PHOTOS),
     true
   ),
 });

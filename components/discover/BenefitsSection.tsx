@@ -204,7 +204,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// memo() zabranuje zbytocnym renderom ak sa props nezmenia
 export const BenefitsSection = memo(function BenefitsSection({
   onActivate,
   limit,

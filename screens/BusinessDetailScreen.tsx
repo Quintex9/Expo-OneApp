@@ -27,7 +27,7 @@ import { useTranslation } from "react-i18next";
 
 import { HeroCarousel } from "../components/discover/HeroCarousel";
 import { BusinessGalleryModal } from "../components/discover/BusinessGalleryModal";
-import { TabMenu } from "../components/discover/TabMenu";
+import { TabMenu, type TabMenuItem } from "../components/discover/TabMenu";
 import { NEWS_IMAGE_SOURCES } from "../components/discover/NewsSection";
 import { BenefitsSection } from "../components/discover/BenefitsSection";
 import { BenefitsBottomSheet } from "../components/discover/BenefitsBottomSheet";
@@ -35,6 +35,7 @@ import { HeroActions } from "../components/discover/HeroActions";
 import { HeroInfo } from "../components/discover/HeroInfo";
 import { InfoSection } from "../components/discover/InfoSection";
 import { HomeSection } from "../components/discover/HomeSection";
+import { BusinessMenuSection } from "../components/discover/BusinessMenuSection";
 import { ReviewsSection } from "../components/discover/ReviewsSection";
 import { normalizeBranch } from "../lib/data/normalizers";
 import {
@@ -44,8 +45,20 @@ import {
 import { useAuth } from "../lib/AuthContext";
 import { AUTH_GUARD_ENABLED } from "../lib/constants/auth";
 import type { BranchData } from "../lib/interfaces";
+import { AppConfig } from "../lib/config/AppConfig";
+import { uploadReviewPhotosDummy } from "../lib/reviews/photoUploadService";
+import type { ReviewPhotoDraft } from "../lib/reviews/types";
+import {
+  getMockBranchMenuItems,
+  resolveBranchMenuLabelMode,
+} from "../lib/data/menu/mockBranchMenu";
+import {
+  buildBusinessDetailTabConfig,
+  normalizeReviewPhotos,
+  resolveTabScrollOffset,
+} from "../lib/business/businessDetailUtils";
 
-type TabKey = "home" | "benefits" | "info" | "reviews";
+type TabKey = "home" | "benefits" | "menu" | "info" | "reviews";
 type ContentRow = { key: "menu" | "content" };
 
 type BusinessDetailRouteParams = {
@@ -57,7 +70,6 @@ type BusinessDetailRoute = RouteProp<
   "BusinessDetailScreen"
 >;
 
-const MENU_TABS: TabKey[] = ["home", "benefits", "info", "reviews"];
 const MENU_GAP = 10;
 const SIDE_PADDING = 15;
 const SNAP_THRESHOLD = 24;
@@ -67,6 +79,7 @@ const STICKY_ENTER_EPSILON = 1;
 const STICKY_EXIT_GAP = 18;
 const SCROLL_CACHE_LIMIT = 40;
 const PREFETCH_NEWS_LIMIT = 6;
+const REVIEW_PHOTO_LIMIT = 3;
 
 export default function BusinessDetailScreen() {
   const navigation = useNavigation<any>();
@@ -86,6 +99,38 @@ export default function BusinessDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [isFavorite, setIsFavorite] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const isBusinessDetailV2Enabled = AppConfig.businessDetailV2Enabled;
+  const isReviewPhotosEnabled = AppConfig.reviewPhotosEnabled;
+
+  const menuLabelMode = useMemo(
+    () => branch.menuLabelMode ?? resolveBranchMenuLabelMode(branch.category),
+    [branch.category, branch.menuLabelMode]
+  );
+  const resolvedMenuItems = useMemo(() => {
+    if (Array.isArray(branch.menuItems) && branch.menuItems.length > 0) {
+      return branch.menuItems;
+    }
+
+    return getMockBranchMenuItems(branch.category)
+      .map((item, index) => {
+        const name = item.name?.trim();
+        if (!name) {
+          return undefined;
+        }
+        return {
+          id: item.id?.trim() || `menu-${index + 1}`,
+          name,
+          details: item.details?.trim() || undefined,
+          price: item.price?.trim() || undefined,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  }, [branch.category, branch.menuItems]);
+  const tabItems = useMemo<TabMenuItem[]>(
+    () => buildBusinessDetailTabConfig(isBusinessDetailV2Enabled, menuLabelMode),
+    [isBusinessDetailV2Enabled, menuLabelMode]
+  );
+  const tabKeys = useMemo(() => tabItems.map((item) => item.key as TabKey), [tabItems]);
 
   const flatListRef = useRef<FlatList<ContentRow>>(null);
   const lastScrollY = useRef(0);
@@ -103,14 +148,19 @@ export default function BusinessDetailScreen() {
   const snapPoints = useMemo(() => ["15%", "35%"], []);
 
   const heroHeight = useMemo(() => Math.min(360, Math.max(240, Math.round(width * 0.7))), [width]);
-  const menuItemWidth = useMemo(
-    () => Math.min(88, Math.floor((width - SIDE_PADDING * 2 - MENU_TABS.length * 5) / MENU_TABS.length)),
-    [width]
-  );
+  const menuItemWidth = useMemo(() => {
+    const itemsCount = Math.max(1, tabItems.length);
+    const available = width - SIDE_PADDING * 2 - 8;
+    const ideal = Math.floor(available / itemsCount);
+    if (ideal < 78) {
+      return undefined;
+    }
+    return Math.min(96, ideal);
+  }, [tabItems.length, width]);
 
   const heroContainerStyle = useMemo(() => ({ height: heroHeight }), [heroHeight]);
   const menuWrapperStyle = useMemo(
-    () => [styles.menuWrapper, { paddingHorizontal: SIDE_PADDING }],
+    () => ({ paddingHorizontal: SIDE_PADDING }),
     []
   );
   const listContentStyle = useMemo(
@@ -154,8 +204,24 @@ export default function BusinessDetailScreen() {
       daysAgo: number;
       likes: number;
       comments: Array<{ id: string; name: string; text: string; daysAgo: number }>;
+      photos?: ReviewPhotoDraft[];
     }>
   >([]);
+
+  useEffect(() => {
+    if (!tabKeys.includes(activeTab)) {
+      setActiveTab("home");
+    }
+  }, [activeTab, tabKeys]);
+
+  const stockReviewPhoto = useMemo<ReviewPhotoDraft>(
+    () => ({
+      id: "stock-review-photo-1",
+      uri: Asset.fromModule(require("../assets/gallery/fitness/fitness_1.jpg")).uri,
+      status: "uploaded",
+    }),
+    []
+  );
 
   const baseReviews = useMemo(
     () => [
@@ -188,6 +254,7 @@ export default function BusinessDetailScreen() {
         daysAgo: 7,
         likes: 15,
         comments: [],
+        photos: [stockReviewPhoto],
       },
       {
         id: "4",
@@ -235,7 +302,7 @@ export default function BusinessDetailScreen() {
         comments: [],
       },
     ],
-    [t]
+    [stockReviewPhoto, t]
   );
 
   const reviews = useMemo(() => [...userReviews, ...baseReviews], [userReviews, baseReviews]);
@@ -305,19 +372,52 @@ export default function BusinessDetailScreen() {
   }, [prefetchModuleIds, prefetchUris]);
 
   const handleAddReview = useCallback(
-    (rating: number, text: string) => {
-      const newReview = {
-        id: `user-${Date.now()}`,
-        name: user?.email?.split("@")[0] || t("anonymousUser"),
-        rating,
-        text,
-        daysAgo: 0,
-        likes: 0,
-        comments: [],
+    (rating: number, text: string, photos?: ReviewPhotoDraft[]) => {
+      const appendReview = (reviewPhotos: ReviewPhotoDraft[]) => {
+        const newReview = {
+          id: `user-${Date.now()}`,
+          name: user?.email?.split("@")[0] || t("anonymousUser"),
+          rating,
+          text,
+          daysAgo: 0,
+          likes: 0,
+          comments: [],
+          photos: reviewPhotos.length > 0 ? reviewPhotos : undefined,
+        };
+        setUserReviews((prev) => [newReview, ...prev]);
       };
-      setUserReviews((prev) => [newReview, ...prev]);
+
+      const selectedPhotos = normalizeReviewPhotos(photos, REVIEW_PHOTO_LIMIT);
+
+      if (!isReviewPhotosEnabled || selectedPhotos.length === 0) {
+        appendReview([]);
+        return;
+      }
+
+      void uploadReviewPhotosDummy(selectedPhotos)
+        .then((results) => {
+          const photoById = new Map(selectedPhotos.map((photo) => [photo.id, photo]));
+          const uploaded = results.map((result) => {
+            const basePhoto = photoById.get(result.id);
+            return {
+              ...(basePhoto ?? { id: result.id, uri: result.localUri }),
+              uri: result.localUri,
+              remoteUrl: result.remoteUrl,
+              status: result.status,
+            } satisfies ReviewPhotoDraft;
+          });
+          appendReview(uploaded);
+        })
+        .catch(() => {
+          appendReview(
+            selectedPhotos.map((photo) => ({
+              ...photo,
+              status: "failed",
+            }))
+          );
+        });
     },
-    [user, t]
+    [isReviewPhotosEnabled, t, user]
   );
 
   const handleBack = useCallback(() => {
@@ -360,28 +460,35 @@ export default function BusinessDetailScreen() {
     setIsGalleryVisible(false);
   }, []);
 
-  const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value as TabKey);
-  }, []);
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const nextTab = value as TabKey;
+      if (!tabKeys.includes(nextTab)) {
+        return;
+      }
+      setActiveTab(nextTab);
+    },
+    [tabKeys]
+  );
   const handleShowAllBenefits = useCallback(() => {
     setActiveTab("benefits");
   }, []);
 
   const moveToAdjacentTab = useCallback((direction: -1 | 1) => {
     setActiveTab((prev) => {
-      const currentIndex = MENU_TABS.indexOf(prev);
+      const currentIndex = tabKeys.indexOf(prev);
       if (currentIndex === -1) {
         return prev;
       }
 
       const nextIndex = currentIndex + direction;
-      if (nextIndex < 0 || nextIndex >= MENU_TABS.length) {
+      if (nextIndex < 0 || nextIndex >= tabKeys.length) {
         return prev;
       }
 
-      return MENU_TABS[nextIndex];
+      return tabKeys[nextIndex];
     });
-  }, []);
+  }, [tabKeys]);
 
   const handleTabSwipeStateChange = useCallback(
     (event: PanGestureHandlerStateChangeEvent) => {
@@ -573,17 +680,13 @@ export default function BusinessDetailScreen() {
   useEffect(() => {
     const previousBranch = prevBranchKey.current;
     const previousTab = prevTabKey.current;
-    const sameBranch = previousBranch === branchKey;
 
     if (previousBranch && previousTab && (previousBranch !== branchKey || previousTab !== activeTab)) {
       setCachedScrollPosition(positionKey(previousBranch, previousTab), lastScrollY.current);
     }
 
-    const savedOffset = getCachedScrollPosition(positionKey(branchKey, activeTab)) ?? 0;
-    const keepSticky = sameBranch
-      ? lastScrollY.current >= snapOffset - 1
-      : savedOffset >= snapOffset - 1;
-    const targetOffset = keepSticky ? Math.max(savedOffset, snapOffset) : savedOffset;
+    const savedOffset = getCachedScrollPosition(positionKey(branchKey, activeTab));
+    const targetOffset = resolveTabScrollOffset(savedOffset);
 
     prevBranchKey.current = branchKey;
     prevTabKey.current = activeTab;
@@ -593,7 +696,6 @@ export default function BusinessDetailScreen() {
     activeTab,
     positionKey,
     restoreScroll,
-    snapOffset,
     setCachedScrollPosition,
     getCachedScrollPosition,
   ]);
@@ -604,9 +706,15 @@ export default function BusinessDetailScreen() {
     ({ item }) => {
       if (item.key === "menu") {
         return (
-          <View style={menuWrapperStyle}>
+          <View
+            style={[
+              styles.menuWrapper,
+              menuWrapperStyle,
+              isSticky ? styles.menuWrapperSticky : styles.menuWrapperRest,
+            ]}
+          >
             <View style={{ height: isSticky ? insets.top : 0 }} />
-            <TabMenu items={MENU_TABS} active={activeTab} onChange={handleTabChange} width={menuItemWidth} />
+            <TabMenu items={tabItems} active={activeTab} onChange={handleTabChange} width={menuItemWidth} />
           </View>
         );
       }
@@ -631,6 +739,13 @@ export default function BusinessDetailScreen() {
 
             {activeTab === "benefits" && <BenefitsSection onActivate={handleActivateBenefit} />}
 
+            {activeTab === "menu" && isBusinessDetailV2Enabled && (
+              <BusinessMenuSection
+                menuItems={resolvedMenuItems}
+                labelMode={menuLabelMode}
+              />
+            )}
+
             {activeTab === "info" && (
               <InfoSection
                 hours={hoursData}
@@ -649,6 +764,7 @@ export default function BusinessDetailScreen() {
                 reviews={reviews}
                 branchName={branch.title}
                 onAddReview={handleAddReview}
+                photosEnabled={isReviewPhotosEnabled}
               />
             )}
           </View>
@@ -664,6 +780,7 @@ export default function BusinessDetailScreen() {
       branch.website,
       branch.coordinates,
       branch.category,
+      branch.menuItems,
       branch.rating,
       handleActivateBenefit,
       handleShowAllBenefits,
@@ -673,11 +790,16 @@ export default function BusinessDetailScreen() {
       handleTabChange,
       hoursData,
       insets.top,
+      isBusinessDetailV2Enabled,
+      isReviewPhotosEnabled,
       isSticky,
+      menuLabelMode,
       menuItemWidth,
       menuWrapperStyle,
+      resolvedMenuItems,
       reviews,
       sectionWrapperStyle,
+      tabItems,
     ]
   );
 
@@ -777,20 +899,35 @@ export default function BusinessDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FAFAFA",
   },
   list: {
     flex: 1,
   },
   listContent: {
-    paddingBottom: 0,
+    paddingBottom: 6,
   },
   menuWrapper: {
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#FAFAFA",
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
+  },
+  menuWrapperRest: {
+    borderBottomColor: "transparent",
+  },
+  menuWrapperSticky: {
+    backgroundColor: "#FFFFFF",
+    borderBottomColor: "#E4E4E7",
+    shadowColor: "#000000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   sectionWrapper: {
     paddingTop: 12,
+    paddingBottom: 12,
   },
 });

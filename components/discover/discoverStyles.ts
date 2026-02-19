@@ -612,7 +612,6 @@ export const styles = StyleSheet.create({
     lineHeight: 16,
   },
   ratingEmojiActive: {
-    // Emoji farbu nezmeníš, ale nech je aspoň konzistentná výška
   },
   ratingText: {
     fontSize: 16,

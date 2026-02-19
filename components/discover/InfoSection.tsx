@@ -73,18 +73,33 @@ export const InfoSection = memo(function InfoSection({
         </View>
 
         {website && (
-          <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(website)}>
+          <TouchableOpacity
+            style={styles.contactRow}
+            onPress={() => Linking.openURL(website)}
+            accessibilityRole="link"
+            accessibilityLabel={website}
+          >
             <Ionicons name="globe-outline" size={20} color="#9B9B9B" />
             <Text style={[styles.contactText, styles.linkText]}>{website}</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(`tel:${phone}`)}>
+        <TouchableOpacity
+          style={styles.contactRow}
+          onPress={() => Linking.openURL(`tel:${phone}`)}
+          accessibilityRole="button"
+          accessibilityLabel={phone}
+        >
           <Ionicons name="call-outline" size={20} color="#9B9B9B" />
           <Text style={styles.contactText}>{phone}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.contactRow} onPress={() => Linking.openURL(`mailto:${email}`)}>
+        <TouchableOpacity
+          style={styles.contactRow}
+          onPress={() => Linking.openURL(`mailto:${email}`)}
+          accessibilityRole="button"
+          accessibilityLabel={email}
+        >
           <Ionicons name="mail-outline" size={20} color="#9B9B9B" />
           <Text style={styles.contactText}>{email}</Text>
         </TouchableOpacity>
@@ -93,12 +108,17 @@ export const InfoSection = memo(function InfoSection({
       <View style={styles.mapContainer}>
         <View style={[styles.map, styles.mapPlaceholder]}>
           <Text style={styles.mapPlaceholderText}>{t("mapNotAvailable")}</Text>
-        </View>
 
-        <TouchableOpacity style={styles.navigateBtn} onPress={handleNavigate}>
-          <Ionicons name="navigate" size={14} color="#FAFAFA" />
-          <Text style={styles.navigateText}>{t("navigate")}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navigateBtn}
+            onPress={handleNavigate}
+            accessibilityRole="button"
+            accessibilityLabel={t("navigate")}
+          >
+            <Ionicons name="navigate" size={14} color="#FAFAFA" />
+            <Text style={styles.navigateText}>{t("navigate")}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -159,9 +179,8 @@ const styles = StyleSheet.create({
   },
   contactRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    marginBottom: 14,
   },
   contactText: {
     fontFamily: "Inter_500Medium",
@@ -177,9 +196,13 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     position: "relative",
-    marginHorizontal: -15,
-    marginTop: 16,
+    marginTop: 8,
     height: 220,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
   },
   map: {
     flex: 1,
@@ -195,18 +218,23 @@ const styles = StyleSheet.create({
   },
   navigateBtn: {
     position: "absolute",
-    left: 26,
-    top: -210,
+    left: 12,
+    top: 12,
     zIndex: 10,
     elevation: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#EB8100",
-    width: 106,
-    height: 32,
+    minWidth: 112,
+    height: 34,
+    paddingHorizontal: 14,
     borderRadius: 16,
     gap: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   navigateText: {
     color: "#FAFAFA",

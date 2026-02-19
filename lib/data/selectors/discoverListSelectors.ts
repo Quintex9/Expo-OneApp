@@ -7,6 +7,7 @@ import type { BranchViewModel, MarkerViewModel } from "../models";
 import { normalizeCategoryValue } from "../mappers";
 import { normalizeId } from "../utils/id";
 import { getCategoryPreviewImages } from "../assets/categoryAssets";
+import { sortByNearestDistance } from "../../discover/discoverSearchUtils";
 
 // Shared selektory pre Discover list obrazovku.
 export type DiscoverListSortOption = "trending" | "topRated" | "openNearYou";
@@ -125,14 +126,11 @@ export const filterDiscoverListItems = ({
 
 export const sortDiscoverListItems = (
   items: DiscoverListItem[],
-  sortOption: DiscoverListSortOption,
-  maxDistanceKm = 2
+  sortOption: DiscoverListSortOption
 ): DiscoverListItem[] => {
   switch (sortOption) {
     case "openNearYou":
-      return items
-        .filter((item) => item.distanceKm <= maxDistanceKm)
-        .sort((a, b) => a.distanceKm - b.distanceKm);
+      return sortByNearestDistance(items);
     case "topRated":
       return [...items].sort((a, b) => b.rating - a.rating);
     case "trending":

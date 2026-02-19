@@ -1,4 +1,3 @@
-// components/ProtectedRoute.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -24,18 +23,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       navigation.replace('Login');
     }
     
-    // Reset flag keď sa používateľ prihlási
     if (user) {
       hasRedirected.current = false;
     }
   }, [user, loading, navigation]);
 
-  // Temporary bypass for testing without login.
   if (!AUTH_GUARD_ENABLED) {
     return <>{children}</>;
   }
 
-  // Zobraz loading indikátor počas načítavania
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -44,7 +40,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Ak nie je prihlásený, nevracaj nič (presmerovanie sa deje v useEffect)
   if (!user) {
     return (
       <View style={styles.loadingContainer}>
@@ -53,7 +48,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Používateľ je prihlásený, zobraz obsah
   return <>{children}</>;
 }
 

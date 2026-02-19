@@ -7,6 +7,13 @@ import type { DiscoverCategory } from "../../interfaces";
 // Typy pre backend kontrakt (DTO vrstva).
 export type DataSourceMode = "mock" | "api" | "supabase";
 
+export interface BranchMenuItemDto {
+  id?: string | null;
+  name?: string | null;
+  details?: string | null;
+  price?: string | null;
+}
+
 export interface BranchDto {
   id: string;
   title?: string | null;
@@ -17,6 +24,8 @@ export interface BranchDto {
   hours?: string | null;
   discountKey?: string | null;
   offersKeys?: string[] | null;
+  menuItems?: BranchMenuItemDto[] | null;
+  menuLabelMode?: "menu" | "pricelist" | null;
   badgeVariant?: "more" | "all" | null;
   moreCount?: number | null;
   coordinates?: [number, number] | null;

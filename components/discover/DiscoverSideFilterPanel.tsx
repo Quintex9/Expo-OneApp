@@ -33,7 +33,6 @@ interface Props {
   toggleSubcategory: (s: string) => void;
 }
 
-// Emoji ikony pre kategórie
 const CATEGORY_EMOJIS: Record<string, string> = {
   Fitness: "🏋️",
   Relax: "🧖",
@@ -41,7 +40,6 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   Gastro: "🍽️",
 };
 
-// Emoji ikony pre subcategories
 const SUBCATEGORY_EMOJIS: Record<string, string> = {
   Vegan: "🌱",
   Coffee: "☕",
@@ -67,7 +65,6 @@ const SUBCATEGORY_EMOJIS: Record<string, string> = {
   Sauna: "🔥",
 };
 
-// Mapovanie subcategories na kategórie
 const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
   Gastro: ["Vegan", "Coffee", "Seafood", "Pizza", "Sushi", "Fast Food", "Asian", "Beer"],
   Fitness: ["Gym", "Training", "Classes", "Yoga"],
@@ -75,7 +72,6 @@ const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
   Relax: ["Spa", "Wellness", "Massage", "Sauna"],
 };
 
-// Discover options (zatiaľ nič nerobia)
 const DISCOVER_OPTIONS = ["topRated", "trending", "top10", "openNearYou"];
 
 function DiscoverSideFilterPanel({
@@ -97,6 +93,7 @@ function DiscoverSideFilterPanel({
   const PANEL_WIDTH = 326;
   const PULL_HANDLE_WIDTH = 28;
   const PULL_HANDLE_HEIGHT = 72;
+  const EDGE_SWIPE_WIDTH = 24;
   const PULL_HANDLE_TOP_MARGIN = 72;
   const PULL_HANDLE_BOTTOM_MARGIN = 120;
   const INITIAL_PULL_HANDLE_TOP = Math.max(
@@ -104,7 +101,6 @@ function DiscoverSideFilterPanel({
     height / 2 - PULL_HANDLE_HEIGHT / 2
   );
 
-  // Animácie
   const translateX = useRef(new Animated.Value(PANEL_WIDTH)).current;
   const dragX = useRef(new Animated.Value(0)).current;
   const translateXValue = useRef(PANEL_WIDTH);
@@ -114,7 +110,6 @@ function DiscoverSideFilterPanel({
   const pullHandleOpacity = useRef(new Animated.Value(visible ? 0 : 1)).current;
   const [pullHandleTop, setPullHandleTop] = React.useState(INITIAL_PULL_HANDLE_TOP);
 
-  // Discover state (zatiaľ nič nerobí)
   const [discoverOptions, setDiscoverOptions] = React.useState<Set<string>>(new Set());
 
   const clampPullHandleTop = useCallback(
@@ -203,7 +198,6 @@ function DiscoverSideFilterPanel({
   }, [clampPullHandleTop]);
 
   const toggleDiscover = (option: string) => {
-    // Zatiaľ nič nerobí
     setDiscoverOptions((prev) => {
       const next = new Set(prev);
       if (next.has(option)) {
@@ -275,6 +269,25 @@ function DiscoverSideFilterPanel({
     }
   };
 
+  const handleEdgeSwipeStateChange = useCallback(
+    (event: PanGestureHandlerStateChangeEvent) => {
+      if (visible) {
+        return;
+      }
+
+      const { state, translationX, velocityX } = event.nativeEvent;
+      if (state !== State.END && state !== State.CANCELLED && state !== State.FAILED) {
+        return;
+      }
+
+      const shouldOpen = translationX < -24 || velocityX < -320;
+      if (shouldOpen) {
+        onOpen();
+      }
+    },
+    [onOpen, visible]
+  );
+
   const handlePullHandleStateChange = (event: PanGestureHandlerStateChangeEvent) => {
     const { state, translationX, translationY, velocityX, velocityY } = event.nativeEvent;
 
@@ -312,14 +325,24 @@ function DiscoverSideFilterPanel({
 
   return (
     <>
-      {/* Pull Handle - viditeľný keď panel nie je otvorený */}
       {!visible && (
         <>
           <PanGestureHandler
+            onHandlerStateChange={handleEdgeSwipeStateChange}
+            activeOffsetX={[-10, 10]}
+            failOffsetY={[-14, 14]}
+          >
+            <View
+              style={[styles.edgeSwipeZone, { width: EDGE_SWIPE_WIDTH }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+          </PanGestureHandler>
+          <PanGestureHandler
             onGestureEvent={handlePullHandleGestureEvent}
             onHandlerStateChange={handlePullHandleStateChange}
-            activeOffsetX={[-8, 8]}
-            activeOffsetY={[-8, 8]}
+            activeOffsetX={[-10, 10]}
+            failOffsetY={[-14, 14]}
             hitSlop={{ top: 14, bottom: 14, left: 18, right: 18 }}
           >
             <Animated.View
@@ -332,6 +355,8 @@ function DiscoverSideFilterPanel({
                   height: PULL_HANDLE_HEIGHT,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("filters")}
             >
               <View
                 style={[
@@ -376,13 +401,12 @@ function DiscoverSideFilterPanel({
               },
             ]}
           >
-          {/* Orange Handle - pre swipe gesture na zatvorenie */}
           {visible && (
             <PanGestureHandler
               onGestureEvent={handleGestureEvent}
               onHandlerStateChange={handleGestureStateChange}
-              activeOffsetX={[-999, 10]}
-              failOffsetY={[-10, 10]}
+              activeOffsetX={[-12, 12]}
+              failOffsetY={[-14, 14]}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <View
@@ -414,16 +438,17 @@ function DiscoverSideFilterPanel({
             </PanGestureHandler>
           )}
 
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{t("filter")}</Text>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={closePanel}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close" size={20} color="#111111" />
-            </TouchableOpacity>
+                onPress={closePanel}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t("back")}
+              >
+                <Ionicons name="close" size={20} color="#111111" />
+              </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -431,7 +456,6 @@ function DiscoverSideFilterPanel({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Categories */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("categories")}</Text>
               <View style={styles.chipsGrid}>
@@ -470,7 +494,6 @@ function DiscoverSideFilterPanel({
               </View>
             </View>
 
-            {/* Subcategories - zobrazí sa len keď je vybraná aspoň 1 kategória */}
             {selectedCategories.map((category) => {
               const currentSubcategories =
                 CATEGORY_SUBCATEGORIES[category] || CATEGORY_SUBCATEGORIES.Gastro;
@@ -507,7 +530,6 @@ function DiscoverSideFilterPanel({
               );
             })}
 
-            {/* Rating */}
             <View style={styles.sectionRating}>
               <Text style={styles.sectionTitle}>{t("rating")}</Text>
               <View style={styles.chipsGridRating}>
@@ -538,7 +560,6 @@ function DiscoverSideFilterPanel({
               </View>
             </View>
 
-            {/* Discover (zatiaľ nič nerobí) */}
             <View style={styles.sectionDiscover}>
               <Text style={styles.sectionTitle}>{t("Discover")}</Text>
               <View style={styles.chipsGrid}>
@@ -723,7 +744,6 @@ const styles = StyleSheet.create({
     width: 141,
   },
   chipRight: {
-    // Pre grid alignment
   },
   chipActive: {
     backgroundColor: "#EB8100",
@@ -762,6 +782,13 @@ const styles = StyleSheet.create({
     zIndex: 9998,
     elevation: 9998,
     pointerEvents: "auto",
+  },
+  edgeSwipeZone: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 9997,
   },
   pullHandle: {
     borderTopLeftRadius: 22,
