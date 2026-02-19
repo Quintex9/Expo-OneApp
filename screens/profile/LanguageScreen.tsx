@@ -1,6 +1,8 @@
-// LanguageScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * LanguageScreen: Jazyková obrazovka mení lokalizáciu aplikácie.
+ *
+ * Prečo: Samostatný jazykový krok minimalizuje náhodné prepnutia a udrží i18n logiku konzistentnú.
+ */
 
 import { useNavigation } from "@react-navigation/native";
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";

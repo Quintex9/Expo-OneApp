@@ -1,6 +1,8 @@
-// LoyaltyCardDetailScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * LoyaltyCardDetailScreen: Detail lojalitnej karty zobrazuje konkrétne údaje, kód a súvisiace akcie.
+ *
+ * Prečo: Oddelený detail karty zabraňuje preťaženiu hlavného zoznamu kariet doplnkovými informáciami.
+ */
 
 import React, { useMemo, useCallback, useRef, useState } from "react";
 import {

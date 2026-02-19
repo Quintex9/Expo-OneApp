@@ -1,6 +1,8 @@
-// useHomeSearch: stav a orchestrace Home Search V2.
-// Zodpovednost: query/scope/history + napojenie na Home search engine.
-// Vstup/Vystup: vracia UI-friendly API pre HomeSearchOverlay.
+/**
+ * useHomeSearch: Hook use Home Search zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useHomeSearch znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";

@@ -27,6 +27,11 @@ type Props = {
 
 const IMAGE_HEIGHT_RATIO = 379.19 / 393;
 
+/**
+ * BusinessGalleryModal: Fullscreen galéria fotiek prevádzky s horizontálnym prehliadaním obrázkov.
+ *
+ * Prečo: Oddelený modal umožní sústredené prezeranie fotiek bez rušenia zvyškom detailu.
+ */
 export function BusinessGalleryModal({
   visible,
   images,

@@ -204,6 +204,11 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * BenefitsSection: Sekcia benefitov prevádzky s claim akciami, stavmi a prepojením na detail benefitu.
+ *
+ * Prečo: Benefity sú jadro hodnoty aplikácie, preto majú vlastnú sekciu s jasnými stavmi použitia.
+ */
 export const BenefitsSection = memo(function BenefitsSection({
   onActivate,
   limit,

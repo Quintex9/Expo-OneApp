@@ -1,6 +1,8 @@
-// userUtils: utility funkcie pre profil a textove meno pouzivatela.
-// Zodpovednost: odvodenie mena z emailu a safe fallbacky.
-// Vstup/Vystup: helpery extractNameFromEmail a getFullNameFromEmail.
+/**
+ * userUtils: Utility súbor user Utils ponúka opakovateľné pomocné funkcie alebo štýlové helpery.
+ *
+ * Prečo: Spoločné helpery v userUtils držia konzistentné správanie naprieč celou aplikáciou.
+ */
 
 export function extractNameFromEmail(email: string | null | undefined): {
   firstName: string;

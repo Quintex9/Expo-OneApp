@@ -74,6 +74,11 @@ const CATEGORY_SUBCATEGORIES: Record<string, string[]> = {
 
 const DISCOVER_OPTIONS = ["topRated", "trending", "top10", "openNearYou"];
 
+/**
+ * DiscoverSideFilterPanel: Bočný filter panel ovládateľný klikom aj swipe gestom z pravého okraja.
+ *
+ * Prečo: Dvojitý spôsob ovládania zvyšuje dostupnosť filtrov pre používateľov s rôznymi návykmi.
+ */
 function DiscoverSideFilterPanel({
   visible,
   onOpen,

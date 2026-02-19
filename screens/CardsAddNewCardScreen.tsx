@@ -1,6 +1,8 @@
-// CardsAddNewCardScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * CardsAddNewCardScreen: Krok pridania novej karty cez skenovanie čiarového alebo QR kódu.
+ *
+ * Prečo: Skenovací flow zrýchľuje pridanie karty a minimalizuje preklepy pri ručnom zadávaní údajov.
+ */
 
 import React, { useCallback, useMemo, useState } from "react";
 import {

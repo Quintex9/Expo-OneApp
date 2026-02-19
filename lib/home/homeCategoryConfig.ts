@@ -1,6 +1,8 @@
-// homeCategoryConfig: zdielany config Home kategorii pre Home/ShowMore flow.
-// Zodpovednost: centralne typy, chips a normalizacia kategorii.
-// Vstup/Vystup: export type + helpery pre UI a filtering.
+/**
+ * homeCategoryConfig: Home modul home Category Config obsahuje shared pravidlá pre Home sekciu a súvisiace flowy.
+ *
+ * Prečo: Pravidlá centralizované v homeCategoryConfig držia rovnaké správanie Home a ShowMore obrazoviek.
+ */
 
 import { Ionicons } from "@expo/vector-icons";
 import type { DiscoverCategory } from "../interfaces";

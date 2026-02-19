@@ -1,6 +1,8 @@
-// businessDetailUtils: ciste helpery pre Business Detail V2 flow.
-// Zodpovednost: centralizovat tab config, scroll restore a normalizaciu review foto.
-// Vstup/Vystup: exportuje pure funkcie pre screen a test script.
+/**
+ * businessDetailUtils: Združuje čisté helper funkcie pre Business Detail flow (taby, scroll správanie a recenzie).
+ *
+ * Prečo: Oddelenie business pravidiel od UI komponentov drží obrazovku čitateľnú a jednoduchšie testovateľnú.
+ */
 
 import type { BranchMenuLabelMode } from "../interfaces";
 import type { ReviewPhotoDraft } from "../reviews/types";

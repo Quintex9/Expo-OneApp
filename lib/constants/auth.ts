@@ -1,6 +1,8 @@
-// auth constants: centralne auth prepinace a limity.
-// Zodpovednost: drzi auth flagy mimo UI logiky.
-// Vstup/Vystup: exportuje konstanty pouzivane v auth flow.
+/**
+ * auth: Súbor auth drží zdieľané konštanty používané vo viacerých moduloch.
+ *
+ * Prečo: Centralizované hodnoty v auth bránia rozchodu čísel a názvov medzi obrazovkami.
+ */
 
 export const AUTH_GUARD_ENABLED = false;
 export const LOGGED_OUT_UI_STATE_ENABLED = false;

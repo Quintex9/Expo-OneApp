@@ -1,6 +1,8 @@
-// camera utils: helpery pre map camera prevody a ovladanie.
-// Zodpovednost: normalizacia center, zoom vypocet a setMapCamera.
-// Vstup/Vystup: utility pre konzistentne map pohyby v appke.
+/**
+ * camera: Mapový modul camera rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v camera znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import { Dimensions } from "react-native";
 import type { Region } from "react-native-maps";

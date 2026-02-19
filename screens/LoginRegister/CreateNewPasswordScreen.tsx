@@ -1,6 +1,8 @@
-// CreateNewPasswordScreen: obrazovka autentifikacneho flow.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * CreateNewPasswordScreen: Obrazovka nastavenia nového hesla po úspešnom overení reset flowu.
+ *
+ * Prečo: Uzavretie reset flowu na dedikovanej obrazovke znižuje riziko neplatných alebo slabých hesiel.
+ */
 
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

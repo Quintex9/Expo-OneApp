@@ -1,6 +1,8 @@
-// CardsSessionContext: docasne session-ulozisko pre pridane karty.
-// Zodpovednost: drzi pridane karty iba v pamati pocas behu aplikacie.
-// Vstup/Vystup: poskytuje cards/add/remove/clear cez context hook.
+/**
+ * CardsSessionContext: Drží dočasný session stav pridaných kariet pre obrazovky kariet.
+ *
+ * Prečo: Zdieľaný kontext udrží konzistentný stav kariet aj pri prechode medzi viacerými krokmi flowu.
+ */
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 

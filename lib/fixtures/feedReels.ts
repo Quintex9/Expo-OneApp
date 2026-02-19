@@ -1,6 +1,8 @@
-// feedReels fixture: staticke feed data pre reels obrazovku.
-// Zodpovednost: drzi testovacie reels itemy + offer key mapy na jednom mieste.
-// Vstup/Vystup: exportuje typy a fixture data pouzivane vo FeedScreen.
+/**
+ * feedReels: Fixture feed Reels poskytuje lokálne testovacie dáta pre vývojové scenáre.
+ *
+ * Prečo: Stabilné mock dáta v feedReels umožňujú rýchle overenie UI bez závislosti od backendu.
+ */
 
 export type ReelType = "image" | "video";
 

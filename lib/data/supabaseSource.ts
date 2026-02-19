@@ -1,6 +1,8 @@
-// supabaseSource: adapter pre Supabase datasource.
-// Zodpovednost: miesto pre realne Supabase query implementacie.
-// Vstup/Vystup: implementuje DataSource kontrakt cez Supabase.
+/**
+ * supabaseSource: Dátový modul supabase Source rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v supabaseSource uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import type { DataSource } from "./source";
 import type { BranchDto, MarkerDto } from "./models";

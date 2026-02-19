@@ -1,6 +1,8 @@
-// interfaces: zdielane typy pre navigaciu, mapu a data modely.
-// Zodpovednost: drzi spolocne kontrakty medzi UI a data vrstvou.
-// Vstup/Vystup: export TypeScript interfejsov pouzitych napriec appkou.
+/**
+ * interfaces: Definuje zdieľané TypeScript kontrakty pre UI, navigáciu, mapu a dátový tok aplikácie.
+ *
+ * Prečo: Jeden zdroj typov znižuje nekonzistencie medzi obrazovkami, hookmi a dátovou vrstvou.
+ */
 
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type BottomSheet from "@gorhom/bottom-sheet";

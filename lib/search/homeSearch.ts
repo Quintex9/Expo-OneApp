@@ -1,6 +1,8 @@
-// homeSearch: fulltext-like scoring engine pre Home Search V2.
-// Zodpovednost: stavia index a pocita relevance score vysledkov.
-// Vstup/Vystup: buildHomeSearchIndex + searchHomeBranches.
+/**
+ * homeSearch: Implementuje Home Search engine: normalizáciu, indexáciu, scoring a radenie výsledkov.
+ *
+ * Prečo: Samostatný engine drží relevanciu vyhľadávania konzistentnú a nezávislú od prezentačnej vrstvy.
+ */
 
 import type { BranchData } from "../interfaces";
 import { normalizeId } from "../data/utils/id";

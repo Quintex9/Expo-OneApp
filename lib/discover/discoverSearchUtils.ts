@@ -1,6 +1,8 @@
-// discoverSearchUtils: helpery pre Discover Search V2 flow.
-// Zodpovednost: favorite places fallback a title-based filtrovanie.
-// Vstup/Vystup: ciste funkcie bez UI side effectov.
+/**
+ * discoverSearchUtils: Obsahuje čisté utility pre Discover Search (favorites model a filtrovanie výsledkov).
+ *
+ * Prečo: Vyhľadávacie pravidlá sú na jednom mieste, takže sa správajú rovnako vo všetkých Discover scenároch.
+ */
 
 import type { BranchData, DiscoverFavoritePlace, Location } from "../interfaces";
 import { NITRA_CENTER } from "../constants/discoverUi";

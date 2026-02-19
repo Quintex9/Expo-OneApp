@@ -1,6 +1,8 @@
-// SubscriptionActivationScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * SubscriptionActivationScreen: Aktivácia predplatného vedie používateľa cez výber plánu a potvrdenie.
+ *
+ * Prečo: Dedikovaný activation flow drží obchodné pravidlá predplatného oddelené od bežného profilu.
+ */
 
 import { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";

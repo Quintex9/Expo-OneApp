@@ -1,6 +1,8 @@
-// normalizers: pomocne prevody a fallback normalizacia branch dat.
-// Zodpovednost: doplna chybajuce hodnoty a stabilizuje vstupny shape.
-// Vstup/Vystup: vracia konzistentny BranchData objekt pre UI vrstvu.
+/**
+ * normalizers: Dátový modul normalizers rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v normalizers uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import { ImageSourcePropType } from "react-native";
 import { DUMMY_BRANCH } from "../constants/discover";

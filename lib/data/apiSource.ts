@@ -1,6 +1,8 @@
-// apiSource: adapter pre REST/HTTP datasource.
-// Zodpovednost: miesto pre realne API volania a transformacie.
-// Vstup/Vystup: implementuje DataSource kontrakt cez API vrstvu.
+/**
+ * apiSource: Dátový modul api Source rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v apiSource uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import type { DataSource } from "./source";
 import type { BranchDto, MarkerDto } from "./models";

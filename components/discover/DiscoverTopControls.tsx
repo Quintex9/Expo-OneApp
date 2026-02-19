@@ -14,6 +14,11 @@ import {
   DISCOVER_TOP_OFFSET,
 } from "../../lib/constants/discoverUi";
 
+/**
+ * DiscoverTopControls: Horné ovládanie Discover mapy: poloha, vyhľadávanie a prepnutie do list režimu.
+ *
+ * Prečo: Kritické mapové akcie sú na jednom mieste, takže používateľ nemusí hľadať primárne ovládanie.
+ */
 export default function DiscoverTopControls({
   insetsTop,
   open,

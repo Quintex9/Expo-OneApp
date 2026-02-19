@@ -36,6 +36,11 @@ function isToday(day: string) {
   return days[todayIndex] === day;
 }
 
+/**
+ * InfoSection: Natívna Info sekcia vrátane embedded mapy a deep linkov na kontakt/navigáciu.
+ *
+ * Prečo: Natívna mapa zlepšuje orientáciu používateľa priamo v detaile bez prechodu do inej appky.
+ */
 export const InfoSection = memo(function InfoSection({
   hours,
   address,

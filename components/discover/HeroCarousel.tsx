@@ -10,6 +10,11 @@ type Props = {
   onImagePress?: (index: number) => void;
 };
 
+/**
+ * HeroCarousel: Carousel fotografií prevádzky s indexovaním a podporou otvorenia galérie.
+ *
+ * Prečo: Rýchly vizuálny prehľad priestoru pomáha používateľovi odhadnúť kvalitu a atmosféru.
+ */
 export function HeroCarousel({ data, height, width, index, onIndexChange, onImagePress }: Props) {
   const renderItem = useCallback(
     ({ item, index: itemIndex }: { item: any; index: number }) => (

@@ -197,6 +197,11 @@ const areOpacityMapsEqual = (
   return true;
 };
 
+/**
+ * DiscoverMap: Natívna Discover mapa s marker clusteringom, kamerou a callbackmi na výber podniku.
+ *
+ * Prečo: Komplexnú mapovú logiku drží v jednom mieste, aby bola interakcia plynulá aj pri veľa bodoch.
+ */
 function DiscoverMap({
   cameraRef,
   filteredMarkers,

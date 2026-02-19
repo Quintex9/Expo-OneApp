@@ -9,6 +9,11 @@ type Props = {
   hours: string;
 };
 
+/**
+ * HeroInfo: Hero informačný blok s názvom prevádzky, ratingom, vzdialenosťou a časom.
+ *
+ * Prečo: Základné metriky viditeľné na prvý pohľad urýchľujú rozhodnutie, či podnik navštíviť.
+ */
 export const HeroInfo = memo(function HeroInfo({ title, rating, ratingCount, distance, hours }: Props) {
   return (
     <View style={styles.container}>

@@ -67,6 +67,11 @@ const resolveTabKey = (routeName: string, label: string): TabIconName | null => 
   return null;
 };
 
+/**
+ * CustomTabBar: Renderuje vlastný spodný panel s ikonami a prekladmi namiesto defaultného tab baru.
+ *
+ * Prečo: Vlastná implementácia drží konzistentný vizuál aplikácie a umožňuje presné UX správanie.
+ */
 export default function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
   const focusedOptions = descriptors[state.routes[state.index].key]?.options;

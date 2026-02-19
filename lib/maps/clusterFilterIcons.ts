@@ -1,6 +1,8 @@
-// clusterFilterIcons: ikony pre cluster filter stavy na mape.
-// Zodpovednost: mapovanie stavu filtra na ikonovy asset.
-// Vstup/Vystup: helper na vyber cluster ikony podla filtra.
+/**
+ * clusterFilterIcons: Mapový modul cluster Filter Icons rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v clusterFilterIcons znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import type { ClusterCountKey } from "./clusterIcons";
 

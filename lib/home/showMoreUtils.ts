@@ -1,6 +1,8 @@
-// showMoreUtils: shared pure helpers pre ShowMore data pipeline.
-// Zodpovednost: section sorting + category filtering + route defaults.
-// Vstup/Vystup: ciste funkcie pouzitelne v UI aj testoch.
+/**
+ * showMoreUtils: Home modul show More Utils obsahuje shared pravidlá pre Home sekciu a súvisiace flowy.
+ *
+ * Prečo: Pravidlá centralizované v showMoreUtils držia rovnaké správanie Home a ShowMore obrazoviek.
+ */
 
 import type { BranchData } from "../interfaces";
 import type { HomeCategoryFilter } from "./homeCategoryConfig";

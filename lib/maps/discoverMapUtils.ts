@@ -1,6 +1,8 @@
-// discoverMapUtils: zdielane helpery pre render map markerov.
-// Zodpovednost: geometria, validacie a pomocne mapove utility.
-// Vstup/Vystup: ciste funkcie pouzivane v DiscoverMap komponente.
+/**
+ * discoverMapUtils: Mapový modul discover Map Utils rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v discoverMapUtils znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import { Image } from "react-native";
 import type { ImageURISource } from "react-native";

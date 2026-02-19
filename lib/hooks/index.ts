@@ -1,6 +1,8 @@
-// hooks index: barrel export custom hookov.
-// Zodpovednost: jednotny vstupny bod pre import hookov.
-// Vstup/Vystup: re-export useDiscover* a useDynamicQRCode.
+/**
+ * index: Hook index zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku index znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 export { useDiscoverFilters } from "./useDiscoverFilters";
 export type { UseDiscoverFiltersReturn } from "./useDiscoverFilters";

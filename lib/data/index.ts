@@ -1,6 +1,8 @@
-// data index: vyber aktivneho datasource podla konfiguracie.
-// Zodpovednost: centralne rozhodnutie medzi mock/api/supabase vetvou.
-// Vstup/Vystup: vracia jednu implementaciu DataSource pre appku.
+/**
+ * index: Dátový modul index rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v index uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import { mockSource } from "./mockSource";
 import type { DataSource } from "./source";

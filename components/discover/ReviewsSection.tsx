@@ -65,6 +65,11 @@ const getInitials = (name: string): string =>
     .join("")
     .toUpperCase();
 
+/**
+ * ReviewItem: Renderuje jednu recenziu vrátane autorstva, textu, reakcií a galérie fotiek.
+ *
+ * Prečo: Izolovaný item zlepšuje výkon listu recenzií a zjednodušuje lokálne interakcie.
+ */
 const ReviewItem = memo(function ReviewItem({
   review,
   isLiked,
@@ -188,6 +193,11 @@ const ReviewItem = memo(function ReviewItem({
   );
 });
 
+/**
+ * ReviewsSection: Spravuje zoznam recenzií, pridanie novej recenzie a priebežné načítanie ďalších položiek.
+ *
+ * Prečo: Sekcia drží celý review flow pokope, aby bol konzistentný a ľahko rozšíriteľný.
+ */
 export function ReviewsSection({
   rating,
   total,

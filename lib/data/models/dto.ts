@@ -1,6 +1,8 @@
-// dto models: backend-agnostic datove typy pre zdrojove vrstvy.
-// Zodpovednost: oddelit transport shape od UI modelov.
-// Vstup/Vystup: exportuje BranchDto/MarkerDto a suvisiace typy.
+/**
+ * dto: Modelový súbor dto obsahuje typy pre dátový kontrakt alebo UI view model.
+ *
+ * Prečo: Typy v dto tvoria stabilnú zmluvu medzi datasource vrstvou a prezentačným kódom.
+ */
 
 import type { DiscoverCategory } from "../../interfaces";
 

@@ -16,6 +16,11 @@ type Props = {
   onSignIn: () => void;
 };
 
+/**
+ * SignInPromptSheet: Zobrazuje modal výzvu na prihlásenie pri akcii, ktorá vyžaduje účet.
+ *
+ * Prečo: Používateľ dostane jasný ďalší krok namiesto tichej chyby alebo nefunkčného tlačidla.
+ */
 export default function SignInPromptSheet({ visible, onClose, onSignIn }: Props) {
   const { t } = useTranslation();
 

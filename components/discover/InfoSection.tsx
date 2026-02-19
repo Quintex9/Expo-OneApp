@@ -32,6 +32,11 @@ function isToday(day: string) {
   return days[todayIndex] === day;
 }
 
+/**
+ * InfoSection: Cross-platform Info sekcia pre prostredia bez natívnej mapovej implementácie.
+ *
+ * Prečo: Udržiava konzistentné informácie o podniku aj tam, kde mapu renderovať nevieme.
+ */
 export const InfoSection = memo(function InfoSection({
   hours,
   address,

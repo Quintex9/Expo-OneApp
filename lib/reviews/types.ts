@@ -1,6 +1,8 @@
-// review types: zdielane kontrakty pre vytvaranie recenzii a foto upload flow.
-// Zodpovednost: centralizovat typy pouzivane AddReviewModal/ReviewsSection/BusinessDetail.
-// Vstup/Vystup: export ReviewPhotoDraft, ReviewCreateInput, ReviewPhotoUploadResult.
+/**
+ * types: Definuje dátové modely recenzií a fotiek používané v review flowe.
+ *
+ * Prečo: Zjednotený kontrakt recenzií znižuje nejasnosti pri odosielaní, renderi a upload pipeline.
+ */
 
 export type ReviewPhotoStatus = "local" | "uploaded" | "failed";
 

@@ -1,6 +1,8 @@
-// FavoriteBranchesScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * FavoriteBranchesScreen: Zobrazuje zoznam obľúbených prevádzok používateľa.
+ *
+ * Prečo: Obľúbené prevádzky sú oddelené od všeobecného feedu, aby boli rýchlo dostupné bez ďalšieho filtrovania.
+ */
 
 import BranchCard from "../components/BranchCard";
 import { useNavigation } from "@react-navigation/native";

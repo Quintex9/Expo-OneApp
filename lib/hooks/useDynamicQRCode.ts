@@ -1,6 +1,8 @@
-// useDynamicQRCode: hook pre generovanie dynamickeho QR payloadu.
-// Zodpovednost: pripravi data/token pre QR obrazovku.
-// Vstup/Vystup: vracia aktualny QR kod a suvisiaci stav.
+/**
+ * useDynamicQRCode: Hook use Dynamic QRCode zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useDynamicQRCode znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useEffect, useMemo, useState } from "react";
 

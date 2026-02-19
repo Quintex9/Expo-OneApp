@@ -13,6 +13,11 @@ import { BranchCardProps, BranchData } from "../lib/interfaces";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 
+/**
+ * BranchCard: Renderuje kompaktnú kartu podniku s kľúčovými metrikami a benefit badge.
+ *
+ * Prečo: Rovnaký card pattern v listoch drží prehľadné porovnanie podnikov na prvý pohľad.
+ */
 function BranchCard(props: BranchCardProps) {
   const { t } = useTranslation();
   const {

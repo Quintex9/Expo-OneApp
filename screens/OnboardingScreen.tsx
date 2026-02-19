@@ -1,6 +1,8 @@
-// OnboardingScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * OnboardingScreen: Onboarding vedie používateľa cez výber preferencií, prevádzok a prípadné predplatné.
+ *
+ * Prečo: Riadený onboarding skracuje čas k prvej hodnote a personalizuje obsah hneď po prvom spustení.
+ */
 
 import React, { useMemo, useState } from "react";
 import {

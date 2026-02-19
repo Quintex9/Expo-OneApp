@@ -1,8 +1,10 @@
-﻿
-// UserAccountScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * UserAccountScreen: Obrazovka používateľského účtu upravuje profilové údaje a základné account informácie.
+ *
+ * Prečo: Editácia účtu je izolovaná, aby zmeny profilových dát nezasahovali do iných profilových sekcií.
+ */
 
+﻿
 import { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import {

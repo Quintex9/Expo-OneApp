@@ -1,6 +1,8 @@
-// marker utils: deterministicke helpery pre title a rating markerov.
-// Zodpovednost: stabilne fallback hodnoty z marker ID.
-// Vstup/Vystup: funkcie getRatingForId a formatTitleFromId.
+/**
+ * marker: Utility marker poskytuje čisté helper funkcie pre prácu s dátami.
+ *
+ * Prečo: Opakované dátové operácie v marker sú na jednom mieste, čo znižuje duplicitu aj chyby.
+ */
 
 const RATING_VALUES = [4.1, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0];
 

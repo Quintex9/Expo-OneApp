@@ -12,6 +12,11 @@ type State = {
     error: Error | null;
 };
 
+/**
+ * ErrorBoundary: Zachytí runtime chyby potomkov a zobrazí bezpečný fallback s možnosťou obnovy.
+ *
+ * Prečo: Pri páde časti UI ostane aplikácia ovládateľná a používateľ nestratí celú obrazovku.
+ */
 export class ErrorBoundary extends Component<Props, State> {
     constructor(props: Props) {
         super(props);

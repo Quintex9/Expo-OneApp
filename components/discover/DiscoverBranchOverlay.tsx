@@ -13,6 +13,11 @@ import {
   TAB_BAR_MIN_INSET,
 } from "../../lib/constants/layout";
 
+/**
+ * DiscoverBranchOverlay: Spodný overlay na mape Discover s horizontálnym zoznamom podnikov a kategóriami.
+ *
+ * Prečo: Kombinuje mapu a rýchly preview výsledkov bez nutnosti prepínať na inú obrazovku.
+ */
 function DiscoverBranchOverlay({
   insetsBottom,
   categoriesOpen,

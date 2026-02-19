@@ -1,6 +1,8 @@
-// discoverUi constants: zdielane UI konstanty pre Discover obrazovky.
-// Zodpovednost: drzi centralne centrum mesta, hlavne filtre a subkategorie.
-// Vstup/Vystup: exportuje hodnoty pouzivane vo viacerych Discover screeoch.
+/**
+ * discoverUi: Súbor discover Ui drží zdieľané konštanty používané vo viacerých moduloch.
+ *
+ * Prečo: Centralizované hodnoty v discoverUi bránia rozchodu čísel a názvov medzi obrazovkami.
+ */
 
 import type { DiscoverCategory } from "../interfaces";
 

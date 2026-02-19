@@ -13,6 +13,11 @@ type Props = {
   notificationsEnabled?: boolean;
 };
 
+/**
+ * HeroActions: Horné akčné tlačidlá detailu prevádzky (späť, obľúbené, upozornenia, zdieľanie).
+ *
+ * Prečo: Najčastejšie akcie sú v dosahu palca bez potreby scrollovať do ďalších sekcií.
+ */
 export function HeroActions({
   topInset,
   onBack,
@@ -67,6 +72,11 @@ export function HeroActions({
 
 type IconProps = { size: number; color: string };
 
+/**
+ * HeartIcon: Lokálna ikona srdca pre akciu obľúbených s konfigurovateľnou veľkosťou a farbou.
+ *
+ * Prečo: Vlastný icon komponent drží konzistentný vizuál nezávisle od externých ikon setov.
+ */
 const HeartIcon = ({ size, color }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -79,6 +89,11 @@ const HeartIcon = ({ size, color }: IconProps) => (
   </Svg>
 );
 
+/**
+ * BellIcon: Lokálna ikona zvončeka pre notifikácie s jednotnou geometriou naprieč stavmi.
+ *
+ * Prečo: Rovnaké proporcie ikony zabraňujú vizuálnemu poskakovaniu pri prepínaní stavov.
+ */
 const BellIcon = ({ size, color }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -91,6 +106,11 @@ const BellIcon = ({ size, color }: IconProps) => (
   </Svg>
 );
 
+/**
+ * ShareIcon: Lokálna ikona zdieľania optimalizovaná pre hero action tlačidlo.
+ *
+ * Prečo: Kontrolovaný SVG tvar drží čitateľnosť ikony aj pri menších veľkostiach na mobile.
+ */
 const ShareIcon = ({ size, color }: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path

@@ -1,6 +1,8 @@
-// id utils: canonical normalizacia a porovnavanie identifikatorov.
-// Zodpovednost: odstranenie rozdielov v tvare ID medzi zdrojmi.
-// Vstup/Vystup: helpery normalizeId, idsEqual a canonicalOrFallbackId.
+/**
+ * id: Utility id poskytuje čisté helper funkcie pre prácu s dátami.
+ *
+ * Prečo: Opakované dátové operácie v id sú na jednom mieste, čo znižuje duplicitu aj chyby.
+ */
 
 const DIACRITIC_REGEX = /[\u0300-\u036f]/g;
 const SPACE_OR_DASH_REGEX = /[\s-]+/g;

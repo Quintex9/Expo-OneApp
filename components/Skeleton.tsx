@@ -8,6 +8,11 @@ type Props = {
     style?: ViewStyle;
 };
 
+/**
+ * Skeleton: Vykreslí základný shimmer placeholder s nastaviteľným rozmerom a rádiusom.
+ *
+ * Prečo: Placeholder stabilizuje layout počas načítania a znižuje vizuálne skákanie obsahu.
+ */
 export function Skeleton({ width, height, borderRadius = 4, style }: Props) {
     const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -47,6 +52,11 @@ export function Skeleton({ width, height, borderRadius = 4, style }: Props) {
     );
 }
 
+/**
+ * SkeletonCard: Zložený skeleton, ktorý simuluje štruktúru bežnej obsahovej karty.
+ *
+ * Prečo: Používateľ vidí očakávaný tvar výsledkov ešte pred načítaním dát, čo zlepšuje vnímanú rýchlosť.
+ */
 export function SkeletonCard() {
     return (
         <View style={styles.card}>
@@ -60,10 +70,20 @@ export function SkeletonCard() {
     );
 }
 
+/**
+ * SkeletonText: Textový skeleton riadok pre názvy a popisy s variabilnou šírkou.
+ *
+ * Prečo: Udržiava rytmus typografie počas loading stavu a bráni poskakovaniu textu po načítaní.
+ */
 export function SkeletonText({ width = "100%" }: { width?: DimensionValue }) {
     return <Skeleton width={width} height={14} borderRadius={4} />;
 }
 
+/**
+ * SkeletonAvatar: Kruhový skeleton placeholder pre profilové obrázky a ikonové prvky.
+ *
+ * Prečo: Jednotný tvar avatara pri loadingu pomáha zachovať čitateľnú hierarchiu obsahu.
+ */
 export function SkeletonAvatar({ size = 40 }: { size?: number }) {
     return <Skeleton width={size} height={size} borderRadius={size / 2} />;
 }

@@ -1,6 +1,8 @@
-// useDiscoverCamera: custom hook pre kameru mapy v Discover.
-// Zodpovednost: sync map center/zoom, user location a restore spravanie.
-// Vstup/Vystup: handlery a akcie pre mapove gesto, centrum a zoom.
+/**
+ * useDiscoverCamera: Hook use Discover Camera zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useDiscoverCamera znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Location from "expo-location";

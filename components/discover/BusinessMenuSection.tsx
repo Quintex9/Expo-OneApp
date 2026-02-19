@@ -12,6 +12,11 @@ type Props = {
 const resolveLabel = (translated: string, key: string, fallback: string): string =>
   translated === key ? fallback : translated;
 
+/**
+ * BusinessMenuSection: Textová sekcia Menu/Cenník so zoznamom položiek bez obrázkov.
+ *
+ * Prečo: Jednoduchý zoznam je čitateľný, rýchly na skenovanie a funguje konzistentne naprieč kategóriami.
+ */
 export const BusinessMenuSection = memo(function BusinessMenuSection({
   menuItems,
   labelMode = "menu",

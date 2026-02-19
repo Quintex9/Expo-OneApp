@@ -10,6 +10,11 @@ import LoyaltyCardDetailScreen from "../screens/LoyaltyCardDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
+/**
+ * CardsStack: Definuje stack flow pre sekciu kariet (zoznam, pridanie, sken a detailné kroky).
+ *
+ * Prečo: Oddelený stack drží vlastnú históriu kariet bez ovplyvnenia zvyšku tab navigácie.
+ */
 export default function CardsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

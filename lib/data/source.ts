@@ -1,6 +1,8 @@
-// data source contract: spolocne rozhranie pre vsetky datasource implementacie.
-// Zodpovednost: definovat jednotny tvar metod pre branch a marker data.
-// Vstup/Vystup: urcuje API pre mock, api aj supabase zdroj.
+/**
+ * source: Dátový modul source rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v source uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import type { BranchDto, MarkerDto } from "./models";
 

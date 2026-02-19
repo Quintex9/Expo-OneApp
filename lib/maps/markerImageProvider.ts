@@ -1,6 +1,8 @@
-// markerImageProvider: hybrid resolver marker obrazkov.
-// Zodpovednost: full sprite / local asset / fallback ikonova vetva.
-// Vstup/Vystup: resolve marker image + metadata anchor/variant.
+/**
+ * markerImageProvider: Mapový modul marker Image Provider rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v markerImageProvider znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import type { ImageSourcePropType, ImageURISource } from "react-native";
 import type { DiscoverMapMarker } from "../interfaces";

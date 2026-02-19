@@ -1,3 +1,9 @@
+/**
+ * withGradleProperties: Expo config plugin dopĺňa a upravuje Gradle vlastnosti potrebné pre správny build projektu.
+ *
+ * Prečo: Stabilná build konfigurácia v plugine znižuje riziko rozdielov medzi lokálnym a CI prostredím.
+ */
+
 const { withGradleProperties } = require("@expo/config-plugins");
 
 /**

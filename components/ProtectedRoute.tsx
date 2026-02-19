@@ -8,6 +8,11 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+/**
+ * ProtectedRoute: Podmienečne pustí používateľa do chránenej časti alebo zobrazí prihlásenie.
+ *
+ * Prečo: Kontrola prístupu priamo pri route zabráni neautorizovaným vstupom do súkromných obrazoviek.
+ */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const navigation = useNavigation<any>();

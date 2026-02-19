@@ -1,6 +1,8 @@
-// reanimated shim: kompatibilitna vrstva pre starsie API volania.
-// Zodpovednost: predchadza padom pri rozdieloch verzii kniznice.
-// Vstup/Vystup: exportuje fallback helpery pre reanimated pouzitie.
+/**
+ * reanimated: Compat shim reanimated preklenie rozdiely medzi verziami knižníc.
+ *
+ * Prečo: Vrstva kompatibility v reanimated chráni produkčný beh appky pred regresiou závislostí.
+ */
 
 import { useCallback } from "react";
 

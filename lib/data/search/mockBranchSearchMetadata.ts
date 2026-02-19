@@ -1,6 +1,8 @@
-// mockBranchSearchMetadata: doplnkove search metadata pre mock katalog.
-// Zodpovednost: centralizuje tagy/menu/aliasy pre Home Search V2.
-// Vstup/Vystup: vracia search metadata podla branch ID s category fallbackom.
+/**
+ * mockBranchSearchMetadata: Search metadata modul mock Branch Search Metadata dopĺňa vyhľadávacie aliasy, tagy a menu kľúče.
+ *
+ * Prečo: Lepšie metadata v mockBranchSearchMetadata zvyšujú relevanciu výsledkov bez zásahu do UI vrstvy.
+ */
 
 import type { DiscoverCategory } from "../../interfaces";
 import { normalizeId } from "../utils/id";

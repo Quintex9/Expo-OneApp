@@ -1,6 +1,8 @@
-// useDiscoverData: orchestracia nacitania a mapovania Discover dat.
-// Zodpovednost: fetch DTO, mapovanie do ViewModel a expose helperov.
-// Vstup/Vystup: branches, markers, groupedMarkers a branch helper funkcie.
+/**
+ * useDiscoverData: Hook use Discover Data zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useDiscoverData znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ImageSourcePropType } from "react-native";

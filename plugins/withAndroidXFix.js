@@ -1,3 +1,9 @@
+/**
+ * withAndroidXFix: Expo config plugin opravuje konflikt AndroidX appComponentFactory v Android manifeste.
+ *
+ * Prečo: Automatická úprava manifestu počas prebuild procesu zabráni ručným zásahom a opakovaným build chybám.
+ */
+
 const { withAndroidManifest } = require("@expo/config-plugins");
 
 /**

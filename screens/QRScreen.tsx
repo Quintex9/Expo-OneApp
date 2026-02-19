@@ -1,6 +1,8 @@
-// QRScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * QRScreen: QR obrazovka zobrazuje kód benefitu alebo karty na naskenovanie personálom.
+ *
+ * Prečo: Samostatný QR režim zvyšuje čitateľnosť kódu a eliminuje rušivé prvky počas skenovania.
+ */
 
 import React, { useMemo, useState } from "react";
 import {

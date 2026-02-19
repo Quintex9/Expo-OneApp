@@ -12,6 +12,11 @@ import { useTranslation } from "react-i18next";
 
 const Tab = createBottomTabNavigator();
 
+/**
+ * Tabs: Skladá spodnú tab navigáciu a mapuje obrazovky na jednotlivé sekcie aplikácie.
+ *
+ * Prečo: Jedno centrálne miesto pre poradie tabov znižuje riziko, že sa navigácia rozíde medzi obrazovkami.
+ */
 export default function Tabs() {
   const { t } = useTranslation();
 

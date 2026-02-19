@@ -15,6 +15,11 @@ type Props = {
 
 const STAR_ICON = require("../../images/star_black.png");
 
+/**
+ * DiscoverGroupSheet: Zobrazí zoznam prevádzok patriacich do jedného mapového clustra.
+ *
+ * Prečo: Pri prekrývajúcich sa bodoch na mape dá používateľovi jasný výber konkrétnej prevádzky.
+ */
 export default function DiscoverGroupSheet({
   sheetRef,
   snapPoints,

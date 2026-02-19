@@ -5,6 +5,11 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { styles } from "./discoverStyles";
 import type { DiscoverFilterSheetProps } from "../../lib/interfaces";
 
+/**
+ * DiscoverFilterSheet: Bottom sheet s filtrami kategórií, ratingu a podkategórií pre Discover mapu.
+ *
+ * Prečo: Filtre sú sústredené na jedno miesto, aby sa dali meniť bez straty polohy na mape.
+ */
 export default function DiscoverFilterSheet({
   filterRef,
   snapPoints,

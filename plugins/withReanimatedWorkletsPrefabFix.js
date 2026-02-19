@@ -1,3 +1,9 @@
+/**
+ * withReanimatedWorkletsPrefabFix: Expo config plugin rieši chýbajúce Reanimated/Worklets prefab balíčky pred CMake konfiguráciou.
+ *
+ * Prečo: Predpríprava závislostí pred build krokom zabráni zlyhaniu native kompilácie na Androide.
+ */
+
 const { withProjectBuildGradle } = require("@expo/config-plugins");
 
 const FIX_MARKER = "withReanimatedWorkletsPrefabFix";

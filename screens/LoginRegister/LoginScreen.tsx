@@ -1,6 +1,8 @@
-// LoginScreen: obrazovka autentifikacneho flow.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * LoginScreen: Prihlasovacia obrazovka rieši login cez formulár a sociálne identity.
+ *
+ * Prečo: Všetky vstupy na prihlásenie sú zjednotené na jednom mieste pre rýchlejší vstup do aplikácie.
+ */
 
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";

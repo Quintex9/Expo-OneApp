@@ -12,6 +12,11 @@ interface HomeBranchGridCardProps {
   compact?: boolean;
 }
 
+/**
+ * HomeBranchGridCard: Grid karta podniku pre Home/ShowMore s optimalizovaným layoutom pre menšie rozmery.
+ *
+ * Prečo: Komponent drží rovnaký vzhľad v mriežke naprieč sekciami a znižuje rozdiely medzi obrazovkami.
+ */
 function HomeBranchGridCard({ branch, cardWidth, onPress, compact = false }: HomeBranchGridCardProps) {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();

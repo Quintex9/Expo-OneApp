@@ -1,6 +1,8 @@
-// ShowMoreScreen: detailny list sekcie z Home ("Zobrazit viac").
-// Zodpovednost: legacy fallback + ShowMore V2 (sticky filtre a grid layout).
-// Vstup/Vystup: route params sekcie + optional inicialna kategoria z Home.
+/**
+ * ShowMoreScreen: ShowMore rozširuje Home sekcie do plného listu/gridu s kategóriami a sticky filtrami.
+ *
+ * Prečo: Používateľ vie prejsť viac položiek z jednej sekcie bez návratu na Home a bez straty kontextu.
+ */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {

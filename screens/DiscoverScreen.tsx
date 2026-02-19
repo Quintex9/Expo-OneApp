@@ -1,6 +1,8 @@
-// DiscoverScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * DiscoverScreen: Mapová obrazovka Discover riadi kameru, markery, filtre, vyhľadávanie a detail overlay.
+ *
+ * Prečo: Jedna orchestrácia mapových stavov drží plynulé prechody medzi mapou, searchom a detailom prevádzky.
+ */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageSourcePropType, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";

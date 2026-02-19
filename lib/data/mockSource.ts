@@ -1,6 +1,8 @@
-// mockSource: lokalny datasource pre vyvoj a testovanie.
-// Zodpovednost: vracia fixture DTO data bez sietovych volani.
-// Vstup/Vystup: implementuje DataSource kontrakt nad mock datami.
+/**
+ * mockSource: Dátový modul mock Source rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v mockSource uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import type { DataSource } from "./source";
 import type { BranchDto, MarkerDto } from "./models";

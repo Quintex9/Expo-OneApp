@@ -1,6 +1,8 @@
-// badgedIcons: resolver localnych ikon s rating badge pre mapu.
-// Zodpovednost: vyber spravneho sprite podla kategorie a ratingu.
-// Vstup/Vystup: vracia image source pre marker render.
+/**
+ * badgedIcons: Mapový modul badged Icons rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v badgedIcons znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 export const BADGED_RATING_KEYS = [
   "0.0",

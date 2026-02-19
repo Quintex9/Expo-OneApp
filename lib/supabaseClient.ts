@@ -1,6 +1,8 @@
-// supabaseClient: inicializacia klienta pre Supabase API.
-// Zodpovednost: vytvorenie a export jednej instancie klienta.
-// Vstup/Vystup: pouziva env konfiguraciu a vracia pripraveny client.
+/**
+ * supabaseClient: Inicializuje a exportuje jednu inštanciu Supabase klienta pre celú aplikáciu.
+ *
+ * Prečo: Jedna klientská inštancia zabraňuje rozdielnej konfigurácii a nepredvídateľným chybám pri API volaniach.
+ */
 
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";

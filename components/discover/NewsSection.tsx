@@ -180,6 +180,11 @@ const getInitials = (name: string): string =>
     .join("")
     .toUpperCase();
 
+/**
+ * NewsPostItem: Renderuje jeden news príspevok s akciami, komentármi a stavmi interakcie.
+ *
+ * Prečo: Oddelenie položky príspevku od sekcie znižuje re-rendering pri zmenách v zozname.
+ */
 const NewsPostItem = memo(function NewsPostItem({
   post,
   title,
@@ -322,6 +327,11 @@ const NewsPostItem = memo(function NewsPostItem({
   );
 });
 
+/**
+ * NewsSection: Sekcia noviniek podniku s feedom príspevkov a interaktívnymi reakciami.
+ *
+ * Prečo: Obsahové novinky ostávajú v detaili prevádzky bez potreby samostatnej obrazovky.
+ */
 export function NewsSection({ title, branchImage, limit }: Props) {
   const { t } = useTranslation();
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());

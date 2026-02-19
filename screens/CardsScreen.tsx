@@ -1,6 +1,8 @@
-// CardsScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * CardsScreen: Hlavná obrazovka kariet zobrazuje lojalitné karty, vyhľadávanie, triedenie a akcie pridania.
+ *
+ * Prečo: Zozbieranie celého card management flowu na jedno miesto znižuje počet prechodov medzi obrazovkami.
+ */
 
 import React, { useMemo, useCallback, useState } from "react";
 import {

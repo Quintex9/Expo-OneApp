@@ -1,6 +1,8 @@
-// SettingsScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * SettingsScreen: Nastavenia aplikácie umožňujú spravovať preferencie a systémové voľby.
+ *
+ * Prečo: Konfiguračné voľby sú oddelené od ostatného obsahu, aby bol account flow prehľadnejší.
+ */
 
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

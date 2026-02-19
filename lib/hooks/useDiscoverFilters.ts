@@ -1,6 +1,8 @@
-// useDiscoverFilters: stav a logika filtrov pre Discover flow.
-// Zodpovednost: category/rating/subcategory filtre a ich obsluha.
-// Vstup/Vystup: vracia filter state a mutacne helper funkcie.
+/**
+ * useDiscoverFilters: Hook use Discover Filters zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useDiscoverFilters znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BranchData, DiscoverMapMarker } from "../interfaces";

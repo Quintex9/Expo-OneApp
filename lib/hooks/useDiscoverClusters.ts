@@ -1,6 +1,8 @@
-// useDiscoverClusters: custom hook pre clustering markerov.
-// Zodpovednost: priprava cluster/single marker vystupu podla zoomu.
-// Vstup/Vystup: vracia data pre mapovy render Discover markerov.
+/**
+ * useDiscoverClusters: Hook use Discover Clusters zapúzdruje stav a udalosti pre svoju časť aplikačného flowu.
+ *
+ * Prečo: Presun stavovej logiky do hooku useDiscoverClusters znižuje komplexitu obrazoviek a uľahčuje opakované použitie.
+ */
 
 import { useMemo } from "react";
 import Supercluster from "supercluster";

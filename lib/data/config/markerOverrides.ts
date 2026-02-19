@@ -1,6 +1,8 @@
-// markerOverrides: lokalne override pravidla pre vybrane prevadzky.
-// Zodpovednost: mapuje aliasy marker ID na custom branch hodnoty.
-// Vstup/Vystup: vracia override objekt pre mapper context.
+/**
+ * markerOverrides: Konfiguračný modul marker Overrides drží lokálne pravidlá pre úpravy dátového správania.
+ *
+ * Prečo: Konfigurácia v markerOverrides je oddelená od business logiky, takže zmeny sú bezpečnejšie a čitateľnejšie.
+ */
 
 import type { BranchData, DiscoverCategory } from "../../interfaces";
 import { normalizeId } from "../utils/id";

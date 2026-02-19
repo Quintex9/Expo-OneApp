@@ -28,6 +28,11 @@ import {
 const SEARCH_TOP_ROW_Y = DISCOVER_TOP_OFFSET;
 const RESULT_ROW_FALLBACK_HEIGHT = 96;
 
+/**
+ * DiscoverSearchSheet: Google-like search overlay v Discover s favorites headerom a zoznamom nájdených podnikov.
+ *
+ * Prečo: Spojenie vstupu, klávesnice a výsledkov na jednej vrstve zrýchľuje vyhľadávanie na mape.
+ */
 function DiscoverSearchSheet({
   onSheetChange,
   onClose,

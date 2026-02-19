@@ -1,6 +1,8 @@
-// stackedIcons: helpery pre stacknute marker ikony.
-// Zodpovednost: priprava icon vrstiev pre stacked marker varianty.
-// Vstup/Vystup: vracia image source pre stacked map marker.
+/**
+ * stackedIcons: Mapový modul stacked Icons rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v stackedIcons znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import type { ClusterCountKey } from "./clusterIcons";
 

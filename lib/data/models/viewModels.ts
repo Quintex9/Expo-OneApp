@@ -1,6 +1,8 @@
-// view models: UI orientovane typy po mapovani z DTO.
-// Zodpovednost: drzat shape pripraveny pre React Native komponenty.
-// Vstup/Vystup: exportuje BranchViewModel a MarkerViewModel.
+/**
+ * viewModels: Modelový súbor view Models obsahuje typy pre dátový kontrakt alebo UI view model.
+ *
+ * Prečo: Typy v viewModels tvoria stabilnú zmluvu medzi datasource vrstvou a prezentačným kódom.
+ */
 
 import type { BranchData, DiscoverMapMarker } from "../../interfaces";
 

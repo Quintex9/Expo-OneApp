@@ -16,6 +16,11 @@ type Props = {
 const resolveLabel = (translated: string, key: string, fallback: string): string =>
   translated === key ? fallback : translated;
 
+/**
+ * HomeSection: Úvodná sekcia detailu prevádzky s hlavným obsahom a kontextovými blokmi.
+ *
+ * Prečo: Najdôležitejšie informácie sú hneď navrchu, aby používateľ nemusel preklikávať viac tabov.
+ */
 export const HomeSection = memo(function HomeSection({
   title,
   branchImage,

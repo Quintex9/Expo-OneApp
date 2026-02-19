@@ -1,6 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
+/**
+ * LocationActionsModal: Ponúka rýchle akcie pre uloženú polohu (upraviť alebo odstrániť).
+ *
+ * Prečo: Sústredené akcie v jednom modale skracujú cestu k správe miest bez zbytočného klikania.
+ */
 export default function LocationActionsModal({
   location,
   onClose,

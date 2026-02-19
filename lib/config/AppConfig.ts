@@ -1,6 +1,8 @@
-// AppConfig: jednotny pristup ku konfiguracii prostredia.
-// Zodpovednost: citanie, validacia a fallback env hodnot.
-// Vstup/Vystup: exportuje typed konfiguraciu pre data a API vrstvu.
+/**
+ * AppConfig: Spracúva environment konfiguráciu a feature flagy do typovaného runtime objektu.
+ *
+ * Prečo: Validácia konfigurácie pri štarte znižuje riziko tichých chýb v rôznych prostrediach.
+ */
 
 import {
   API_BASE_URL,

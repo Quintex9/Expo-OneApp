@@ -1,6 +1,8 @@
-// BenefitsScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * BenefitsScreen: Obrazovka benefitov zobrazuje aktívne a využité výhody používateľa.
+ *
+ * Prečo: Používateľ má všetky benefity na jednom mieste a vie rýchlo prepnúť medzi stavmi bez ďalšej navigácie.
+ */
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,6 +1,8 @@
-// labelSelection: vyber markerov pre zobrazenie labelov.
-// Zodpovednost: ranking, collision filter a stabilny vyber Top N.
-// Vstup/Vystup: vracia set marker ID pre label render politiku.
+/**
+ * labelSelection: Mapový modul label Selection rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v labelSelection znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 import {
   MAP_LABEL_CANDIDATE_MULTIPLIER,

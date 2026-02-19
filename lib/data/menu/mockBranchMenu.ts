@@ -1,6 +1,8 @@
-// mockBranchMenu: fallback menu/cennik data pre Business Detail V2.
-// Zodpovednost: vracia category-aware textove menu polozky pri chybajucich backend datach.
-// Vstup/Vystup: export helperov pre menuLabelMode a fallback itemy.
+/**
+ * mockBranchMenu: Menu modul mock Branch Menu poskytuje fallback položky menu alebo cenníka pre detail podniku.
+ *
+ * Prečo: Fallback obsah v mockBranchMenu drží konzistentný zážitok aj pri nekompletných backend dátach.
+ */
 
 import type { DiscoverCategory, BranchMenuLabelMode } from "../../interfaces";
 import type { BranchMenuItemDto } from "../models";

@@ -1,6 +1,8 @@
-// homeSearchTypes: kontrakty pre Home Search V2 index a vysledky.
-// Zodpovednost: drzi typy pre build/index/search API.
-// Vstup/Vystup: export typov pre engine a UI hook.
+/**
+ * homeSearchTypes: Definuje typové kontrakty pre Home Search index, vstupy a výsledné položky.
+ *
+ * Prečo: Presné typy chránia kompatibilitu medzi search enginom, hookom a overlay komponentom.
+ */
 
 import type { BranchData, DiscoverCategory } from "../interfaces";
 

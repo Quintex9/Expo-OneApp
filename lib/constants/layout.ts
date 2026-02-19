@@ -1,6 +1,8 @@
-// layout constants: spolocne layout rozmery a offsety.
-// Zodpovednost: drzi cisla pouzivane vo viacerych screenoch.
-// Vstup/Vystup: exportuje stabilne hodnoty pre UI rozlozenie.
+/**
+ * layout: Súbor layout drží zdieľané konštanty používané vo viacerých moduloch.
+ *
+ * Prečo: Centralizované hodnoty v layout bránia rozchodu čísel a názvov medzi obrazovkami.
+ */
 
 export const BRANCH_CARD_BASELINE_OFFSET = 0;
 export const BRANCH_CARD_OVERLAY_PADDING_Y = 7;

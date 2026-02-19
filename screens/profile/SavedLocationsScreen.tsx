@@ -1,6 +1,8 @@
-// SavedLocationsScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * SavedLocationsScreen: Správa uložených lokalít používateľa s možnosťou úpravy a odstránenia.
+ *
+ * Prečo: Uložené miesta sú pri Discover flowe kritické, preto majú vlastnú prehľadnú správu.
+ */
 
 import React, { useState } from "react";
 import {

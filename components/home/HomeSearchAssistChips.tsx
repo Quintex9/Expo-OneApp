@@ -9,6 +9,11 @@ interface HomeSearchAssistChipsProps {
   clearLabel?: string;
 }
 
+/**
+ * HomeSearchAssistChips: Renderuje pomocné chips pre návrhy dotazov, históriu a rýchle vyčistenie.
+ *
+ * Prečo: Rýchle voľby znižujú počet úderov na klávesnici a skracujú cestu k relevantnému výsledku.
+ */
 function HomeSearchAssistChips({
   title,
   chips,

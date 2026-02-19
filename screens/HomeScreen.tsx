@@ -1,6 +1,8 @@
-// HomeScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * HomeScreen: Domovská obrazovka prezentuje hlavné sekcie podnikov, filtre a vstup do vyhľadávania.
+ *
+ * Prečo: Home je vstupný bod aplikácie, preto agreguje najdôležitejšie akcie a odporúčaný obsah na jednom mieste.
+ */
 
 import React, { useCallback, useEffect, useMemo } from "react";
 import {

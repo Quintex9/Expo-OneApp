@@ -1,6 +1,8 @@
-// CardsAddOtherCardNameScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * CardsAddOtherCardNameScreen: Krok doplnenia názvu pri pridávaní vlastnej/inej karty.
+ *
+ * Prečo: Vlastný názov karty zlepšuje orientáciu používateľa v zozname pri väčšom počte kariet.
+ */
 
 import React, { useCallback, useMemo, useState } from "react";
 import {

@@ -1,6 +1,8 @@
-// coords: fixture suradnice markerov pre Discover mapu.
-// Zodpovednost: drzi id, kategoriu a geo polohu markerov.
-// Vstup/Vystup: exportuje zdrojove mapove body pre datasource.
+/**
+ * coords: Dátový modul coords rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v coords uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import { Coords } from "../interfaces";
 

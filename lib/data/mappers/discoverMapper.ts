@@ -1,6 +1,8 @@
-// discoverMapper: spolocne derivacie pre Discover data flow.
-// Zodpovednost: grouping markerov a fallback branch model z markerov.
-// Vstup/Vystup: helpery pre skupiny markerov a odvodene branch listy.
+/**
+ * discoverMapper: Mapper discover Mapper prevádza zdrojové DTO dáta na view model pripravený pre UI.
+ *
+ * Prečo: Jasne oddelený mapping v discoverMapper drží fallback pravidlá a normalizáciu mimo komponentov.
+ */
 
 import type { BranchViewModel, MarkerViewModel } from "../models";
 import { formatTitleFromId } from "../normalizers";

@@ -1,6 +1,8 @@
-// discover constants: default hodnoty pre Discover mapu a detail.
-// Zodpovednost: zoom prahy, layout konstanty a dummy branch data.
-// Vstup/Vystup: exportuje konfig hodnoty pre Discover obrazovky.
+/**
+ * discover: Súbor discover drží zdieľané konštanty používané vo viacerých moduloch.
+ *
+ * Prečo: Centralizované hodnoty v discover bránia rozchodu čísel a názvov medzi obrazovkami.
+ */
 
 import { ImageSourcePropType } from "react-native";
 import type { BranchData } from "../../lib/interfaces";

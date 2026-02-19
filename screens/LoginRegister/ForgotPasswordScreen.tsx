@@ -1,6 +1,8 @@
-// ForgotPasswordScreen: obrazovka autentifikacneho flow.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * ForgotPasswordScreen: Obrazovka obnovy hesla odosiela reset pokyn na e-mail používateľa.
+ *
+ * Prečo: Samostatná obnova hesla znižuje frustráciu pri strate prístupu a udrží bezpečný auth proces.
+ */
 
 import React, { useState } from "react";
 import {

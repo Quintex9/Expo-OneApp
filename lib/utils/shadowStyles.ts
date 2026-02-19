@@ -1,6 +1,8 @@
-// shadowStyles: helpery pre jednotne tiene v UI.
-// Zodpovednost: drzat opakovane shadow hodnoty na jednom mieste.
-// Vstup/Vystup: export style objektov pre iOS/Android tiene.
+/**
+ * shadowStyles: Utility súbor shadow Styles ponúka opakovateľné pomocné funkcie alebo štýlové helpery.
+ *
+ * Prečo: Spoločné helpery v shadowStyles držia konzistentné správanie naprieč celou aplikáciou.
+ */
 
 import { Platform, ViewStyle } from "react-native";
 

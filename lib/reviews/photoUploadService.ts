@@ -1,6 +1,8 @@
-// photoUploadService: backend-ready dummy upload pre review fotky.
-// Zodpovednost: drzat upload kontrakt oddeleny od UI, bez realneho storage write v tejto faze.
-// Vstup/Vystup: prijima draft fotky a vracia upload result s placeholder remote URL.
+/**
+ * photoUploadService: Poskytuje upload service vrstvu pre fotky recenzií s backend-ready rozhraním.
+ *
+ * Prečo: Izolácia upload logiky umožňuje neskoršie pripojenie reálneho storage bez zásahu do UI komponentov.
+ */
 
 import type { ReviewPhotoDraft, ReviewPhotoUploadResult } from "./types";
 

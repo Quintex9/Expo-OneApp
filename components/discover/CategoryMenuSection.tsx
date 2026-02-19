@@ -219,6 +219,11 @@ const MENU_BY_CATEGORY: Record<MenuCategory, MenuConfig> = {
   },
 };
 
+/**
+ * CategoryMenuSection: Starší kategóriový menu blok s položkami a cenami podľa typu prevádzky.
+ *
+ * Prečo: Fallback menu drží spätnú kompatibilitu pre prevádzky bez nového menu modelu.
+ */
 export const CategoryMenuSection = memo(function CategoryMenuSection({ category }: Props) {
   const { t } = useTranslation();
 

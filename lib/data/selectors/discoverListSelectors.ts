@@ -1,6 +1,8 @@
-// discoverListSelectors: selektory pre Discover list obrazovku.
-// Zodpovednost: build, filter a sort list itemov z marker dat.
-// Vstup/Vystup: vracia list modely pripravene pre BranchCard render.
+/**
+ * discoverListSelectors: Selektor discover List Selectors pripravuje filtrované alebo zoradené kolekcie pre obrazovky.
+ *
+ * Prečo: Presun výberovej logiky do discoverListSelectors udrží komponenty jednoduchšie a výkonovo predvídateľné.
+ */
 
 import type { DiscoverCategory } from "../../interfaces";
 import type { BranchViewModel, MarkerViewModel } from "../models";

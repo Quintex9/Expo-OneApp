@@ -3,6 +3,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import type { SelectableCardProps } from "../lib/interfaces";
 
+/**
+ * SelectableCard: Jednoduchá klikateľná karta pre výber položky podľa identifikátora.
+ *
+ * Prečo: Unifikované správanie výberu znižuje duplicitu a drží rovnaký tap feedback naprieč UI.
+ */
 export default function SelectableCard({
   id,
   title,

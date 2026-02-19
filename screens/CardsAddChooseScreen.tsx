@@ -1,6 +1,8 @@
-// CardsAddChooseScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * CardsAddChooseScreen: Úvodný krok pridania karty, kde si používateľ zvolí spôsob pokračovania.
+ *
+ * Prečo: Jasná voľba vstupného kroku znižuje chyby v neskorších častiach flowu pridávania karty.
+ */
 
 import React, { useMemo, useState } from "react";
 import {

@@ -1,6 +1,8 @@
-// useDataSource: hook pre stabilne nacitanie aktivneho datasource.
-// Zodpovednost: memoizuje vybrany zdroj dat pre render cyklus.
-// Vstup/Vystup: vracia instanciu DataSource pre dalsie hooky/sluzby.
+/**
+ * useDataSource: Dátový modul use Data Source rieši sourcing, normalizáciu alebo orchestráciu dát pre aplikáciu.
+ *
+ * Prečo: Oddelenie dátových pravidiel v useDataSource uľahčuje výmenu datasource bez zmien v komponentoch.
+ */
 
 import { useMemo } from "react";
 import { getDataSource } from "./index";

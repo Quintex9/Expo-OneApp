@@ -9,6 +9,11 @@ type Props = {
   onLogin: () => void;
 };
 
+/**
+ * BenefitsBottomSheet: Bottom sheet detailu benefitu s podmienkami a CTA akciami.
+ *
+ * Prečo: Detail benefitu sa dá zobraziť nad aktuálnym kontextom bez opustenia detailu prevádzky.
+ */
 export function BenefitsBottomSheet({
   sheetRef,
   snapPoints,

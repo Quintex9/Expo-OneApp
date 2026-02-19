@@ -21,6 +21,11 @@ const SAVED_LOCATION_MARKER_ICON = require("../../images/test_placeholder.png");
 
 type LocationStep = "add" | "details" | "search" | "map";
 
+/**
+ * LocationAddStep: Prvý krok flowu pre pridanie lokality: voľba názvu a vstup do detailu.
+ *
+ * Prečo: Rozdelenie na kroky znižuje kognitívnu záťaž a minimalizuje chyby pri vypĺňaní.
+ */
 function LocationAddStep({
   addressLine1,
   addressLine2,
@@ -88,6 +93,11 @@ function LocationAddStep({
   );
 }
 
+/**
+ * LocationDetailsStep: Krok na doplnenie názvu lokality a potvrdenie údajov pred uložením.
+ *
+ * Prečo: Explicitné potvrdenie detailov pred uložením znižuje počet zle pomenovaných miest.
+ */
 function LocationDetailsStep({
   locationName,
   onChangeName,
@@ -137,6 +147,11 @@ function LocationDetailsStep({
   );
 }
 
+/**
+ * LocationSearchStep: Krok s vyhľadávaním adries a výberom výsledku pred otvorením mapy.
+ *
+ * Prečo: Textové hľadanie je rýchlejšie pri presnej adrese ako manuálne posúvanie mapy.
+ */
 function LocationSearchStep({
   searchQuery,
   onChangeQuery,
@@ -207,6 +222,11 @@ function LocationSearchStep({
   );
 }
 
+/**
+ * LocationMapStep: Mapový krok na jemné doladenie bodu a finálne uloženie lokality.
+ *
+ * Prečo: Používateľ vie potvrdiť presné umiestnenie pinu, keď geokóding netrafí úplne presne.
+ */
 function LocationMapStep({
   selectedCoord,
   selectedCoordLabel,
@@ -316,6 +336,11 @@ function LocationMapStep({
   );
 }
 
+/**
+ * DiscoverLocationSheet: Natívny multi-step flow pre správu polohy so search krokom, mapou a uložením bodu.
+ *
+ * Prečo: Orchestrácia krokov na jednom mieste drží jednotné prechody a správny stav medzi krokmi.
+ */
 export default function DiscoverLocationSheet({
   locationRef,
   setLocation,

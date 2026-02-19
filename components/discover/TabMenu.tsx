@@ -39,6 +39,11 @@ const resolveLabel = (
   return item.fallbackLabel ?? FALLBACK_LABELS[item.key] ?? item.key;
 };
 
+/**
+ * TabMenu: Horizontálne menu tabov pre detail prevádzky s aktívnym stavom a prepínaním sekcií.
+ *
+ * Prečo: Jednotné prepínanie sekcií udrží orientáciu aj pri väčšom počte tabov.
+ */
 export const TabMenu = memo(function TabMenu({
   items,
   active,

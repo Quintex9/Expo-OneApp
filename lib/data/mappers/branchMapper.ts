@@ -1,6 +1,8 @@
-// branchMapper: prevod BranchDto na BranchViewModel.
-// Zodpovednost: fallback logika pre rating, texty, obrazky a offers.
-// Vstup/Vystup: mapBranchDtoToViewModel pripraveny pre UI komponenty.
+/**
+ * branchMapper: Mapper branch Mapper prevádza zdrojové DTO dáta na view model pripravený pre UI.
+ *
+ * Prečo: Jasne oddelený mapping v branchMapper drží fallback pravidlá a normalizáciu mimo komponentov.
+ */
 
 import type { ImageSourcePropType } from "react-native";
 import type { BranchDto, BranchViewModel } from "../models";

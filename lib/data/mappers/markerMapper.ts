@@ -1,6 +1,8 @@
-// markerMapper: prevod MarkerDto na MarkerViewModel.
-// Zodpovednost: normalizacia ID, ratingu, category a marker ikon.
-// Vstup/Vystup: mapMarkerDtoToViewModel pre mapovy render pipeline.
+/**
+ * markerMapper: Mapper marker Mapper prevádza zdrojové DTO dáta na view model pripravený pre UI.
+ *
+ * Prečo: Jasne oddelený mapping v markerMapper drží fallback pravidlá a normalizáciu mimo komponentov.
+ */
 
 import type { MarkerDto, MarkerViewModel } from "../models";
 import { formatTitleFromId, getRatingForId } from "../normalizers";

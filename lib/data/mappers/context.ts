@@ -1,6 +1,8 @@
-// mapper context: spolocny kontext a helpery pre mapper vrstvu.
-// Zodpovednost: preklady, resolve ikon/obrazkov a override lookup.
-// Vstup/Vystup: createMapperContext a utility pre mapovanie DTO -> UI.
+/**
+ * context: Mapper context prevádza zdrojové DTO dáta na view model pripravený pre UI.
+ *
+ * Prečo: Jasne oddelený mapping v context drží fallback pravidlá a normalizáciu mimo komponentov.
+ */
 
 import type { ImageSourcePropType } from "react-native";
 import { DUMMY_BRANCH, translateBranchOffers } from "../../constants/discover";

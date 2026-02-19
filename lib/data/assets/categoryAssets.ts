@@ -1,6 +1,8 @@
-// categoryAssets: centralny register obrazkov podla kategorie.
-// Zodpovednost: placeholder, gallery a marker ikony na jednom mieste.
-// Vstup/Vystup: helpery na bezpecny vyber assetu podla typu prevadzky.
+/**
+ * categoryAssets: Asset register category Assets mapuje kategórie a stavy na obrazové zdroje.
+ *
+ * Prečo: Jedno miesto pre asset mapovanie v categoryAssets zjednodušuje správu ikon a fallback obrázkov.
+ */
 
 import type { ImageSourcePropType } from "react-native";
 import type { DiscoverCategory } from "../../interfaces";

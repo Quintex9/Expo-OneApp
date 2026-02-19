@@ -1,6 +1,8 @@
-// clusterIcons: generator/loader cluster ikon podla poctu markerov.
-// Zodpovednost: priprava vizualu cluster pinov pre mapu.
-// Vstup/Vystup: vracia image source pre cluster marker.
+/**
+ * clusterIcons: Mapový modul cluster Icons rieši špecifickú časť renderu alebo správania mapy.
+ *
+ * Prečo: Izolované mapové utility v clusterIcons znižujú riziko regresií pri úpravách markerov a kamery.
+ */
 
 export const CLUSTER_COUNT_KEYS = [
   "0",

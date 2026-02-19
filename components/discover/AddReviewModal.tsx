@@ -49,6 +49,11 @@ const dedupePhotosByUri = (photos: ReviewPhotoDraft[]) => {
   return Array.from(unique.values());
 };
 
+/**
+ * AddReviewModal: Modal na vytvorenie recenzie s hodnotením, textom a výberom fotiek.
+ *
+ * Prečo: Vedený formulár zvyšuje kvalitu recenzií a znižuje počet neúplných odoslaní.
+ */
 export function AddReviewModal({
   visible,
   onClose,

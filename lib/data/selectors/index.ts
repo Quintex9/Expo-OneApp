@@ -1,6 +1,8 @@
-// selectors index: barrel export selektorov.
-// Zodpovednost: centralizovat import selektor funkcii.
-// Vstup/Vystup: re-export helperov pre Discover list flow.
+/**
+ * index: Selektor index pripravuje filtrované alebo zoradené kolekcie pre obrazovky.
+ *
+ * Prečo: Presun výberovej logiky do index udrží komponenty jednoduchšie a výkonovo predvídateľné.
+ */
 
 export {
   buildDiscoverListItems,

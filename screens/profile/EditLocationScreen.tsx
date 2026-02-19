@@ -1,6 +1,8 @@
-// EditLocationScreen: obrazovka profilovej sekcie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * EditLocationScreen: Formulár na úpravu jednej uloženej lokality.
+ *
+ * Prečo: Samostatný edit krok predchádza nechcenému prepísaniu iných lokalít a zvyšuje kontrolu nad zmenami.
+ */
 
 import React, { useState } from "react";
 import {

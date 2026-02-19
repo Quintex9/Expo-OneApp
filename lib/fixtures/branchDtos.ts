@@ -1,6 +1,8 @@
-// branchDtos fixture: mock DTO katalog prevadzok.
-// Zodpovednost: lokalne testovacie data v backend kontrakt shape.
-// Vstup/Vystup: export branchDtosFixture pre mock datasource.
+/**
+ * branchDtos: Fixture branch Dtos poskytuje lokálne testovacie dáta pre vývojové scenáre.
+ *
+ * Prečo: Stabilné mock dáta v branchDtos umožňujú rýchle overenie UI bez závislosti od backendu.
+ */
 
 import type { BranchDto } from "../data/models";
 import { getMockBranchSearchMetadata } from "../data/search/mockBranchSearchMetadata";

@@ -1,6 +1,8 @@
-// BusinessDetailScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * BusinessDetailScreen: Detail prevádzky orchestruje hero obsah, tab sekcie, recenzie, menu a súvisiace interakcie.
+ *
+ * Prečo: Komplexný detail je centralizovaný v jednej obrazovke, aby boli prechody medzi sekciami konzistentné.
+ */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {

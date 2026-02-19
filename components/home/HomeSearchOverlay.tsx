@@ -36,6 +36,11 @@ interface HomeSearchOverlayProps {
 
 const RESULT_ITEM_HEIGHT = 144;
 
+/**
+ * HomeSearchOverlay: Full-screen vyhľadávacia vrstva na Home so scope filtrom, históriou a výsledkami.
+ *
+ * Prečo: Oddelenie search flow do overlay urýchľuje hľadanie bez opustenia kontextu domovskej obrazovky.
+ */
 function HomeSearchOverlay({
   visible,
   query,

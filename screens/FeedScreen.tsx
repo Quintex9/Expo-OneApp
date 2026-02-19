@@ -1,6 +1,8 @@
-// FeedScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * FeedScreen: Feed obrazovka prehráva reels obsah s gestami a prepojením na prevádzky.
+ *
+ * Prečo: Samostatná obrazovka pre feed drží multimediálne interakcie izolované od ostatných častí aplikácie.
+ */
 
 import React, { memo, useMemo, useRef, useCallback, useEffect } from "react";
 import {

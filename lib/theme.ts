@@ -1,6 +1,8 @@
-// theme: centralne dizajn tokeny aplikacie.
-// Zodpovednost: farby, typografia, spacing, shadows a helper style objekty.
-// Vstup/Vystup: exportuje theme hodnoty pre konzistentne UI styly.
+/**
+ * theme: Obsahuje dizajnové tokeny aplikácie (farby, typografia, spacing a opakovateľné štýly).
+ *
+ * Prečo: Tokeny na jednom mieste držia konzistentný vizuál a uľahčujú globálne úpravy dizajnu.
+ */
 
 export const colors = {
     // Primárna farba (oranžová)

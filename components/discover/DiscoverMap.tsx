@@ -3,6 +3,11 @@ import { Text, View } from "react-native";
 import type { DiscoverMapProps } from "../../lib/interfaces";
 import { styles } from "./discoverStyles";
 
+/**
+ * DiscoverMap: Web fallback komponent mapy, ktorý na webe zobrazuje bezpečný placeholder.
+ *
+ * Prečo: Predchádza pádom buildov na platforme bez natívneho mapového runtime.
+ */
 function DiscoverMap(_props: DiscoverMapProps) {
   return (
     <View style={styles.map}>

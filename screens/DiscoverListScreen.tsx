@@ -1,6 +1,8 @@
-// DiscoverListScreen: obrazovka hlavneho flow aplikacie.
-// Zodpovednost: renderuje UI, obsluhuje udalosti a lokalny stav obrazovky.
-// Vstup/Vystup: pracuje s navigation params, hookmi a volaniami akcii.
+/**
+ * DiscoverListScreen: List režim Discover zobrazuje filtrované prevádzky v zozname s radením podľa vybraného kritéria.
+ *
+ * Prečo: Alternatíva k mape umožní rýchle porovnanie prevádzok v textovo-kartovom rozložení.
+ */
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {

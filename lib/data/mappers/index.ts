@@ -1,6 +1,8 @@
-// mappers index: barrel export mapper vrstvy.
-// Zodpovednost: jednotny import mapovacich funkcii.
-// Vstup/Vystup: re-export branch/marker/discover mapper API.
+/**
+ * index: Mapper index prevádza zdrojové DTO dáta na view model pripravený pre UI.
+ *
+ * Prečo: Jasne oddelený mapping v index drží fallback pravidlá a normalizáciu mimo komponentov.
+ */
 
 export { createMapperContext, normalizeCategoryValue } from "./context";
 export type { MapperContext } from "./context";
