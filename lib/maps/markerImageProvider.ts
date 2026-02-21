@@ -37,6 +37,34 @@ const BADGED_ANCHOR_X = BASE_ANCHOR_X;
 const BADGED_ANCHOR_Y =
   (BADGED_PIN_OFFSET_Y + PIN_TRIM_HEIGHT) / BADGED_CANVAS_HEIGHT;
 
+type FullSpriteCollisionZone = {
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+};
+
+type FullSpriteCollisionRowSegment = {
+  left: number;
+  right: number;
+};
+
+type FullSpriteCollisionRow = {
+  offsetY: number;
+  height: number;
+  segments: FullSpriteCollisionRowSegment[];
+};
+
+type FullSpriteMetrics = {
+  width: number;
+  height: number;
+  anchor: { x: number; y: number };
+  collisionRows: FullSpriteCollisionRow[];
+  collisionZones: FullSpriteCollisionZone[];
+};
+
+const fullSpriteMetricsCache = new Map<string, FullSpriteMetrics>();
+
 const resolveLocalFullAnchor = (width: number, height: number) => {
   if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
     return FULL_MARKER_DEFAULT_ANCHOR;
@@ -160,19 +188,85 @@ export const hasLocalFullMarkerSprite = (marker?: DiscoverMapMarker | null) =>
   );
 
 export const getMarkerFullSpriteMetrics = (marker?: DiscoverMapMarker | null) => {
-  const sprite = getMarkerSpriteKeyCandidates(marker)
-    .map((key) => getLocalFullMarkerSprite(key))
-    .find((candidate) => Boolean(candidate));
+  const spriteKeyCandidates = getMarkerSpriteKeyCandidates(marker);
+  let resolvedSpriteKey: string | null = null;
+  let sprite: ReturnType<typeof getLocalFullMarkerSprite> | undefined;
 
-  if (!sprite) {
+  for (const key of spriteKeyCandidates) {
+    const candidate = getLocalFullMarkerSprite(key);
+    if (!candidate) {
+      continue;
+    }
+    resolvedSpriteKey = key;
+    sprite = candidate;
+    break;
+  }
+
+  if (!sprite || !resolvedSpriteKey) {
     return null;
   }
 
-  return {
+  const cached = fullSpriteMetricsCache.get(resolvedSpriteKey);
+  if (cached) {
+    return cached;
+  }
+
+  const anchor = resolveLocalFullAnchor(sprite.width, sprite.height);
+  const anchorPxX = anchor.x * sprite.width;
+  const anchorPxY = anchor.y * sprite.height;
+  const collisionRows = sprite.collisionRows
+    .filter(
+      (row) =>
+        Number.isFinite(row.y) &&
+        Array.isArray(row.segments) &&
+        row.segments.length > 0
+    )
+    .map((row) => {
+      const segments = row.segments
+        .filter(
+          (segment) =>
+            Number.isFinite(segment.left) &&
+            Number.isFinite(segment.width) &&
+            segment.width > 0
+        )
+        .map((segment) => ({
+          left: segment.left - anchorPxX,
+          right: segment.left + segment.width - anchorPxX,
+        }))
+        .filter((segment) => segment.right > segment.left);
+      return {
+        offsetY: row.y - anchorPxY,
+        height: 1,
+        segments,
+      };
+    })
+    .filter((row) => row.segments.length > 0);
+  const collisionZones = sprite.collisionZones
+    .filter(
+      (zone) =>
+        Number.isFinite(zone.width) &&
+        zone.width > 0 &&
+        Number.isFinite(zone.height) &&
+        zone.height > 0 &&
+        Number.isFinite(zone.left) &&
+        Number.isFinite(zone.top)
+    )
+    .map((zone) => ({
+      width: zone.width,
+      height: zone.height,
+      offsetX: zone.left + zone.width / 2 - anchorPxX,
+      offsetY: zone.top + zone.height / 2 - anchorPxY,
+    }));
+
+  const metrics: FullSpriteMetrics = {
     width: sprite.width,
     height: sprite.height,
-    anchor: resolveLocalFullAnchor(sprite.width, sprite.height),
+    anchor,
+    collisionRows,
+    collisionZones,
   };
+  fullSpriteMetricsCache.set(resolvedSpriteKey, metrics);
+  return metrics;
 };
 
 export const getMarkerRemoteSpriteUrl = (marker?: DiscoverMapMarker | null) =>

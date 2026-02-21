@@ -31,6 +31,10 @@ const TITLE_TEXT_COLOR = "#FFFFFF";
 const TITLE_STROKE_COLOR = "#000000";
 const TITLE_STROKE_WIDTH = 5;
 const TITLE_FONT = "600 30px Arial";
+const MARKER_COLLISION_ALPHA_THRESHOLD = 24;
+const MARKER_COLLISION_MIN_ZONE_WIDTH = 2;
+const MARKER_COLLISION_MIN_ZONE_HEIGHT = 1;
+const MARKER_COLLISION_MAX_HORIZONTAL_JOIN_DELTA = 1;
 
 const CATEGORY_DIR_MAP = {
   Fitness: "fitness",
@@ -62,6 +66,11 @@ function escapeTsString(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function toRounded(value, precision = 4) {
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+}
+
 function normalizeTitleFromId(id) {
   const normalized = id.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
   if (!normalized) {
@@ -89,6 +98,157 @@ function slugifyId(id) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
   return normalized || "marker";
+}
+
+function extractOpaqueRowSegments(data, width, y) {
+  const segments = [];
+  const rowOffset = y * width * 4;
+  let x = 0;
+
+  while (x < width) {
+    while (x < width && data[rowOffset + x * 4 + 3] < MARKER_COLLISION_ALPHA_THRESHOLD) {
+      x += 1;
+    }
+    if (x >= width) {
+      break;
+    }
+    const startX = x;
+    while (x < width && data[rowOffset + x * 4 + 3] >= MARKER_COLLISION_ALPHA_THRESHOLD) {
+      x += 1;
+    }
+    const endX = x - 1;
+    const segmentWidth = endX - startX + 1;
+    if (segmentWidth >= MARKER_COLLISION_MIN_ZONE_WIDTH) {
+      segments.push({
+        left: startX,
+        right: endX,
+      });
+    }
+  }
+
+  return segments;
+}
+
+function mergeRowSegmentsVertically(rowSegments) {
+  const zones = [];
+  let previousRefs = [];
+  let previousY = -1;
+
+  rowSegments.forEach((row) => {
+    if (previousY >= 0 && row.y !== previousY + 1) {
+      previousRefs = [];
+    }
+    const usedPrevious = new Set();
+    const currentRefs = [];
+
+    row.segments.forEach((segment) => {
+      let bestMatch = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      previousRefs.forEach((prevRef, prevIndex) => {
+        if (usedPrevious.has(prevIndex)) {
+          return;
+        }
+        const leftDelta = Math.abs(prevRef.left - segment.left);
+        const rightDelta = Math.abs(prevRef.right - segment.right);
+        if (
+          leftDelta > MARKER_COLLISION_MAX_HORIZONTAL_JOIN_DELTA ||
+          rightDelta > MARKER_COLLISION_MAX_HORIZONTAL_JOIN_DELTA
+        ) {
+          return;
+        }
+        const score = leftDelta + rightDelta;
+        if (score < bestScore) {
+          bestScore = score;
+          bestMatch = {
+            prevIndex,
+            zoneIndex: prevRef.zoneIndex,
+          };
+        }
+      });
+
+      if (bestMatch) {
+        usedPrevious.add(bestMatch.prevIndex);
+        const zone = zones[bestMatch.zoneIndex];
+        const zoneRight = zone.left + zone.width - 1;
+        zone.left = Math.min(zone.left, segment.left);
+        zone.width = Math.max(zoneRight, segment.right) - zone.left + 1;
+        zone.height += 1;
+        currentRefs.push({
+          zoneIndex: bestMatch.zoneIndex,
+          left: segment.left,
+          right: segment.right,
+        });
+        return;
+      }
+
+      const zoneIndex =
+        zones.push({
+          left: segment.left,
+          top: row.y,
+          width: segment.right - segment.left + 1,
+          height: 1,
+        }) - 1;
+      currentRefs.push({
+        zoneIndex,
+        left: segment.left,
+        right: segment.right,
+      });
+    });
+
+    previousRefs = currentRefs;
+    previousY = row.y;
+  });
+
+  return zones.filter(
+    (zone) =>
+      zone.width >= MARKER_COLLISION_MIN_ZONE_WIDTH &&
+      zone.height >= MARKER_COLLISION_MIN_ZONE_HEIGHT
+  );
+}
+
+function extractMarkerCollisionRows(ctx, width, height) {
+  const maxY = Math.min(height - 1, PIN_TIP_Y + 1);
+  const imageData = ctx.getImageData(0, 0, width, maxY + 1);
+  const { data } = imageData;
+  const rows = [];
+
+  for (let y = 0; y <= maxY; y += 1) {
+    const segments = extractOpaqueRowSegments(data, width, y);
+    if (segments.length === 0) {
+      continue;
+    }
+    rows.push({
+      y,
+      segments: segments.map((segment) => ({
+        left: segment.left,
+        width: segment.right - segment.left + 1,
+      })),
+    });
+  }
+
+  return rows;
+}
+
+function toMergeInputRows(collisionRows) {
+  return collisionRows.map((row) => ({
+    y: row.y,
+    segments: row.segments.map((segment) => ({
+      left: segment.left,
+      right: segment.left + segment.width - 1,
+    })),
+  }));
+}
+
+function extractMarkerCollision(ctx, width, height) {
+  const collisionRows = extractMarkerCollisionRows(ctx, width, height);
+  const collisionZones = mergeRowSegmentsVertically(
+    toMergeInputRows(collisionRows)
+  );
+  return {
+    collisionRows,
+    collisionZones,
+  };
 }
 
 function readMarkerCatalog() {
@@ -203,11 +363,19 @@ async function main() {
     const outputPath = path.join(OUTPUT_DIR, fileName);
     fs.writeFileSync(outputPath, canvas.toBuffer("image/png"));
 
+    const collision = extractMarkerCollision(
+      ctx,
+      canvasWidth,
+      FULL_MARKER_CANVAS_HEIGHT
+    );
+
     manifest.push({
       id: marker.id,
       fileName,
       width: canvasWidth,
       height: FULL_MARKER_CANVAS_HEIGHT,
+      collisionRows: collision.collisionRows,
+      collisionZones: collision.collisionZones,
     });
   }
 
@@ -219,6 +387,25 @@ async function main() {
     "export type FullMarkerSpriteEntry = {",
     "  image: number;",
     "  anchor: { x: number; y: number };",
+    "  width: number;",
+    "  height: number;",
+    "  collisionRows: ReadonlyArray<FullMarkerCollisionRow>;",
+    "  collisionZones: ReadonlyArray<FullMarkerCollisionZone>;",
+    "};",
+    "",
+    "export type FullMarkerCollisionRow = {",
+    "  y: number;",
+    "  segments: ReadonlyArray<FullMarkerCollisionRowSegment>;",
+    "};",
+    "",
+    "export type FullMarkerCollisionRowSegment = {",
+    "  left: number;",
+    "  width: number;",
+    "};",
+    "",
+    "export type FullMarkerCollisionZone = {",
+    "  left: number;",
+    "  top: number;",
     "  width: number;",
     "  height: number;",
     "};",
@@ -240,6 +427,32 @@ async function main() {
       "    anchor: FULL_MARKER_DEFAULT_ANCHOR,",
       `    width: ${item.width},`,
       `    height: ${item.height},`,
+      "    collisionRows: [",
+      ...item.collisionRows.map(
+        (row) =>
+          `      { y: ${toRounded(row.y, 3)}, segments: [${row.segments
+            .map(
+              (segment) =>
+                `{ left: ${toRounded(segment.left, 3)}, width: ${toRounded(
+                  segment.width,
+                  3
+                )} }`
+            )
+            .join(", ")}] },`
+      ),
+      "    ],",
+      "    collisionZones: [",
+      ...item.collisionZones.map(
+        (zone) =>
+          `      { left: ${toRounded(zone.left, 3)}, top: ${toRounded(
+            zone.top,
+            3
+          )}, width: ${toRounded(zone.width, 3)}, height: ${toRounded(
+            zone.height,
+            3
+          )} },`
+      ),
+      "    ],",
       "  },"
     );
   });

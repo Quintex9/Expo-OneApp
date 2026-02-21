@@ -42,6 +42,7 @@ import {
 } from "../../lib/maps/discoverMapUtils";
 import {
   normalizeDiscoverMapLabelPolicy,
+  type MarkerCollisionZone,
   selectInlineLabelLayout,
   selectInlineLabelIds,
   type LabelPlacement,
@@ -80,8 +81,6 @@ import {
   MAP_LABEL_LAYOUT_V3,
   MAP_LABEL_MAX_CANDIDATES_V3,
   MAP_LABEL_STICKY_SLOT_BONUS,
-  MAP_LABEL_COLLISION_WIDTH_SCALE_V3,
-  MAP_LABEL_COLLISION_HEIGHT_SCALE_V3,
   MAP_FULL_SPRITES_LOGS_ENABLED,
   MAP_FULL_SPRITES_V1,
   MAP_IOS_STABLE_MARKERS_LOGS_ENABLED,
@@ -128,6 +127,9 @@ const FULL_SPRITE_TITLE_OFFSET_Y =
 const FULL_SPRITE_TITLE_BASE_MAX_WIDTH =
   FULL_SPRITE_CANVAS_MIN_WIDTH - FULL_SPRITE_SIDE_PADDING_X * 2;
 const FULL_SPRITE_COLLISION_SAFETY_X = 2;
+const FULL_SPRITE_COLLISION_MIN_WIDTH = 34;
+const FULL_SPRITE_COLLISION_INK_SCALE_X = 0.96;
+const FULL_SPRITE_COLLISION_INK_SCALE_Y = 0.9;
 const FULL_SPRITE_VIEWPORT_MARGIN_X = 96;
 const FULL_SPRITE_VIEWPORT_MARGIN_Y = 72;
 const FULL_SPRITE_FADE_IN_DURATION_MS = 160;
@@ -139,22 +141,46 @@ const CLUSTER_PRESS_ZOOM_STEP = 1;
 const CLUSTER_PRESS_TARGET_MARGIN_ZOOM = 0.2;
 const INLINE_LABEL_COLLISION_GAP_X = 0;
 const INLINE_LABEL_COLLISION_GAP_Y = 0;
+const INLINE_LABEL_PRECISE_COLLISION_WIDTH_SCALE = 1;
+const INLINE_LABEL_PRECISE_COLLISION_HEIGHT_SCALE = 1;
 const INLINE_LABEL_FIXED_SLOT_OFFSETS = {
   below: { x: 0, y: 0 },
-  "below-right": { x: 0, y: 0 },
-  "below-left": { x: 0, y: 0 },
-  above: { x: 0, y: 0 },
+  "below-right": { x: 16, y: 0 },
+  "below-left": { x: -16, y: 0 },
+  above: { x: 0, y: -34 },
 } as const;
 const INLINE_LABEL_FIXED_SLOT_PENALTIES = {
   below: 0,
-  "below-right": 0,
-  "below-left": 0,
-  above: 0,
+  "below-right": 0.01,
+  "below-left": 0.012,
+  above: 0.018,
 } as const;
-const NATIVE_PROJECTION_FAST_LIMIT = 120;
-const NATIVE_PROJECTION_ULTRA_FAST_LIMIT = 72;
-const LABEL_RECOMPUTE_SKIP_PAN_PX = 10;
-const LABEL_RECOMPUTE_SKIP_ZOOM = 0.025;
+const LABEL_RECOMPUTE_SKIP_PAN_PX = 0.5;
+const LABEL_RECOMPUTE_SKIP_ZOOM = 0.001;
+const MARKER_COLLISION_TIP_Y = BADGED_PIN_OFFSET_Y + PIN_TRIM_HEIGHT;
+const MARKER_COLLISION_ZONE_SPECS = [
+  { widthRatio: 0.33, heightRatio: 0.14, top: 4 },
+  { widthRatio: 0.45, heightRatio: 0.16, top: BADGED_PIN_OFFSET_Y + 12 },
+  { widthRatio: 0.56, heightRatio: 0.18, top: BADGED_PIN_OFFSET_Y + 38 },
+  { widthRatio: 0.5, heightRatio: 0.18, top: BADGED_PIN_OFFSET_Y + 68 },
+  { widthRatio: 0.38, heightRatio: 0.16, top: BADGED_PIN_OFFSET_Y + 98 },
+  { widthRatio: 0.25, heightRatio: 0.14, top: BADGED_PIN_OFFSET_Y + 128 },
+  { widthRatio: 0.16, heightRatio: 0.12, top: BADGED_PIN_OFFSET_Y + 154 },
+] as const;
+const markerCollisionOffsetY = (zoneTop: number, zoneHeight: number) =>
+  zoneTop + zoneHeight / 2 - MARKER_COLLISION_TIP_Y;
+const MARKER_COLLISION_ZONES: MarkerCollisionZone[] = MARKER_COLLISION_ZONE_SPECS.map(
+  (spec) => {
+    const width = PIN_TRIM_WIDTH * spec.widthRatio;
+    const height = PIN_TRIM_HEIGHT * spec.heightRatio;
+    return {
+      width,
+      height,
+      offsetX: 0,
+      offsetY: markerCollisionOffsetY(spec.top, height),
+    };
+  }
+);
 
 const BASE_ANCHOR_X =
   (PIN_TRIM_X + PIN_TRIM_WIDTH / 2) / PIN_CANVAS_WIDTH;
@@ -255,17 +281,66 @@ const FULL_SPRITE_GLYPH_WIDTH_MAP: Record<string, number> = {
   "/": 12,
   "&": 22,
   "'": 7,
+  ":": 9,
+  ";": 9,
+  "!": 9,
+  "?": 18,
+  "(": 11,
+  ")": 11,
+  "+": 18,
+  "*": 16,
+  "\"": 10,
+};
+
+const FULL_SPRITE_COMBINING_MARKS_REGEX = /[\u0300-\u036f]/g;
+
+const normalizeFullSpriteGlyphText = (title: string) => {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return "";
+  }
+  try {
+    return trimmed
+      .normalize("NFD")
+      .replace(FULL_SPRITE_COMBINING_MARKS_REGEX, "")
+      .toUpperCase();
+  } catch {
+    return trimmed.toUpperCase();
+  }
+};
+
+const estimateUnknownFullSpriteGlyphWidth = (char: string) => {
+  if (char === " ") {
+    return 9;
+  }
+  if (/^[A-Z]$/.test(char)) {
+    return 20;
+  }
+  if (/^[0-9]$/.test(char)) {
+    return 19;
+  }
+  if (/^[.,:;'"`~]$/.test(char)) {
+    return 9;
+  }
+  if (/^[-_\/\\|]$/.test(char)) {
+    return 12;
+  }
+  if (/^[(){}\[\]]$/.test(char)) {
+    return 11;
+  }
+  return 18;
 };
 
 const estimateFullSpriteGlyphWidth = (title: string) => {
-  const text = title.trim().toUpperCase();
+  const text = normalizeFullSpriteGlyphText(title);
   if (!text) {
     return 0;
   }
   let total = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    total += FULL_SPRITE_GLYPH_WIDTH_MAP[char] ?? 20;
+  for (const char of text) {
+    total +=
+      FULL_SPRITE_GLYPH_WIDTH_MAP[char] ??
+      estimateUnknownFullSpriteGlyphWidth(char);
   }
   return total;
 };
@@ -299,15 +374,23 @@ const resolveFullSpriteLabelGeometry = (
       estimatedTitleWidth
     );
     const collisionWidth = clampNumber(
-      contentWidth + FULL_SPRITE_COLLISION_SAFETY_X,
-      40,
+      contentWidth * FULL_SPRITE_COLLISION_INK_SCALE_X +
+        FULL_SPRITE_COLLISION_SAFETY_X,
+      FULL_SPRITE_COLLISION_MIN_WIDTH,
       estimatedTitleWidth
+    );
+    const collisionHeight = Math.round(
+      clampNumber(
+        FULL_SPRITE_TITLE_HEIGHT * FULL_SPRITE_COLLISION_INK_SCALE_Y,
+        20,
+        FULL_SPRITE_TITLE_HEIGHT
+      )
     );
     return {
       width: estimatedTitleWidth,
       height: FULL_SPRITE_TITLE_HEIGHT,
-      collisionWidth: Math.round(collisionWidth),
-      collisionHeight: FULL_SPRITE_TITLE_HEIGHT - 2,
+      collisionWidth,
+      collisionHeight,
       offsetX: 0,
       offsetY: FULL_SPRITE_TITLE_OFFSET_Y,
     };
@@ -331,9 +414,17 @@ const resolveFullSpriteLabelGeometry = (
     titleWidth
   );
   const collisionWidth = clampNumber(
-    contentWidth + FULL_SPRITE_COLLISION_SAFETY_X,
-    40,
+    contentWidth * FULL_SPRITE_COLLISION_INK_SCALE_X +
+      FULL_SPRITE_COLLISION_SAFETY_X,
+    FULL_SPRITE_COLLISION_MIN_WIDTH,
     titleWidth
+  );
+  const collisionHeight = Math.round(
+    clampNumber(
+      FULL_SPRITE_TITLE_HEIGHT * FULL_SPRITE_COLLISION_INK_SCALE_Y,
+      20,
+      FULL_SPRITE_TITLE_HEIGHT
+    )
   );
   const anchorX =
     typeof metrics.anchor?.x === "number" && Number.isFinite(metrics.anchor.x)
@@ -349,8 +440,8 @@ const resolveFullSpriteLabelGeometry = (
       clampNumber(titleWidth, FULL_SPRITE_TITLE_MIN_WIDTH, FULL_SPRITE_TITLE_MAX_WIDTH)
     ),
     height: FULL_SPRITE_TITLE_HEIGHT,
-    collisionWidth: Math.round(collisionWidth),
-    collisionHeight: FULL_SPRITE_TITLE_HEIGHT - 2,
+    collisionWidth,
+    collisionHeight,
     offsetX: (0.5 - anchorX) * metrics.width,
     offsetY: FULL_SPRITE_TITLE_TOP - anchorY * metrics.height,
   };
@@ -1028,6 +1119,18 @@ function DiscoverMap({
         labelHeight: fullSpriteGeometry?.height,
         collisionWidth: fullSpriteGeometry?.collisionWidth,
         collisionHeight: fullSpriteGeometry?.collisionHeight,
+        markerCollisionZones:
+          useFullSpriteGeometry &&
+          Array.isArray(fullSpriteMetrics?.collisionZones) &&
+          fullSpriteMetrics.collisionZones.length > 0
+            ? fullSpriteMetrics.collisionZones
+            : MARKER_COLLISION_ZONES,
+        markerCollisionRows:
+          useFullSpriteGeometry &&
+          Array.isArray(fullSpriteMetrics?.collisionRows) &&
+          fullSpriteMetrics.collisionRows.length > 0
+            ? fullSpriteMetrics.collisionRows
+            : undefined,
         labelPriority: Number.isFinite(marker.labelPriority)
           ? Number(marker.labelPriority)
           : 0,
@@ -1188,11 +1291,16 @@ function DiscoverMap({
       const startedAtMs = Date.now();
       const selectionRunId = nativeProjectionRequestRef.current + 1;
       nativeProjectionRequestRef.current = selectionRunId;
+      const effectiveNextZoomRaw =
+        Platform.OS === "ios" ? nextZoom + IOS_ZOOM_OFFSET : nextZoom;
+      const effectiveNextZoom = clampNumber(effectiveNextZoomRaw, 0, 20);
+      const shouldShowSingleLayerForPass =
+        effectiveNextZoom >= singleLayerEnterZoom;
       if (
         mapLayoutSize.width <= 0 ||
         mapLayoutSize.height <= 0 ||
         labelCandidates.length === 0 ||
-        !showSingleLayer
+        !shouldShowSingleLayerForPass
       ) {
         commitInlineLabelLayout([], false, "", []);
         lastInlineRecomputeRef.current = null;
@@ -1201,9 +1309,6 @@ function DiscoverMap({
         return;
       }
 
-      const effectiveNextZoomRaw =
-        Platform.OS === "ios" ? nextZoom + IOS_ZOOM_OFFSET : nextZoom;
-      const effectiveNextZoom = clampNumber(effectiveNextZoomRaw, 0, 20);
       const hasForcedIds = forceInlineLabelIdsRef.current.size > 0;
       const previousRecompute = lastInlineRecomputeRef.current;
       let panDeltaPx = Number.POSITIVE_INFINITY;
@@ -1223,7 +1328,7 @@ function DiscoverMap({
       }
       const shouldThrottleIOSRecompute =
         isIOSStableMarkersMode &&
-        (source === "region-change" || source === "region-complete") &&
+        source === "region-change" &&
         !hasForcedIds;
 
       if (shouldThrottleIOSRecompute) {
@@ -1364,10 +1469,10 @@ function DiscoverMap({
           forceInlineLabelIdsRef.current.size > 0
             ? new Set(forceInlineLabelIdsRef.current)
             : undefined;
-        const maxCandidatesForPass =
-          source === "region-change"
-            ? MAP_LABEL_MAX_CANDIDATES_V3
-            : Math.max(MAP_LABEL_MAX_CANDIDATES_V3, selectionCandidates.length);
+        const maxCandidatesForPass = Math.max(
+          MAP_LABEL_MAX_CANDIDATES_V3,
+          selectionCandidates.length
+        );
         const selection = labelLayoutV3Enabled
           ? selectInlineLabelLayout({
               candidates: selectionCandidates,
@@ -1377,12 +1482,13 @@ function DiscoverMap({
               preferVisibleNonOverlapping: true,
               collisionGapX: INLINE_LABEL_COLLISION_GAP_X,
               collisionGapY: INLINE_LABEL_COLLISION_GAP_Y,
-              collisionWidthScale: MAP_LABEL_COLLISION_WIDTH_SCALE_V3,
-              collisionHeightScale: MAP_LABEL_COLLISION_HEIGHT_SCALE_V3,
+              collisionWidthScale: INLINE_LABEL_PRECISE_COLLISION_WIDTH_SCALE,
+              collisionHeightScale: INLINE_LABEL_PRECISE_COLLISION_HEIGHT_SCALE,
               maxCandidates: maxCandidatesForPass,
               stickySlotBonus: MAP_LABEL_STICKY_SLOT_BONUS,
               slotOffsets: INLINE_LABEL_FIXED_SLOT_OFFSETS,
               slotPenalties: INLINE_LABEL_FIXED_SLOT_PENALTIES,
+              markerObstacleScope: "all",
               mapSize: mapLayoutSize,
               labelSize: labelEngineBaseSize,
               policy: policyForPass,
@@ -1398,6 +1504,7 @@ function DiscoverMap({
                 zoom: effectiveNextZoom,
                 singleModeZoom: singleLayerEnterZoom,
                 preferVisibleNonOverlapping: true,
+                markerObstacleScope: "all",
                 mapSize: mapLayoutSize,
                 labelSize: labelEngineBaseSize,
                 policy: policyForPass,
@@ -1452,7 +1559,6 @@ function DiscoverMap({
       const shouldUseNativeProjection =
         labelLayoutV3Enabled &&
         mapLabelCollisionV2Enabled &&
-        source !== "region-change" &&
         labelCandidates.length <= MAP_LABEL_MAX_CANDIDATES_V3;
       const mapView = cameraRef.current;
       if (!shouldUseNativeProjection || !mapView) {
@@ -1460,27 +1566,7 @@ function DiscoverMap({
         return;
       }
 
-      const isSmallRegionCompleteStep =
-        source === "region-complete" &&
-        Number.isFinite(panDeltaPx) &&
-        Number.isFinite(zoomDelta) &&
-        panDeltaPx < 90 &&
-        zoomDelta < 0.18;
-      const baseNativeProjectionLimit =
-        fullSpriteTextLayersEnabled && !useInlineLabelOverlay
-          ? NATIVE_PROJECTION_FAST_LIMIT
-          : labelCandidates.length;
-      const dynamicNativeProjectionLimit = isSmallRegionCompleteStep
-        ? NATIVE_PROJECTION_ULTRA_FAST_LIMIT
-        : baseNativeProjectionLimit;
-      const nativeProjectionFloor = Math.min(
-        labelCandidates.length,
-        Math.max(36, forceInlineLabelIdsRef.current.size * 6)
-      );
-      const nativeProjectionLimit = Math.min(
-        labelCandidates.length,
-        Math.max(nativeProjectionFloor, dynamicNativeProjectionLimit)
-      );
+      const nativeProjectionLimit = labelCandidates.length;
       const stickyNativeProjectionIds = new Set<string>([
         ...inlineLabelIdsRef.current,
         ...Array.from(forceInlineLabelIdsRef.current),
@@ -1529,13 +1615,14 @@ function DiscoverMap({
         .slice(0, nativeProjectionLimit);
 
       const shouldRunInstantPassBeforeNative =
-        !fullSpriteTextLayersEnabled ||
-        useInlineLabelOverlay ||
-        source === "map-ready" ||
-        source === "dataset" ||
-        source === "layout" ||
-        !inlineLabelsEnabledRef.current ||
-        inlineLabelIdsRef.current.length === 0;
+        source !== "region-change" &&
+        (!fullSpriteTextLayersEnabled ||
+          useInlineLabelOverlay ||
+          source === "map-ready" ||
+          source === "dataset" ||
+          source === "layout" ||
+          !inlineLabelsEnabledRef.current ||
+          inlineLabelIdsRef.current.length === 0);
 
       if (shouldRunInstantPassBeforeNative) {
         // Instant pass first, then precise native-projected refinement.
@@ -1630,6 +1717,17 @@ function DiscoverMap({
     }
     return Array.from(fullSpriteTargetIdSet).sort().join("|");
   }, [fullSpriteTargetIdSet]);
+
+  const effectiveFullSpriteOpacityById = useMemo(() => {
+    if (fullSpriteFadeEnabled) {
+      return fullSpriteOpacityById;
+    }
+    const immediateMap: Record<string, number> = {};
+    fullSpriteTargetIdSet.forEach((id) => {
+      immediateMap[id] = 1;
+    });
+    return immediateMap;
+  }, [fullSpriteFadeEnabled, fullSpriteOpacityById, fullSpriteTargetIdSet]);
 
   const inlineTextRenderedByMarkerIdSet = useMemo(() => {
     if (!fullSpriteTextLayersEnabled || !showSingleLayer) {
@@ -1840,6 +1938,14 @@ function DiscoverMap({
   useEffect(() => {
     recomputeInlineLabels(cameraCenterRef.current, zoomRef.current, "dataset");
   }, [labelCandidates, recomputeInlineLabels]);
+
+  useEffect(() => {
+    recomputeInlineLabels(
+      cameraCenterRef.current,
+      zoomRef.current,
+      "region-complete"
+    );
+  }, [showSingleLayer, recomputeInlineLabels]);
 
   useEffect(() => {
     const generation = prefetchGenerationRef.current + 1;
@@ -2500,7 +2606,7 @@ function DiscoverMap({
             : getDefaultPinColor(marker, hasActiveFilter);
           const fullOpacityForMarker =
             !marker.isCluster && !marker.isStacked
-              ? clampNumber(fullSpriteOpacityById[marker.id] ?? 0, 0, 1)
+              ? clampNumber(effectiveFullSpriteOpacityById[marker.id] ?? 0, 0, 1)
               : 0;
           const compactMarkerOpacity =
             useOverlayFullSprites && fullOpacityForMarker >= 1 - FULL_SPRITE_FADE_EPSILON
@@ -2641,8 +2747,8 @@ function DiscoverMap({
           );
         }),
     [
+      effectiveFullSpriteOpacityById,
       failedRemoteSpriteKeySet,
-      fullSpriteOpacityById,
       fullSpriteTextLayersEnabled,
       hasActiveFilter,
       handleMarkerPress,
@@ -2707,7 +2813,11 @@ function DiscoverMap({
           return null;
         }
 
-        const opacity = fullSpriteOpacityById[marker.id] ?? 0;
+        const opacity = clampNumber(
+          effectiveFullSpriteOpacityById[marker.id] ?? 0,
+          0,
+          1
+        );
         if (opacity <= FULL_SPRITE_FADE_EPSILON) {
           return null;
         }
@@ -2737,8 +2847,8 @@ function DiscoverMap({
         );
       });
   }, [
+    effectiveFullSpriteOpacityById,
     failedRemoteSpriteKeySet,
-    fullSpriteOpacityById,
     useOverlayFullSprites,
     handleMarkerPress,
     renderMarkers,
@@ -2772,6 +2882,7 @@ function DiscoverMap({
         zoomControlEnabled={false}
         rotateEnabled={true}
         pitchEnabled={true}
+        scrollDuringRotateOrZoomEnabled={true}
         customMapStyle={Platform.OS === "android" ? GOOGLE_MAP_STYLE : undefined}
         showsPointsOfInterest={Platform.OS === "ios" ? false : undefined}
       >

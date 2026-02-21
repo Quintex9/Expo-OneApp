@@ -37,9 +37,35 @@ export type MarkerLabelCandidate = {
   labelHeight?: number;
   collisionWidth?: number;
   collisionHeight?: number;
+  markerCollisionZones?: MarkerCollisionZone[];
+  markerCollisionRows?: MarkerCollisionRow[];
+  markerCollisionWidth?: number;
+  markerCollisionHeight?: number;
+  markerCollisionOffsetX?: number;
+  markerCollisionOffsetY?: number;
   screenX?: number;
   screenY?: number;
 };
+
+export type MarkerCollisionZone = {
+  width: number;
+  height: number;
+  offsetX?: number;
+  offsetY?: number;
+};
+
+export type MarkerCollisionRowSegment = {
+  left: number;
+  right: number;
+};
+
+export type MarkerCollisionRow = {
+  offsetY: number;
+  height?: number;
+  segments: MarkerCollisionRowSegment[];
+};
+
+export type MarkerObstacleScope = "placed" | "all";
 
 export type LabelSlot = "below" | "below-right" | "below-left" | "above";
 
@@ -122,6 +148,7 @@ type SelectInlineLabelLayoutParams = {
   maxCandidates?: number;
   slotOffsets?: Partial<SlotOffsetMap>;
   slotPenalties?: Partial<SlotPenaltyMap>;
+  markerObstacleScope?: MarkerObstacleScope;
 };
 
 type ProjectedCandidate = {
@@ -134,6 +161,8 @@ type ProjectedCandidate = {
   labelHeight: number;
   collisionWidth: number;
   collisionHeight: number;
+  markerCollisionZones: ResolvedMarkerCollisionZone[];
+  markerCollisionRows: ResolvedMarkerCollisionRow[];
   labelOffsetX: number;
   labelOffsetY: number;
   labelPriority: number;
@@ -150,7 +179,35 @@ type PlacedLabelEntry = {
   score: number;
   slot: LabelSlot;
   rect: LabelRect;
+  markerObstacleIndices: number[];
   placement: LabelPlacement;
+};
+
+type MarkerObstacleEntry = {
+  id: string;
+  active: boolean;
+  rect: LabelRect;
+  screenX: number;
+  screenY: number;
+  rows?: ResolvedMarkerCollisionRow[];
+};
+
+type ResolvedMarkerCollisionZone = {
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+};
+
+type ResolvedMarkerCollisionRowSegment = {
+  left: number;
+  right: number;
+};
+
+type ResolvedMarkerCollisionRow = {
+  top: number;
+  bottom: number;
+  segments: ResolvedMarkerCollisionRowSegment[];
 };
 
 const TILE_SIZE = 256;
@@ -165,6 +222,11 @@ const MIN_COLLISION_GRID_CELL_SIZE = 44;
 const MAX_COLLISION_GRID_CELL_SIZE = 128;
 const MIN_LABEL_HEIGHT_PX = 8;
 const MAX_LABEL_HEIGHT_PX = 128;
+const MIN_MARKER_COLLISION_SIZE_PX = 0;
+const MIN_MARKER_COLLISION_ROW_HEIGHT_PX = 0.5;
+const MARKER_COLLISION_MIN_OVERLAP_WIDTH_PX = 1;
+const MARKER_COLLISION_MIN_OVERLAP_HEIGHT_PX = 1;
+const MARKER_COLLISION_MIN_OVERLAP_AREA_PX2 = 1;
 
 const clampNumber = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -200,6 +262,81 @@ const rectsOverlap = (a: LabelRect, b: LabelRect) =>
     a.bottom <= b.top ||
     a.top >= b.bottom
   );
+
+const rectIntersectionMetrics = (a: LabelRect, b: LabelRect) => {
+  const overlapWidth = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  const overlapHeight = Math.max(
+    0,
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+  );
+  return {
+    width: overlapWidth,
+    height: overlapHeight,
+    area: overlapWidth * overlapHeight,
+  };
+};
+
+const hasMarkerRowsCollision = (
+  labelRect: LabelRect,
+  markerCenterX: number,
+  markerCenterY: number,
+  rows: ResolvedMarkerCollisionRow[]
+) => {
+  let overlapArea = 0;
+  let overlapWidthMax = 0;
+  let overlapTop = Number.POSITIVE_INFINITY;
+  let overlapBottom = Number.NEGATIVE_INFINITY;
+
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
+    const rowTop = markerCenterY + row.top;
+    const rowBottom = markerCenterY + row.bottom;
+    if (rowBottom <= labelRect.top) {
+      continue;
+    }
+    if (rowTop >= labelRect.bottom) {
+      break;
+    }
+    const rowOverlapTop = Math.max(labelRect.top, rowTop);
+    const rowOverlapBottom = Math.min(labelRect.bottom, rowBottom);
+    if (rowOverlapBottom <= rowOverlapTop) {
+      continue;
+    }
+    const rowOverlapHeight = rowOverlapBottom - rowOverlapTop;
+    let rowIntersected = false;
+
+    for (let segmentIndex = 0; segmentIndex < row.segments.length; segmentIndex += 1) {
+      const segment = row.segments[segmentIndex];
+      const segmentLeft = markerCenterX + segment.left;
+      const segmentRight = markerCenterX + segment.right;
+      const overlapLeft = Math.max(labelRect.left, segmentLeft);
+      const overlapRight = Math.min(labelRect.right, segmentRight);
+      if (overlapRight <= overlapLeft) {
+        continue;
+      }
+      const overlapWidth = overlapRight - overlapLeft;
+      overlapArea += overlapWidth * rowOverlapHeight;
+      overlapWidthMax = Math.max(overlapWidthMax, overlapWidth);
+      rowIntersected = true;
+    }
+
+    if (!rowIntersected) {
+      continue;
+    }
+    overlapTop = Math.min(overlapTop, rowOverlapTop);
+    overlapBottom = Math.max(overlapBottom, rowOverlapBottom);
+
+    if (
+      overlapArea >= MARKER_COLLISION_MIN_OVERLAP_AREA_PX2 &&
+      overlapWidthMax >= MARKER_COLLISION_MIN_OVERLAP_WIDTH_PX &&
+      overlapBottom - overlapTop >= MARKER_COLLISION_MIN_OVERLAP_HEIGHT_PX
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const densityCellKey = (x: number, y: number) => `${x}:${y}`;
 
@@ -431,6 +568,7 @@ export const selectInlineLabelLayout = ({
   maxCandidates,
   slotOffsets,
   slotPenalties,
+  markerObstacleScope,
 }: SelectInlineLabelLayoutParams): InlineLabelLayoutResult => {
   const useVisibleNonOverlappingMode = preferVisibleNonOverlapping === true;
   const enabled = useVisibleNonOverlappingMode
@@ -523,6 +661,8 @@ export const selectInlineLabelLayout = ({
   const resolvedGapY = collisionGapY ?? MAP_LABEL_COLLISION_GAP_Y;
   const resolvedSlotOffsets = buildSlotOffsets(slotOffsets);
   const resolvedSlotPenalties = buildSlotPenalties(slotPenalties);
+  const resolvedMarkerObstacleScope: MarkerObstacleScope =
+    markerObstacleScope === "all" ? "all" : "placed";
   const maxAllowedLabelWidth = clampNumber(
     typeof maxLabelWidth === "number" && Number.isFinite(maxLabelWidth)
       ? maxLabelWidth
@@ -540,6 +680,9 @@ export const selectInlineLabelLayout = ({
   let projectedLabelHeightSum = 0;
   let projectedCollisionWidthSum = 0;
   let projectedCollisionHeightSum = 0;
+  let projectedMarkerCollisionWidthSum = 0;
+  let projectedMarkerCollisionHeightSum = 0;
+  let projectedMarkerCollisionCount = 0;
   const densityCounts = new Map<string, number>();
 
   candidates.forEach((candidate) => {
@@ -622,6 +765,110 @@ export const selectInlineLabelLayout = ({
       MIN_LABEL_HEIGHT_PX,
       labelHeight
     );
+    const fallbackMarkerCollisionZones: MarkerCollisionZone[] =
+      typeof candidate.markerCollisionWidth === "number" &&
+      Number.isFinite(candidate.markerCollisionWidth) &&
+      typeof candidate.markerCollisionHeight === "number" &&
+      Number.isFinite(candidate.markerCollisionHeight)
+        ? [
+            {
+              width: candidate.markerCollisionWidth,
+              height: candidate.markerCollisionHeight,
+              offsetX: candidate.markerCollisionOffsetX,
+              offsetY: candidate.markerCollisionOffsetY,
+            },
+          ]
+        : [];
+    const rawMarkerCollisionZones =
+      Array.isArray(candidate.markerCollisionZones) &&
+      candidate.markerCollisionZones.length > 0
+        ? candidate.markerCollisionZones
+        : fallbackMarkerCollisionZones;
+    const markerCollisionZones: ResolvedMarkerCollisionZone[] = [];
+    rawMarkerCollisionZones.forEach((zone) => {
+      const zoneWidth = clampNumber(
+        typeof zone.width === "number" && Number.isFinite(zone.width) ? zone.width : 0,
+        MIN_MARKER_COLLISION_SIZE_PX,
+        Math.max(
+          MIN_MARKER_COLLISION_SIZE_PX,
+          mapSize.width + LABEL_VIEWPORT_MARGIN * 2
+        )
+      );
+      const zoneHeight = clampNumber(
+        typeof zone.height === "number" && Number.isFinite(zone.height) ? zone.height : 0,
+        MIN_MARKER_COLLISION_SIZE_PX,
+        Math.max(
+          MIN_MARKER_COLLISION_SIZE_PX,
+          mapSize.height + LABEL_VIEWPORT_MARGIN * 2
+        )
+      );
+      if (zoneWidth <= 0 || zoneHeight <= 0) {
+        return;
+      }
+      markerCollisionZones.push({
+        width: zoneWidth,
+        height: zoneHeight,
+        offsetX:
+          typeof zone.offsetX === "number" && Number.isFinite(zone.offsetX)
+            ? zone.offsetX
+            : 0,
+        offsetY:
+          typeof zone.offsetY === "number" && Number.isFinite(zone.offsetY)
+            ? zone.offsetY
+            : 0,
+        });
+    });
+    const markerCollisionRows: ResolvedMarkerCollisionRow[] = [];
+    if (
+      Array.isArray(candidate.markerCollisionRows) &&
+      candidate.markerCollisionRows.length > 0
+    ) {
+      candidate.markerCollisionRows.forEach((row) => {
+        const rowTop =
+          typeof row.offsetY === "number" && Number.isFinite(row.offsetY)
+            ? row.offsetY
+            : 0;
+        const rowHeight = clampNumber(
+          typeof row.height === "number" && Number.isFinite(row.height)
+            ? row.height
+            : 1,
+          MIN_MARKER_COLLISION_ROW_HEIGHT_PX,
+          Math.max(
+            MIN_MARKER_COLLISION_ROW_HEIGHT_PX,
+            mapSize.height + LABEL_VIEWPORT_MARGIN * 2
+          )
+        );
+        if (!Array.isArray(row.segments) || row.segments.length === 0) {
+          return;
+        }
+        const segments: ResolvedMarkerCollisionRowSegment[] = [];
+        row.segments.forEach((segment) => {
+          const segmentLeft =
+            typeof segment.left === "number" && Number.isFinite(segment.left)
+              ? segment.left
+              : 0;
+          const segmentRight =
+            typeof segment.right === "number" && Number.isFinite(segment.right)
+              ? segment.right
+              : segmentLeft;
+          if (segmentRight <= segmentLeft) {
+            return;
+          }
+          segments.push({
+            left: segmentLeft,
+            right: segmentRight,
+          });
+        });
+        if (segments.length === 0) {
+          return;
+        }
+        markerCollisionRows.push({
+          top: rowTop,
+          bottom: rowTop + rowHeight,
+          segments,
+        });
+      });
+    }
     const renderLeft = screenX + labelOffsetX - labelWidth / 2;
     const renderTop = screenY + labelOffsetY;
     const renderRight = renderLeft + labelWidth;
@@ -650,6 +897,8 @@ export const selectInlineLabelLayout = ({
       labelHeight,
       collisionWidth,
       collisionHeight,
+      markerCollisionZones,
+      markerCollisionRows,
       labelOffsetX,
       labelOffsetY,
       labelPriority: Number.isFinite(candidate.labelPriority)
@@ -662,6 +911,11 @@ export const selectInlineLabelLayout = ({
     projectedLabelHeightSum += labelHeight;
     projectedCollisionWidthSum += collisionWidth;
     projectedCollisionHeightSum += collisionHeight;
+    markerCollisionZones.forEach((zone) => {
+      projectedMarkerCollisionWidthSum += zone.width;
+      projectedMarkerCollisionHeightSum += zone.height;
+      projectedMarkerCollisionCount += 1;
+    });
 
     const densityX = Math.floor(screenX / DENSITY_GRID_CELL_SIZE);
     const densityY = Math.floor(screenY / DENSITY_GRID_CELL_SIZE);
@@ -763,8 +1017,24 @@ export const selectInlineLabelLayout = ({
     projected.length > 0
       ? (projectedCollisionHeightSum / projected.length) * resolvedCollisionHeightScale
       : labelSize.height * resolvedCollisionHeightScale;
+  const averageMarkerCollisionWidth =
+    projectedMarkerCollisionCount > 0
+      ? projectedMarkerCollisionWidthSum / projectedMarkerCollisionCount
+      : 0;
+  const averageMarkerCollisionHeight =
+    projectedMarkerCollisionCount > 0
+      ? projectedMarkerCollisionHeightSum / projectedMarkerCollisionCount
+      : 0;
+  const averageSpatialCollisionWidth = Math.max(
+    averageCollisionWidth,
+    averageMarkerCollisionWidth
+  );
+  const averageSpatialCollisionHeight = Math.max(
+    averageCollisionHeight,
+    averageMarkerCollisionHeight
+  );
   const collisionGridCellSize = clampNumber(
-    Math.round((averageCollisionWidth + averageCollisionHeight) / 2),
+    Math.round((averageSpatialCollisionWidth + averageSpatialCollisionHeight) / 2),
     MIN_COLLISION_GRID_CELL_SIZE,
     MAX_COLLISION_GRID_CELL_SIZE
   );
@@ -783,6 +1053,10 @@ export const selectInlineLabelLayout = ({
   const collisionSeenStampByIndex: number[] = [];
   let collisionQueryStamp = 0;
   const collisionScratchIndices: number[] = [];
+  const markerObstacles: MarkerObstacleEntry[] = [];
+  const markerObstacleGrid = new Map<string, number[]>();
+  const markerObstacleSeenStampByIndex: number[] = [];
+  let markerObstacleQueryStamp = 0;
   let rejectedByCollision = 0;
   let forcedPlaced = 0;
   let evicted = 0;
@@ -832,6 +1106,228 @@ export const selectInlineLabelLayout = ({
       }
     }
     return collisionScratchIndices;
+  };
+
+  const pushMarkerObstacleToGrid = (entryIndex: number, rect: LabelRect) => {
+    const bounds = rectToCellBounds(rect, collisionGridCellSize);
+    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
+        const key = collisionCellKey(x, y);
+        const bucket = markerObstacleGrid.get(key);
+        if (!bucket) {
+          markerObstacleGrid.set(key, [entryIndex]);
+          continue;
+        }
+        bucket.push(entryIndex);
+      }
+    }
+  };
+
+  const buildMarkerObstacleRects = (candidate: ProjectedCandidate) => {
+    const rects: LabelRect[] = [];
+    candidate.markerCollisionZones.forEach((zone) => {
+      const markerLeft = candidate.screenX + zone.offsetX - zone.width / 2;
+      const markerTop = candidate.screenY + zone.offsetY - zone.height / 2;
+      const markerRect: LabelRect = {
+        left: markerLeft,
+        right: markerLeft + zone.width,
+        top: markerTop,
+        bottom: markerTop + zone.height,
+      };
+
+      if (
+        markerRect.right < -LABEL_VIEWPORT_MARGIN ||
+        markerRect.left > mapSize.width + LABEL_VIEWPORT_MARGIN ||
+        markerRect.bottom < -LABEL_VIEWPORT_MARGIN ||
+        markerRect.top > mapSize.height + LABEL_VIEWPORT_MARGIN
+      ) {
+        return;
+      }
+      rects.push(markerRect);
+    });
+    return rects;
+  };
+
+  const buildMarkerObstacleBoundingRectFromRows = (
+    candidate: ProjectedCandidate
+  ): LabelRect | null => {
+    if (candidate.markerCollisionRows.length === 0) {
+      return null;
+    }
+    let minLeft = Number.POSITIVE_INFINITY;
+    let maxRight = Number.NEGATIVE_INFINITY;
+    let minTop = Number.POSITIVE_INFINITY;
+    let maxBottom = Number.NEGATIVE_INFINITY;
+
+    candidate.markerCollisionRows.forEach((row) => {
+      const rowTop = candidate.screenY + row.top;
+      const rowBottom = candidate.screenY + row.bottom;
+      if (
+        rowBottom < -LABEL_VIEWPORT_MARGIN ||
+        rowTop > mapSize.height + LABEL_VIEWPORT_MARGIN
+      ) {
+        return;
+      }
+      row.segments.forEach((segment) => {
+        const segmentLeft = candidate.screenX + segment.left;
+        const segmentRight = candidate.screenX + segment.right;
+        if (
+          segmentRight < -LABEL_VIEWPORT_MARGIN ||
+          segmentLeft > mapSize.width + LABEL_VIEWPORT_MARGIN
+        ) {
+          return;
+        }
+        minLeft = Math.min(minLeft, segmentLeft);
+        maxRight = Math.max(maxRight, segmentRight);
+        minTop = Math.min(minTop, rowTop);
+        maxBottom = Math.max(maxBottom, rowBottom);
+      });
+    });
+
+    if (
+      !Number.isFinite(minLeft) ||
+      !Number.isFinite(maxRight) ||
+      !Number.isFinite(minTop) ||
+      !Number.isFinite(maxBottom) ||
+      maxRight <= minLeft ||
+      maxBottom <= minTop
+    ) {
+      return null;
+    }
+
+    return {
+      left: minLeft,
+      right: maxRight,
+      top: minTop,
+      bottom: maxBottom,
+    };
+  };
+
+  const pushMarkerObstaclesForCandidate = (
+    candidate: ProjectedCandidate,
+    active: boolean
+  ) => {
+    const markerObstacleIndices: number[] = [];
+    const markerRowBounds = buildMarkerObstacleBoundingRectFromRows(candidate);
+    if (markerRowBounds) {
+      const markerObstacleIndex =
+        markerObstacles.push({
+          id: candidate.id,
+          active,
+          rect: markerRowBounds,
+          screenX: candidate.screenX,
+          screenY: candidate.screenY,
+          rows: candidate.markerCollisionRows,
+        }) - 1;
+      pushMarkerObstacleToGrid(markerObstacleIndex, markerRowBounds);
+      markerObstacleIndices.push(markerObstacleIndex);
+      return markerObstacleIndices;
+    }
+
+    const markerRects = buildMarkerObstacleRects(candidate);
+    markerRects.forEach((markerRect) => {
+      const markerObstacleIndex =
+        markerObstacles.push({
+          id: candidate.id,
+          active,
+          rect: markerRect,
+          screenX: candidate.screenX,
+          screenY: candidate.screenY,
+        }) - 1;
+      pushMarkerObstacleToGrid(markerObstacleIndex, markerRect);
+      markerObstacleIndices.push(markerObstacleIndex);
+    });
+    return markerObstacleIndices;
+  };
+
+  if (resolvedMarkerObstacleScope === "all") {
+    projected.forEach((candidate) => {
+      void pushMarkerObstaclesForCandidate(candidate, true);
+    });
+  }
+
+  const pushMarkerObstacles = (candidate: ProjectedCandidate) => {
+    if (resolvedMarkerObstacleScope !== "placed") {
+      return [];
+    }
+    return pushMarkerObstaclesForCandidate(candidate, true);
+  };
+
+  const deactivateEntry = (entry: PlacedLabelEntry) => {
+    if (!entry.active) {
+      return;
+    }
+    entry.active = false;
+    if (resolvedMarkerObstacleScope !== "placed") {
+      activeLabelCount = Math.max(0, activeLabelCount - 1);
+      return;
+    }
+    entry.markerObstacleIndices.forEach((obstacleIndex) => {
+      const obstacle = markerObstacles[obstacleIndex];
+      if (obstacle) {
+        obstacle.active = false;
+      }
+    });
+    activeLabelCount = Math.max(0, activeLabelCount - 1);
+  };
+
+  const hasMarkerObstacleCollision = (
+    rect: LabelRect,
+    candidateId: string
+  ): boolean => {
+    if (markerObstacles.length === 0) {
+      return false;
+    }
+
+    markerObstacleQueryStamp += 1;
+    const stamp = markerObstacleQueryStamp;
+    const bounds = rectToCellBounds(rect, collisionGridCellSize);
+    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
+        const key = collisionCellKey(x, y);
+        const bucket = markerObstacleGrid.get(key);
+        if (!bucket) {
+          continue;
+        }
+        for (let i = 0; i < bucket.length; i += 1) {
+          const index = bucket[i];
+          if (markerObstacleSeenStampByIndex[index] === stamp) {
+            continue;
+          }
+          markerObstacleSeenStampByIndex[index] = stamp;
+          const entry = markerObstacles[index];
+          if (!entry || !entry.active || entry.id === candidateId) {
+            continue;
+          }
+          if (!rectsOverlap(rect, entry.rect)) {
+            continue;
+          }
+          if (entry.rows && entry.rows.length > 0) {
+            if (
+              hasMarkerRowsCollision(
+                rect,
+                entry.screenX,
+                entry.screenY,
+                entry.rows
+              )
+            ) {
+              return true;
+            }
+            continue;
+          }
+          const overlap = rectIntersectionMetrics(rect, entry.rect);
+          const isMeaningfulCollision =
+            overlap.area >= MARKER_COLLISION_MIN_OVERLAP_AREA_PX2 &&
+            overlap.width >= MARKER_COLLISION_MIN_OVERLAP_WIDTH_PX &&
+            overlap.height >= MARKER_COLLISION_MIN_OVERLAP_HEIGHT_PX;
+          if (isMeaningfulCollision) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   };
 
   const placeCandidate = (
@@ -893,6 +1389,10 @@ export const selectInlineLabelLayout = ({
         bottom: collisionTop + collisionHeight + resolvedGapY,
       };
 
+      if (hasMarkerObstacleCollision(collisionRect, candidate.id)) {
+        continue;
+      }
+
       const collidingEntries = collectCollisionCandidates(collisionRect);
 
       if (collidingEntries.length > 0) {
@@ -912,9 +1412,9 @@ export const selectInlineLabelLayout = ({
         }
         for (let i = 0; i < collidingEntries.length; i += 1) {
           const index = collidingEntries[i];
-          if (placedEntries[index].active) {
-            placedEntries[index].active = false;
-            activeLabelCount = Math.max(0, activeLabelCount - 1);
+          const entry = placedEntries[index];
+          if (entry?.active) {
+            deactivateEntry(entry);
             evicted += 1;
           }
         }
@@ -939,9 +1439,11 @@ export const selectInlineLabelLayout = ({
         score: slotScore,
         slot: resolvedSlot,
         rect: collisionRect,
+        markerObstacleIndices: [],
         placement,
       };
       const entryIndex = placedEntries.push(entry) - 1;
+      entry.markerObstacleIndices = pushMarkerObstacles(candidate);
       pushToCollisionGrid(entryIndex, collisionRect);
       activeLabelCount += 1;
       if (forced) {
