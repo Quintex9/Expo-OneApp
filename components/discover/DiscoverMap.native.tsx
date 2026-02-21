@@ -42,7 +42,10 @@ import {
 } from "../../lib/maps/discoverMapUtils";
 import {
   normalizeDiscoverMapLabelPolicy,
+  selectInlineLabelLayout,
   selectInlineLabelIds,
+  type LabelPlacement,
+  type LabelSlot,
   type MarkerLabelCandidate,
 } from "../../lib/maps/labelSelection";
 import {
@@ -73,6 +76,12 @@ import {
   MAP_LABEL_COLLISION_V2_LOGS_ENABLED,
   MAP_LABEL_DENSE_LOW_ZOOM_BUDGET,
   MAP_LABEL_DENSE_MARKER_COUNT_THRESHOLD,
+  MAP_LABEL_GESTURE_RECOMPUTE_MS,
+  MAP_LABEL_LAYOUT_V3,
+  MAP_LABEL_MAX_CANDIDATES_V3,
+  MAP_LABEL_STICKY_SLOT_BONUS,
+  MAP_LABEL_COLLISION_WIDTH_SCALE_V3,
+  MAP_LABEL_COLLISION_HEIGHT_SCALE_V3,
   MAP_FULL_SPRITES_LOGS_ENABLED,
   MAP_FULL_SPRITES_V1,
   MAP_IOS_STABLE_MARKERS_LOGS_ENABLED,
@@ -106,12 +115,41 @@ const MARKER_TITLE_OFFSET_Y = 8;
 const BADGED_TITLE_MAX_WIDTH = 560;
 const BADGED_TITLE_HORIZONTAL_PADDING = 10;
 const BADGED_TITLE_CHAR_PX = 9.2;
+const FULL_SPRITE_CANVAS_MIN_WIDTH = 260;
+const FULL_SPRITE_TITLE_MIN_WIDTH = 140;
+const FULL_SPRITE_TITLE_MAX_WIDTH = 888;
+const FULL_SPRITE_SIDE_PADDING_X = 16;
+const FULL_SPRITE_TITLE_HEIGHT = 36;
+const FULL_SPRITE_TITLE_TOP = BADGED_CANVAS_HEIGHT + 6;
+const FULL_SPRITE_TITLE_OFFSET_Y =
+  FULL_SPRITE_TITLE_TOP - (BADGED_PIN_OFFSET_Y + PIN_TRIM_HEIGHT);
+const FULL_SPRITE_TITLE_BASE_MAX_WIDTH =
+  FULL_SPRITE_CANVAS_MIN_WIDTH - FULL_SPRITE_SIDE_PADDING_X * 2;
+const FULL_SPRITE_TITLE_CHAR_PX = 15.2;
+const FULL_SPRITE_TITLE_EXTRA_PX = 38;
 const FULL_SPRITE_VIEWPORT_MARGIN_X = 96;
 const FULL_SPRITE_VIEWPORT_MARGIN_Y = 72;
 const FULL_SPRITE_FADE_IN_DURATION_MS = 160;
 const FULL_SPRITE_FADE_OUT_DURATION_MS = 360;
 const FULL_SPRITE_FADE_EPSILON = 0.015;
 const CLUSTER_TO_SINGLE_FADE_WINDOW_MS = 700;
+const SINGLE_LAYER_ENTER_ZOOM_OFFSET = 0.5;
+const CLUSTER_PRESS_ZOOM_STEP = 1;
+const CLUSTER_PRESS_TARGET_MARGIN_ZOOM = 0.2;
+const INLINE_LABEL_COLLISION_GAP_X = 0;
+const INLINE_LABEL_COLLISION_GAP_Y = 0;
+const INLINE_LABEL_FIXED_SLOT_OFFSETS = {
+  below: { x: 0, y: 0 },
+  "below-right": { x: 0, y: 0 },
+  "below-left": { x: 0, y: 0 },
+  above: { x: 0, y: 0 },
+} as const;
+const INLINE_LABEL_FIXED_SLOT_PENALTIES = {
+  below: 0,
+  "below-right": 0,
+  "below-left": 0,
+  above: 0,
+} as const;
 
 const BASE_ANCHOR_X =
   (PIN_TRIM_X + PIN_TRIM_WIDTH / 2) / PIN_CANVAS_WIDTH;
@@ -165,6 +203,66 @@ const estimateInlineTitleWidth = (title: string) => {
   const estimated =
     normalized.length * BADGED_TITLE_CHAR_PX + BADGED_TITLE_HORIZONTAL_PADDING * 2;
   return Math.round(clampNumber(estimated, BADGED_TITLE_WIDTH, BADGED_TITLE_MAX_WIDTH));
+};
+
+const estimateFullSpriteTitleWidth = (title: string) => {
+  const normalized = title.trim().toUpperCase();
+  if (!normalized) {
+    return FULL_SPRITE_TITLE_MIN_WIDTH;
+  }
+  const estimated = normalized.length * FULL_SPRITE_TITLE_CHAR_PX + FULL_SPRITE_TITLE_EXTRA_PX;
+  return Math.round(
+    clampNumber(
+      estimated,
+      FULL_SPRITE_TITLE_MIN_WIDTH,
+      FULL_SPRITE_TITLE_MAX_WIDTH
+    )
+  );
+};
+
+const resolveFullSpriteLabelGeometry = (
+  title: string,
+  metrics: ReturnType<typeof getMarkerFullSpriteMetrics>
+) => {
+  const estimatedTitleWidth = estimateFullSpriteTitleWidth(title);
+  if (!metrics) {
+    return {
+      width: estimatedTitleWidth,
+      height: FULL_SPRITE_TITLE_HEIGHT,
+      offsetX: 0,
+      offsetY: FULL_SPRITE_TITLE_OFFSET_Y,
+    };
+  }
+
+  const maxTitleWidthForSprite = Math.max(
+    FULL_SPRITE_TITLE_MIN_WIDTH,
+    metrics.width - FULL_SPRITE_SIDE_PADDING_X * 2
+  );
+  const estimatedBaseWidth = Math.min(
+    estimatedTitleWidth,
+    FULL_SPRITE_TITLE_BASE_MAX_WIDTH
+  );
+  const titleWidth =
+    metrics.width > FULL_SPRITE_CANVAS_MIN_WIDTH + 0.5
+      ? maxTitleWidthForSprite
+      : Math.min(maxTitleWidthForSprite, estimatedBaseWidth);
+  const anchorX =
+    typeof metrics.anchor?.x === "number" && Number.isFinite(metrics.anchor.x)
+      ? metrics.anchor.x
+      : 0.5;
+  const anchorY =
+    typeof metrics.anchor?.y === "number" && Number.isFinite(metrics.anchor.y)
+      ? metrics.anchor.y
+      : BADGED_ANCHOR_Y;
+
+  return {
+    width: Math.round(
+      clampNumber(titleWidth, FULL_SPRITE_TITLE_MIN_WIDTH, FULL_SPRITE_TITLE_MAX_WIDTH)
+    ),
+    height: FULL_SPRITE_TITLE_HEIGHT,
+    offsetX: (0.5 - anchorX) * metrics.width,
+    offsetY: FULL_SPRITE_TITLE_TOP - anchorY * metrics.height,
+  };
 };
 
 const buildClusterId = (memberIds: string[]) => {
@@ -314,12 +412,32 @@ function DiscoverMap({
     Platform.OS === "ios" ? IOS_FORCE_CLUSTER_ZOOM : FORCE_CLUSTER_ZOOM;
   const singleModeZoom =
     Platform.OS === "ios" ? IOS_SINGLE_MODE_ZOOM : SINGLE_MODE_ZOOM;
+  const singleLayerEnterZoom = Math.max(0, singleModeZoom + SINGLE_LAYER_ENTER_ZOOM_OFFSET);
   const isIOS = Platform.OS === "ios";
   const isIOSStableMarkersMode = isIOS && MAP_IOS_STABLE_MARKERS_V1;
   const fullSpritesEnabled =
     markerRenderPolicy?.fullSpritesEnabled ?? MAP_FULL_SPRITES_V1;
-  const fullSpriteFadeEnabled = !isIOSStableMarkersMode;
-  const useOverlayFullSprites = fullSpritesEnabled && !isIOSStableMarkersMode;
+  const labelLayoutV3Enabled = MAP_LABEL_LAYOUT_V3;
+  const fullSpriteTextLayersEnabled = fullSpritesEnabled;
+  const useInlineLabelOverlay = labelLayoutV3Enabled && !fullSpriteTextLayersEnabled;
+  const labelEngineBaseSize = useMemo(
+    () =>
+      fullSpriteTextLayersEnabled
+        ? {
+            width: FULL_SPRITE_TITLE_MIN_WIDTH,
+            height: FULL_SPRITE_TITLE_HEIGHT,
+            offsetY: FULL_SPRITE_TITLE_OFFSET_Y,
+          }
+        : {
+            width: BADGED_TITLE_WIDTH,
+            height: BADGED_TITLE_HEIGHT,
+            offsetY: MARKER_TITLE_OFFSET_Y,
+          },
+    [fullSpriteTextLayersEnabled]
+  );
+  const fullSpriteFadeEnabled = fullSpriteTextLayersEnabled && !isIOSStableMarkersMode;
+  const useOverlayFullSprites =
+    fullSpriteTextLayersEnabled && !isIOSStableMarkersMode;
   const resolvedLabelPolicy = useMemo(
     () => normalizeDiscoverMapLabelPolicy(labelPolicy),
     [labelPolicy]
@@ -334,7 +452,7 @@ function DiscoverMap({
     )
   );
 
-  const showSingleLayer = effectiveZoom >= singleModeZoom;
+  const showSingleLayer = effectiveZoom >= singleLayerEnterZoom;
   const showClusterLayer = !showSingleLayer;
   const shouldCullClustersByViewport = Platform.OS !== "ios";
   const showSingleLayerRef = useRef(showSingleLayer);
@@ -790,6 +908,7 @@ function DiscoverMap({
 
   const labelCandidates = useMemo<MarkerLabelCandidate[]>(() => {
     const candidates: MarkerLabelCandidate[] = [];
+    const useFullSpriteGeometry = fullSpriteTextLayersEnabled;
     singleLayerMarkers.forEach((group) => {
       if (group.items.length !== 1) {
         return;
@@ -802,24 +921,27 @@ function DiscoverMap({
       if (!title) {
         return;
       }
-      const rating = getMarkerNumericRating(marker);
-      if (rating === null) {
-        return;
-      }
+      const rating = getMarkerNumericRating(marker) ?? 0;
       const fullSpriteMetrics = getMarkerFullSpriteMetrics(marker);
+      const fullSpriteGeometry = useFullSpriteGeometry
+        ? resolveFullSpriteLabelGeometry(title, fullSpriteMetrics)
+        : null;
       candidates.push({
         id: marker.id,
         title,
         coordinate: group.coordinate,
         rating,
-        estimatedWidth: fullSpriteMetrics?.width ?? estimateInlineTitleWidth(title),
+        estimatedWidth: fullSpriteGeometry?.width ?? estimateInlineTitleWidth(title),
+        labelOffsetX: fullSpriteGeometry?.offsetX,
+        labelOffsetY: fullSpriteGeometry?.offsetY,
+        labelHeight: fullSpriteGeometry?.height,
         labelPriority: Number.isFinite(marker.labelPriority)
           ? Number(marker.labelPriority)
           : 0,
       });
     });
     return candidates;
-  }, [singleLayerMarkers]);
+  }, [fullSpriteTextLayersEnabled, singleLayerMarkers]);
   const localFullSpriteIdSet = useMemo(() => {
     const ids = new Set<string>();
     singleLayerMarkers.forEach((group) => {
@@ -846,12 +968,16 @@ function DiscoverMap({
   } | null>(null);
   const [mapLayoutSize, setMapLayoutSize] = useState({ width: 0, height: 0 });
   const [inlineLabelIds, setInlineLabelIds] = useState<string[]>([]);
+  const [inlineLabelPlacements, setInlineLabelPlacements] = useState<LabelPlacement[]>(
+    []
+  );
   const [readyFullSpriteIds, setReadyFullSpriteIds] = useState<string[]>([]);
   const [fullSpriteOpacityById, setFullSpriteOpacityById] = useState<
     Record<string, number>
   >({});
   const [failedRemoteSpriteKeys, setFailedRemoteSpriteKeys] = useState<string[]>([]);
   const inlineLabelIdsRef = useRef<string[]>([]);
+  const stickySlotByIdRef = useRef<Map<string, LabelSlot>>(new Map());
   const forceInlineLabelIdsRef = useRef<Set<string>>(new Set());
   const fullSpriteOpacityByIdRef = useRef<Record<string, number>>({});
   const fullSpriteTargetIdsRef = useRef<Set<string>>(new Set());
@@ -872,8 +998,17 @@ function DiscoverMap({
     zoom: number;
   } | null>(null);
   const recomputeCounterRef = useRef(0);
+  const nativeProjectionRequestRef = useRef(0);
   const mountedRef = useRef(true);
   const prefetchGenerationRef = useRef(0);
+  const gestureRecomputeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const pendingGestureRecomputeRef = useRef<{
+    center: [number, number];
+    zoom: number;
+  } | null>(null);
+  const lastGestureRecomputeTsRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -906,19 +1041,40 @@ function DiscoverMap({
     setStackedTooltipPoint(null);
   }, [clearPendingStackedOpen]);
 
-  const commitInlineLabelIds = useCallback((nextIds: string[], enabled: boolean) => {
-    const nextHash = nextIds.join("|");
-    const hasSameState =
-      inlineLabelHashRef.current === nextHash &&
-      inlineLabelsEnabledRef.current === enabled;
-    if (hasSameState) {
-      return;
-    }
-    inlineLabelHashRef.current = nextHash;
-    inlineLabelsEnabledRef.current = enabled;
-    inlineLabelIdsRef.current = nextIds;
-    setInlineLabelIds(nextIds);
-  }, []);
+  const commitInlineLabelLayout = useCallback(
+    (
+      nextPlacements: LabelPlacement[],
+      enabled: boolean,
+      explicitHash?: string,
+      explicitIds?: string[]
+    ) => {
+      const nextIds =
+        explicitIds && explicitIds.length > 0
+          ? [...explicitIds]
+          : nextPlacements.map((placement) => placement.id);
+      const nextHash =
+        explicitHash ??
+        [...nextPlacements]
+          .sort((left, right) => left.id.localeCompare(right.id))
+          .map((placement) => `${placement.id}:${placement.slot}`)
+          .join("|");
+      const hasSameState =
+        inlineLabelHashRef.current === nextHash &&
+        inlineLabelsEnabledRef.current === enabled;
+      if (hasSameState) {
+        return;
+      }
+      inlineLabelHashRef.current = nextHash;
+      inlineLabelsEnabledRef.current = enabled;
+      inlineLabelIdsRef.current = nextIds;
+      stickySlotByIdRef.current = new Map(
+        nextPlacements.map((placement) => [placement.id, placement.slot])
+      );
+      setInlineLabelIds(nextIds);
+      setInlineLabelPlacements(nextPlacements);
+    },
+    []
+  );
 
   useEffect(() => {
     inlineLabelIdsRef.current = inlineLabelIds;
@@ -928,17 +1084,26 @@ function DiscoverMap({
     (
       nextCenter: [number, number],
       nextZoom: number,
-      source: "dataset" | "layout" | "map-ready" | "region-complete" | "marker-press" = "dataset"
+      source:
+        | "dataset"
+        | "layout"
+        | "map-ready"
+        | "region-change"
+        | "region-complete"
+        | "marker-press" = "dataset"
     ) => {
       const startedAtMs = Date.now();
+      const selectionRunId = nativeProjectionRequestRef.current + 1;
+      nativeProjectionRequestRef.current = selectionRunId;
       if (
-        !fullSpritesEnabled ||
         mapLayoutSize.width <= 0 ||
         mapLayoutSize.height <= 0 ||
-        labelCandidates.length === 0
+        labelCandidates.length === 0 ||
+        !showSingleLayer
       ) {
-        commitInlineLabelIds([], false);
+        commitInlineLabelLayout([], false, "", []);
         lastInlineRecomputeRef.current = null;
+        stickySlotByIdRef.current = new Map();
         forceInlineLabelIdsRef.current.clear();
         return;
       }
@@ -949,7 +1114,7 @@ function DiscoverMap({
       const hasForcedIds = forceInlineLabelIdsRef.current.size > 0;
       const shouldThrottleIOSRecompute =
         isIOSStableMarkersMode &&
-        source === "region-complete" &&
+        (source === "region-change" || source === "region-complete") &&
         !hasForcedIds;
 
       if (shouldThrottleIOSRecompute) {
@@ -976,12 +1141,100 @@ function DiscoverMap({
         }
       }
 
-      const previousHash = inlineLabelHashRef.current;
-      const previousEnabled = inlineLabelsEnabledRef.current;
+      const applySelection = (selectionCandidates: MarkerLabelCandidate[]) => {
+        if (
+          !mountedRef.current ||
+          nativeProjectionRequestRef.current !== selectionRunId
+        ) {
+          return;
+        }
 
-      if (!mapLabelCollisionV2Enabled) {
-        if (effectiveNextZoom < singleModeZoom) {
-          commitInlineLabelIds([], false);
+        const previousHash = inlineLabelHashRef.current;
+        const previousEnabled = inlineLabelsEnabledRef.current;
+
+        if (!mapLabelCollisionV2Enabled) {
+          if (effectiveNextZoom < singleLayerEnterZoom) {
+            commitInlineLabelLayout([], false, "", []);
+            lastInlineRecomputeRef.current = {
+              center: [nextCenter[0], nextCenter[1]],
+              zoom: effectiveNextZoom,
+            };
+            stickySlotByIdRef.current = new Map();
+            forceInlineLabelIdsRef.current.clear();
+            return;
+          }
+
+          const worldSize = 256 * Math.pow(2, effectiveNextZoom);
+          const centerPoint = projectToWorld(nextCenter[0], nextCenter[1], worldSize);
+          const visiblePlacements: LabelPlacement[] = [];
+
+          selectionCandidates.forEach((candidate) => {
+            const hasNativePoint =
+              typeof candidate.screenX === "number" &&
+              Number.isFinite(candidate.screenX) &&
+              typeof candidate.screenY === "number" &&
+              Number.isFinite(candidate.screenY);
+            let screenX = 0;
+            let screenY = 0;
+
+            if (hasNativePoint) {
+              screenX = candidate.screenX!;
+              screenY = candidate.screenY!;
+            } else {
+              const candidatePoint = projectToWorld(
+                candidate.coordinate.longitude,
+                candidate.coordinate.latitude,
+                worldSize
+              );
+              const dx = wrapWorldDelta(candidatePoint.x - centerPoint.x, worldSize);
+              const dy = candidatePoint.y - centerPoint.y;
+              screenX = mapLayoutSize.width / 2 + dx;
+              screenY = mapLayoutSize.height / 2 + dy;
+            }
+
+            const candidateWidth = candidate.estimatedWidth ?? labelEngineBaseSize.width;
+            const candidateHeight = candidate.labelHeight ?? labelEngineBaseSize.height;
+            const candidateOffsetX = candidate.labelOffsetX ?? 0;
+            const candidateOffsetY = candidate.labelOffsetY ?? labelEngineBaseSize.offsetY;
+            const renderLeft = screenX + candidateOffsetX - candidateWidth / 2;
+            const renderTop = screenY + candidateOffsetY;
+            const renderRight = renderLeft + candidateWidth;
+            const renderBottom = renderTop + candidateHeight;
+
+            if (
+              renderRight < -FULL_SPRITE_VIEWPORT_MARGIN_X ||
+              renderLeft > mapLayoutSize.width + FULL_SPRITE_VIEWPORT_MARGIN_X ||
+              renderBottom < -FULL_SPRITE_VIEWPORT_MARGIN_Y ||
+              renderTop > mapLayoutSize.height + FULL_SPRITE_VIEWPORT_MARGIN_Y
+            ) {
+              return;
+            }
+
+            visiblePlacements.push({
+              id: candidate.id,
+              title: candidate.title,
+              slot: "below",
+              left: renderLeft,
+              top: renderTop,
+              width: candidateWidth,
+              height: candidateHeight,
+              screenX: screenX + candidateOffsetX,
+              screenY: screenY + candidateOffsetY,
+              score: 1,
+            });
+          });
+
+          const visibleIds = visiblePlacements.map((placement) => placement.id);
+          const visibleHash = visiblePlacements
+            .map((placement) => `${placement.id}:${placement.slot}`)
+            .sort()
+            .join("|");
+          commitInlineLabelLayout(
+            visiblePlacements,
+            true,
+            visibleHash,
+            visibleIds
+          );
           lastInlineRecomputeRef.current = {
             center: [nextCenter[0], nextCenter[1]],
             zoom: effectiveNextZoom,
@@ -990,116 +1243,156 @@ function DiscoverMap({
           return;
         }
 
-        const worldSize = 256 * Math.pow(2, effectiveNextZoom);
-        const centerPoint = projectToWorld(nextCenter[0], nextCenter[1], worldSize);
-        const visibleIds: string[] = [];
+        const denseLowZoomCircuitBreakerActive =
+          selectionCandidates.length > MAP_LABEL_DENSE_MARKER_COUNT_THRESHOLD &&
+          effectiveNextZoom < singleLayerEnterZoom;
+        const policyForPass = denseLowZoomCircuitBreakerActive
+          ? {
+              ...resolvedLabelPolicy,
+              lowZoomMax: Math.min(
+                resolvedLabelPolicy.lowZoomMax,
+                MAP_LABEL_DENSE_LOW_ZOOM_BUDGET
+              ),
+            }
+          : resolvedLabelPolicy;
+        const forcedIds =
+          forceInlineLabelIdsRef.current.size > 0
+            ? new Set(forceInlineLabelIdsRef.current)
+            : undefined;
+        const selection = labelLayoutV3Enabled
+          ? selectInlineLabelLayout({
+              candidates: selectionCandidates,
+              center: nextCenter,
+              zoom: effectiveNextZoom,
+              singleModeZoom: singleLayerEnterZoom,
+              preferVisibleNonOverlapping: true,
+              collisionGapX: INLINE_LABEL_COLLISION_GAP_X,
+              collisionGapY: INLINE_LABEL_COLLISION_GAP_Y,
+              collisionWidthScale: MAP_LABEL_COLLISION_WIDTH_SCALE_V3,
+              collisionHeightScale: MAP_LABEL_COLLISION_HEIGHT_SCALE_V3,
+              maxCandidates: MAP_LABEL_MAX_CANDIDATES_V3,
+              stickySlotBonus: MAP_LABEL_STICKY_SLOT_BONUS,
+              slotOffsets: INLINE_LABEL_FIXED_SLOT_OFFSETS,
+              slotPenalties: INLINE_LABEL_FIXED_SLOT_PENALTIES,
+              mapSize: mapLayoutSize,
+              labelSize: labelEngineBaseSize,
+              policy: policyForPass,
+              wasEnabled: inlineLabelsEnabledRef.current,
+              stickyIds: new Set(inlineLabelIdsRef.current),
+              stickySlots: stickySlotByIdRef.current,
+              forceIncludeIds: forcedIds,
+            })
+          : (() => {
+              const legacySelection = selectInlineLabelIds({
+                candidates: selectionCandidates,
+                center: nextCenter,
+                zoom: effectiveNextZoom,
+                singleModeZoom: singleLayerEnterZoom,
+                preferVisibleNonOverlapping: true,
+                mapSize: mapLayoutSize,
+                labelSize: labelEngineBaseSize,
+                policy: policyForPass,
+                wasEnabled: inlineLabelsEnabledRef.current,
+                stickyIds: new Set(inlineLabelIdsRef.current),
+                forceIncludeIds: forcedIds,
+              });
+              return {
+                ...legacySelection,
+                placements: [] as LabelPlacement[],
+                hiddenCount: 0,
+                forcedPlaced: 0,
+                evicted: 0,
+              };
+            })();
 
-        labelCandidates.forEach((candidate) => {
-          const candidatePoint = projectToWorld(
-            candidate.coordinate.longitude,
-            candidate.coordinate.latitude,
-            worldSize
-          );
-
-          const dx = wrapWorldDelta(candidatePoint.x - centerPoint.x, worldSize);
-          const dy = candidatePoint.y - centerPoint.y;
-          const screenX = mapLayoutSize.width / 2 + dx;
-          const screenY = mapLayoutSize.height / 2 + dy;
-
-          if (
-            screenX < -FULL_SPRITE_VIEWPORT_MARGIN_X ||
-            screenX > mapLayoutSize.width + FULL_SPRITE_VIEWPORT_MARGIN_X ||
-            screenY < -FULL_SPRITE_VIEWPORT_MARGIN_Y ||
-            screenY > mapLayoutSize.height + FULL_SPRITE_VIEWPORT_MARGIN_Y
-          ) {
-            return;
-          }
-
-          visibleIds.push(candidate.id);
-        });
-
-        commitInlineLabelIds(visibleIds, true);
+        commitInlineLabelLayout(
+          selection.placements,
+          selection.enabled,
+          selection.hash,
+          selection.ids
+        );
         lastInlineRecomputeRef.current = {
           center: [nextCenter[0], nextCenter[1]],
           zoom: effectiveNextZoom,
         };
         forceInlineLabelIdsRef.current.clear();
+        const currentHash = selection.hash;
+        const hashChanged =
+          previousHash !== currentHash || previousEnabled !== selection.enabled;
+        if (hashChanged) {
+          recomputeCounterRef.current += 1;
+        }
+        if (isIOSStableMarkersMode && MAP_IOS_STABLE_MARKERS_LOGS_ENABLED) {
+          const recomputeMs = Date.now() - startedAtMs;
+          const fallbackCount = selection.ids.filter(
+            (id) => !localFullSpriteIdSet.has(id)
+          ).length;
+          console.debug(
+            `[map_ios_stable_markers_v1] source=${source} markers=${selectionCandidates.length} inlineLabelCount=${selection.ids.length} selectionHashChanges=${recomputeCounterRef.current} recomputeMs=${recomputeMs} fallbackCount=${fallbackCount}`
+          );
+        }
+
+        if (MAP_LABEL_COLLISION_V2_LOGS_ENABLED) {
+          const recomputeMs = Date.now() - startedAtMs;
+          console.debug(
+            `[map_label_collision_v2] source=${source} markers=${selectionCandidates.length} candidates=${selection.candidateCount ?? 0} projected=${selection.projectedCount ?? 0} selected=${selection.ids.length} hidden=${selection.hiddenCount ?? 0} forcedPlaced=${selection.forcedPlaced ?? 0} evicted=${selection.evicted ?? 0} rejectedByCollision=${selection.rejectedByCollision ?? 0} zoom=${effectiveNextZoom.toFixed(2)} recomputeMs=${recomputeMs}`
+          );
+        }
+      };
+
+      const shouldUseNativeProjection =
+        labelLayoutV3Enabled &&
+        mapLabelCollisionV2Enabled &&
+        source !== "region-change" &&
+        labelCandidates.length <= MAP_LABEL_MAX_CANDIDATES_V3;
+      const mapView = cameraRef.current;
+      if (!shouldUseNativeProjection || !mapView) {
+        applySelection(labelCandidates);
         return;
       }
 
-      const denseLowZoomCircuitBreakerActive =
-        labelCandidates.length > MAP_LABEL_DENSE_MARKER_COUNT_THRESHOLD &&
-        effectiveNextZoom < singleModeZoom;
-      const policyForPass = denseLowZoomCircuitBreakerActive
-        ? {
-            ...resolvedLabelPolicy,
-            lowZoomMax: Math.min(
-              resolvedLabelPolicy.lowZoomMax,
-              MAP_LABEL_DENSE_LOW_ZOOM_BUDGET
-            ),
+      void Promise.all(
+        labelCandidates.map(async (candidate) => {
+          try {
+            const point = await mapView.pointForCoordinate(candidate.coordinate);
+            if (
+              point &&
+              Number.isFinite(point.x) &&
+              Number.isFinite(point.y)
+            ) {
+              return {
+                ...candidate,
+                screenX: point.x,
+                screenY: point.y,
+              };
+            }
+          } catch {
           }
-        : resolvedLabelPolicy;
-      const forcedIds =
-        forceInlineLabelIdsRef.current.size > 0
-          ? new Set(forceInlineLabelIdsRef.current)
-          : undefined;
-      const selection = selectInlineLabelIds({
-        candidates: labelCandidates,
-        center: nextCenter,
-        zoom: effectiveNextZoom,
-        singleModeZoom,
-        mapSize: mapLayoutSize,
-        labelSize: {
-          width: BADGED_TITLE_WIDTH,
-          height: BADGED_TITLE_HEIGHT,
-          offsetY: MARKER_TITLE_OFFSET_Y,
-        },
-        policy: policyForPass,
-        wasEnabled: inlineLabelsEnabledRef.current,
-        stickyIds: new Set(inlineLabelIdsRef.current),
-        forceIncludeIds: forcedIds,
-      });
-
-      commitInlineLabelIds(selection.ids, selection.enabled);
-      lastInlineRecomputeRef.current = {
-        center: [nextCenter[0], nextCenter[1]],
-        zoom: effectiveNextZoom,
-      };
-      forceInlineLabelIdsRef.current.clear();
-      const currentHash = selection.hash;
-      const hashChanged =
-        previousHash !== currentHash || previousEnabled !== selection.enabled;
-      if (hashChanged) {
-        recomputeCounterRef.current += 1;
-      }
-      if (isIOSStableMarkersMode && MAP_IOS_STABLE_MARKERS_LOGS_ENABLED) {
-        const recomputeMs = Date.now() - startedAtMs;
-        const fallbackCount = selection.ids.filter(
-          (id) => !localFullSpriteIdSet.has(id)
-        ).length;
-        console.debug(
-          `[map_ios_stable_markers_v1] source=${source} markers=${labelCandidates.length} inlineLabelCount=${selection.ids.length} selectionHashChanges=${recomputeCounterRef.current} recomputeMs=${recomputeMs} fallbackCount=${fallbackCount}`
-        );
-      }
-
-      if (MAP_LABEL_COLLISION_V2_LOGS_ENABLED) {
-        const recomputeMs = Date.now() - startedAtMs;
-        console.debug(
-          `[map_label_collision_v2] source=${source} markers=${labelCandidates.length} candidates=${selection.candidateCount ?? 0} projected=${selection.projectedCount ?? 0} selected=${selection.ids.length} rejectedByCollision=${selection.rejectedByCollision ?? 0} zoom=${effectiveNextZoom.toFixed(2)} recomputeMs=${recomputeMs}`
-        );
-      }
+          return candidate;
+        })
+      )
+        .then((projectedCandidates) => {
+          applySelection(projectedCandidates);
+        })
+        .catch(() => {
+          applySelection(labelCandidates);
+        });
     },
     [
-      commitInlineLabelIds,
+      cameraRef,
+      commitInlineLabelLayout,
       labelCandidates,
+      labelEngineBaseSize,
       mapLabelCollisionV2Enabled,
       mapLayoutSize.height,
       mapLayoutSize.width,
-      singleModeZoom,
-      fullSpritesEnabled,
+      singleLayerEnterZoom,
+      showSingleLayer,
+      labelLayoutV3Enabled,
       isIOSStableMarkersMode,
       localFullSpriteIdSet,
       resolvedLabelPolicy,
+      useInlineLabelOverlay,
     ]
   );
 
@@ -1115,12 +1408,18 @@ function DiscoverMap({
     }
     const next = new Set<string>();
     inlineLabelIds.forEach((id) => {
-      if (readyFullSpriteIdSet.has(id)) {
+      if (localFullSpriteIdSet.has(id) || readyFullSpriteIdSet.has(id)) {
         next.add(id);
       }
     });
     return next;
-  }, [useOverlayFullSprites, inlineLabelIds, readyFullSpriteIdSet, showSingleLayer]);
+  }, [
+    useOverlayFullSprites,
+    inlineLabelIds,
+    localFullSpriteIdSet,
+    readyFullSpriteIdSet,
+    showSingleLayer,
+  ]);
 
   const fullSpriteTargetHash = useMemo(() => {
     if (fullSpriteTargetIdSet.size === 0) {
@@ -1128,6 +1427,33 @@ function DiscoverMap({
     }
     return Array.from(fullSpriteTargetIdSet).sort().join("|");
   }, [fullSpriteTargetIdSet]);
+
+  const inlineTextRenderedByMarkerIdSet = useMemo(() => {
+    if (!fullSpriteTextLayersEnabled || !showSingleLayer) {
+      return new Set<string>();
+    }
+    if (useOverlayFullSprites) {
+      return fullSpriteTargetIdSet;
+    }
+    if (isIOSStableMarkersMode) {
+      const next = new Set<string>();
+      inlineLabelIds.forEach((id) => {
+        if (localFullSpriteIdSet.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    }
+    return new Set<string>();
+  }, [
+    fullSpriteTargetIdSet,
+    fullSpriteTextLayersEnabled,
+    inlineLabelIds,
+    isIOSStableMarkersMode,
+    localFullSpriteIdSet,
+    showSingleLayer,
+    useOverlayFullSprites,
+  ]);
 
   const failedRemoteSpriteKeySet = useMemo(
     () => new Set(failedRemoteSpriteKeys),
@@ -1316,7 +1642,7 @@ function DiscoverMap({
     const generation = prefetchGenerationRef.current + 1;
     prefetchGenerationRef.current = generation;
 
-    if (!fullSpritesEnabled || !showSingleLayer) {
+    if (!fullSpriteTextLayersEnabled || !showSingleLayer) {
       setReadyFullSpriteIds((previous) => (previous.length > 0 ? [] : previous));
       return;
     }
@@ -1343,10 +1669,11 @@ function DiscoverMap({
       const remoteSpriteUrl = getMarkerRemoteSpriteUrl(marker);
       const hasLocalSprite = hasLocalFullMarkerSprite(marker);
 
+      if (hasLocalSprite && !readyFullSpriteIdSet.has(markerId)) {
+        immediateReadyMarkerIds.push(markerId);
+      }
+
       if (!remoteSpriteUrl || failedRemoteSpriteKeySet.has(spriteKey)) {
-        if (hasLocalSprite && !readyFullSpriteIdSet.has(markerId)) {
-          immediateReadyMarkerIds.push(markerId);
-        }
         return;
       }
 
@@ -1420,7 +1747,7 @@ function DiscoverMap({
     }
   }, [
     failedRemoteSpriteKeySet,
-    fullSpritesEnabled,
+    fullSpriteTextLayersEnabled,
     inlineLabelIds,
     isIOSStableMarkersMode,
     readyFullSpriteIdSet,
@@ -1429,13 +1756,14 @@ function DiscoverMap({
   ]);
 
   useEffect(() => {
-    if (!MAP_FULL_SPRITES_LOGS_ENABLED) {
+    if (!MAP_FULL_SPRITES_LOGS_ENABLED || !fullSpriteTextLayersEnabled) {
       return;
     }
     console.debug(
       `[map_full_sprites_v1] markers=${filteredMarkers.length} selected=${inlineLabelIds.length} ready=${readyFullSpriteIds.length} remoteFailures=${failedRemoteSpriteKeys.length}`
     );
   }, [
+    fullSpriteTextLayersEnabled,
     failedRemoteSpriteKeys.length,
     filteredMarkers.length,
     inlineLabelIds.length,
@@ -1569,6 +1897,20 @@ function DiscoverMap({
     };
   }, []);
 
+  const clearPendingGestureLabelRecompute = useCallback(() => {
+    if (gestureRecomputeTimeoutRef.current) {
+      clearTimeout(gestureRecomputeTimeoutRef.current);
+      gestureRecomputeTimeoutRef.current = null;
+    }
+    pendingGestureRecomputeRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearPendingGestureLabelRecompute();
+    };
+  }, [clearPendingGestureLabelRecompute]);
+
   const markGestureActive = useCallback(() => {
     gestureRef.current = true;
     if (gestureReleaseTimeoutRef.current) {
@@ -1586,6 +1928,59 @@ function DiscoverMap({
       gestureReleaseTimeoutRef.current = null;
     }, 120);
   }, []);
+
+  const scheduleGestureLabelRecompute = useCallback(
+    (nextCenter: [number, number], nextZoom: number) => {
+      if (!labelLayoutV3Enabled) {
+        return;
+      }
+      if (fullSpriteTextLayersEnabled && !useInlineLabelOverlay) {
+        return;
+      }
+
+      pendingGestureRecomputeRef.current = {
+        center: [nextCenter[0], nextCenter[1]],
+        zoom: nextZoom,
+      };
+
+      const now = Date.now();
+      const elapsed = now - lastGestureRecomputeTsRef.current;
+      const runImmediate =
+        elapsed >= MAP_LABEL_GESTURE_RECOMPUTE_MS &&
+        gestureRecomputeTimeoutRef.current === null;
+
+      if (runImmediate) {
+        lastGestureRecomputeTsRef.current = now;
+        const pending = pendingGestureRecomputeRef.current;
+        pendingGestureRecomputeRef.current = null;
+        if (pending) {
+          recomputeInlineLabels(pending.center, pending.zoom, "region-change");
+        }
+        return;
+      }
+
+      if (gestureRecomputeTimeoutRef.current) {
+        return;
+      }
+
+      const waitMs = Math.max(1, MAP_LABEL_GESTURE_RECOMPUTE_MS - elapsed);
+      gestureRecomputeTimeoutRef.current = setTimeout(() => {
+        gestureRecomputeTimeoutRef.current = null;
+        lastGestureRecomputeTsRef.current = Date.now();
+        const pending = pendingGestureRecomputeRef.current;
+        pendingGestureRecomputeRef.current = null;
+        if (pending) {
+          recomputeInlineLabels(pending.center, pending.zoom, "region-change");
+        }
+      }, waitMs);
+    },
+    [
+      fullSpriteTextLayersEnabled,
+      labelLayoutV3Enabled,
+      recomputeInlineLabels,
+      useInlineLabelOverlay,
+    ]
+  );
 
   const handlePanDrag = useCallback(() => {
     markGestureActive();
@@ -1615,9 +2010,10 @@ function DiscoverMap({
       if (!gestureRef.current) {
         return;
       }
+      scheduleGestureLabelRecompute(nextCenter, nextZoom);
       onCameraChanged(nextCenter, nextZoom, true);
     },
-    [applyRenderCamera, onCameraChanged]
+    [applyRenderCamera, onCameraChanged, scheduleGestureLabelRecompute]
   );
 
   const handleRegionChangeComplete = useCallback(
@@ -1637,6 +2033,7 @@ function DiscoverMap({
 
       applyRenderCamera(nextCenter, nextZoom);
       scheduleGestureRelease();
+      clearPendingGestureLabelRecompute();
       onCameraChanged(
         nextCenter,
         nextZoom,
@@ -1661,6 +2058,7 @@ function DiscoverMap({
     },
     [
       applyRenderCamera,
+      clearPendingGestureLabelRecompute,
       clearPendingStackedOpen,
       onCameraChanged,
       recomputeInlineLabels,
@@ -1753,7 +2151,13 @@ function DiscoverMap({
       closeStackedTooltip();
 
       if (marker.isCluster) {
-        const targetZoom = Math.min(zoomRef.current + 2, 20);
+        const targetZoom = Math.min(
+          20,
+          Math.max(
+            zoomRef.current + CLUSTER_PRESS_ZOOM_STEP,
+            singleLayerEnterZoom + CLUSTER_PRESS_TARGET_MARGIN_ZOOM
+          )
+        );
 
         setMapCamera(cameraRef, {
           center: [
@@ -1783,6 +2187,7 @@ function DiscoverMap({
       mapLabelCollisionV2Enabled,
       onMarkerPress,
       recomputeInlineLabels,
+      singleLayerEnterZoom,
       selectedStackedMarkerId,
       closeStackedTooltip,
     ]
@@ -1839,7 +2244,7 @@ function DiscoverMap({
             marker.markerData ? hasLocalFullMarkerSprite(marker.markerData) : false;
           const canUseIOSStableInlineSprite =
             isIOSStableMarkersMode &&
-            fullSpritesEnabled &&
+            fullSpriteTextLayersEnabled &&
             hasLocalInlineFullSprite &&
             !marker.isCluster &&
             !marker.isStacked &&
@@ -2035,7 +2440,7 @@ function DiscoverMap({
     [
       failedRemoteSpriteKeySet,
       fullSpriteOpacityById,
-      fullSpritesEnabled,
+      fullSpriteTextLayersEnabled,
       hasActiveFilter,
       handleMarkerPress,
       isIOSStableMarkersMode,
@@ -2044,6 +2449,46 @@ function DiscoverMap({
       useOverlayFullSprites,
     ]
   );
+
+  const inlineLabelOverlayElements = useMemo(() => {
+    if (!showSingleLayer || inlineLabelPlacements.length === 0) {
+      return [] as React.ReactNode[];
+    }
+
+    const placementsToRender = useInlineLabelOverlay
+      ? inlineLabelPlacements
+      : inlineLabelPlacements.filter(
+          (placement) => !inlineTextRenderedByMarkerIdSet.has(placement.id)
+        );
+    if (placementsToRender.length === 0) {
+      return [] as React.ReactNode[];
+    }
+
+    return placementsToRender.map((placement) => (
+      <View
+        key={`inline-label:${placement.id}`}
+        pointerEvents="none"
+        style={[
+          localStyles.inlineLabelWrap,
+          {
+            left: placement.left,
+            top: placement.top,
+            width: placement.width,
+            height: placement.height,
+          },
+        ]}
+      >
+        <Text style={localStyles.inlineLabelText} numberOfLines={1}>
+          {placement.title}
+        </Text>
+      </View>
+    ));
+  }, [
+    inlineLabelPlacements,
+    inlineTextRenderedByMarkerIdSet,
+    showSingleLayer,
+    useInlineLabelOverlay,
+  ]);
 
   const fullSpriteOverlayElements = useMemo(() => {
     if (!useOverlayFullSprites) {
@@ -2066,6 +2511,7 @@ function DiscoverMap({
 
         const resolved = resolveMarkerImage(marker.markerData, {
           preferFullSprite: true,
+          preferLocalFullSprite: true,
           remoteSpriteFailureKeys: failedRemoteSpriteKeySet,
         });
         if (resolved.variant === "compact" || !isValidMarkerImage(resolved.image)) {
@@ -2121,6 +2567,8 @@ function DiscoverMap({
         onRegionChangeComplete={handleRegionChangeComplete}
         showsCompass={false}
         zoomControlEnabled={false}
+        rotateEnabled={true}
+        pitchEnabled={true}
         customMapStyle={Platform.OS === "android" ? GOOGLE_MAP_STYLE : undefined}
         showsPointsOfInterest={Platform.OS === "ios" ? false : undefined}
       >
@@ -2136,6 +2584,12 @@ function DiscoverMap({
           />
         )}
       </MapView>
+
+      {inlineLabelOverlayElements.length > 0 && (
+        <View pointerEvents="none" style={localStyles.inlineLabelLayer}>
+          {inlineLabelOverlayElements}
+        </View>
+      )}
 
       {selectedStackedMarker && stackedTooltipLayout && (
         <TouchableWithoutFeedback onPress={closeStackedTooltip}>
@@ -2216,6 +2670,27 @@ const localStyles = StyleSheet.create({
   },
   iosMarkerLayerHidden: {
     opacity: 0,
+  },
+  inlineLabelLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 12,
+  },
+  inlineLabelWrap: {
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 2,
+  },
+  inlineLabelText: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "600",
+    color: "#0B0F19",
+    textAlign: "center",
+    includeFontPadding: false,
+    textShadowColor: "rgba(255, 255, 255, 0.92)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3,
   },
   tooltipBackdrop: {
     ...StyleSheet.absoluteFillObject,
