@@ -21,6 +21,7 @@ type MarkerLayerProps = {
   renderMarkers: RenderMarker[];
   inlineLabelIdSet: Set<string>;
   effectiveFullSpriteOpacityById: Record<string, number>;
+  clusterTracksViewChangesEnabled: boolean;
   hasActiveFilter: boolean;
   handleMarkerPress: (marker: RenderMarker) => void;
   mapMarkerPipelineOptV1: boolean;
@@ -35,6 +36,7 @@ export function MarkerLayer({
   renderMarkers,
   inlineLabelIdSet,
   effectiveFullSpriteOpacityById,
+  clusterTracksViewChangesEnabled,
   hasActiveFilter,
   handleMarkerPress,
   mapMarkerPipelineOptV1,
@@ -128,6 +130,9 @@ export function MarkerLayer({
         useOverlayFullSprites && fullOpacityForMarker >= 1 - FULL_SPRITE_FADE_EPSILON
           ? 0
           : 1;
+      const markerTracksViewChanges = marker.isCluster
+        ? clusterTracksViewChangesEnabled
+        : false;
       const numericImageProp = typeof imageProp === "number" ? imageProp : undefined;
       const iosCompactImageSource =
         typeof iosStableCompactImage === "number"
@@ -209,9 +214,9 @@ export function MarkerLayer({
           opacity={compactMarkerOpacity}
           onPress={() => handleMarkerPress(marker)}
           {...(!shouldRenderIOSScaledStaticImage && imageProp
-            ? { image: imageProp, tracksViewChanges: false }
+            ? { image: imageProp, tracksViewChanges: markerTracksViewChanges }
             : shouldRenderIOSScaledStaticImage
-              ? { tracksViewChanges: false }
+              ? { tracksViewChanges: markerTracksViewChanges }
               : {})}
           {...(resolvedAnchorProp ? { anchor: resolvedAnchorProp } : {})}
           {...(markerPinColor ? { pinColor: markerPinColor } : {})}
@@ -267,6 +272,7 @@ export function MarkerLayer({
   }, [
     effectiveFullSpriteOpacityById,
     failedRemoteSpriteKeySet,
+    clusterTracksViewChangesEnabled,
     fullSpriteTextLayersEnabled,
     hasActiveFilter,
     handleMarkerPress,

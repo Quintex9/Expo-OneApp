@@ -40,8 +40,10 @@ import {
   BASE_ANCHOR_X,
   BASE_ANCHOR_Y,
   CLUSTER_ZOOM_BUCKET_SIZE,
+  CLUSTER_CULL_RELEASE_DELAY_MS,
   CLUSTER_PRESS_TARGET_MARGIN_ZOOM,
   CLUSTER_PRESS_ZOOM_STEP,
+  CLUSTER_REDRAW_INTERACTION_ENABLED,
   FULL_SPRITE_TITLE_HEIGHT,
   FULL_SPRITE_TITLE_MIN_WIDTH,
   FULL_SPRITE_TITLE_OFFSET_Y,
@@ -129,6 +131,10 @@ function DiscoverMap({
   const zoom = renderCamera.zoom;
   const cameraCenterRef = useRef(cameraCenter);
   const zoomRef = useRef(zoom);
+  const [suppressClusterViewportCull, setSuppressClusterViewportCull] = useState(false);
+  const suppressClusterCullReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     cameraCenterRef.current = cameraCenter;
@@ -137,6 +143,32 @@ function DiscoverMap({
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
+
+  const setSuppressClusterViewportCullSafe = useCallback((nextValue: boolean) => {
+    setSuppressClusterViewportCull((previous) =>
+      previous === nextValue ? previous : nextValue
+    );
+  }, []);
+
+  const clearSuppressClusterCullRelease = useCallback(() => {
+    if (suppressClusterCullReleaseTimeoutRef.current) {
+      clearTimeout(suppressClusterCullReleaseTimeoutRef.current);
+      suppressClusterCullReleaseTimeoutRef.current = null;
+    }
+  }, []);
+
+  const markClusterInteractionActive = useCallback(() => {
+    clearSuppressClusterCullRelease();
+    setSuppressClusterViewportCullSafe(true);
+  }, [clearSuppressClusterCullRelease, setSuppressClusterViewportCullSafe]);
+
+  const scheduleClusterInteractionRelease = useCallback(() => {
+    clearSuppressClusterCullRelease();
+    suppressClusterCullReleaseTimeoutRef.current = setTimeout(() => {
+      suppressClusterCullReleaseTimeoutRef.current = null;
+      setSuppressClusterViewportCullSafe(false);
+    }, CLUSTER_CULL_RELEASE_DELAY_MS);
+  }, [clearSuppressClusterCullRelease, setSuppressClusterViewportCullSafe]);
 
   const singleLayerMarkers = useMemo<SingleLayerMarkerGroup[]>(() => {
     const grouped = new Map<
@@ -226,7 +258,10 @@ function DiscoverMap({
 
   const showSingleLayer = effectiveZoom >= singleLayerEnterZoom;
   const showClusterLayer = !showSingleLayer;
-  const shouldCullClustersByViewport = Platform.OS !== "ios";
+  const shouldCullClustersByViewport =
+    Platform.OS !== "ios" && !suppressClusterViewportCull;
+  const clusterTracksViewChangesEnabled =
+    CLUSTER_REDRAW_INTERACTION_ENABLED && suppressClusterViewportCull;
 
   const clusteredFeatures = useClusteredFeatures({
     showClusterLayer,
@@ -426,8 +461,9 @@ function DiscoverMap({
       if (gestureReleaseTimeoutRef.current) {
         clearTimeout(gestureReleaseTimeoutRef.current);
       }
+      clearSuppressClusterCullRelease();
     };
-  }, []);
+  }, [clearSuppressClusterCullRelease]);
 
   useEffect(() => {
     applyRenderCamera(
@@ -529,16 +565,24 @@ function DiscoverMap({
 
   const handlePanDrag = useCallback(() => {
     markGestureActive();
+    markClusterInteractionActive();
     if (selectedStackedMarkerId || pendingStackedOpenRef.current) {
       closeStackedTooltip();
     }
-  }, [markGestureActive, selectedStackedMarkerId, closeStackedTooltip, pendingStackedOpenRef]);
+  }, [
+    closeStackedTooltip,
+    markClusterInteractionActive,
+    markGestureActive,
+    pendingStackedOpenRef,
+    selectedStackedMarkerId,
+  ]);
 
   const handleRegionChange = useCallback(
     (region: Region) => {
       if (!isValidRegion(region)) {
         return;
       }
+      markClusterInteractionActive();
 
       const nextCenter = normalizeCenter([region.longitude, region.latitude]);
       const nextZoom = regionToZoom(region);
@@ -558,13 +602,19 @@ function DiscoverMap({
       scheduleGestureLabelRecompute(nextCenter, nextZoom);
       onCameraChanged(nextCenter, nextZoom, true);
     },
-    [applyRenderCamera, onCameraChanged, scheduleGestureLabelRecompute]
+    [
+      applyRenderCamera,
+      markClusterInteractionActive,
+      onCameraChanged,
+      scheduleGestureLabelRecompute,
+    ]
   );
 
   const handleRegionChangeComplete = useCallback(
     (region: Region, details?: { isGesture?: boolean }) => {
       if (!isValidRegion(region)) {
         scheduleGestureRelease();
+        scheduleClusterInteractionRelease();
         return;
       }
 
@@ -573,11 +623,13 @@ function DiscoverMap({
       const nextZoom = regionToZoom(region);
       if (!isFiniteCoordinate(nextCenter[1], nextCenter[0]) || !Number.isFinite(nextZoom)) {
         scheduleGestureRelease();
+        scheduleClusterInteractionRelease();
         return;
       }
 
       applyRenderCamera(nextCenter, nextZoom);
       scheduleGestureRelease();
+      scheduleClusterInteractionRelease();
       clearPendingGestureLabelRecompute();
       onCameraChanged(
         nextCenter,
@@ -609,6 +661,7 @@ function DiscoverMap({
       recomputeInlineLabels,
       renderMarkers,
       scheduleGestureRelease,
+      scheduleClusterInteractionRelease,
       selectedStackedMarker,
       setSelectedStackedMarkerId,
       updateStackedTooltipPosition,
@@ -753,6 +806,19 @@ function DiscoverMap({
     }
   }, [selectedStackedMarkerId, closeStackedTooltip, pendingStackedOpenRef]);
 
+  const handleMapTouchStart = useCallback(() => {
+    markGestureActive();
+    markClusterInteractionActive();
+  }, [markClusterInteractionActive, markGestureActive]);
+
+  const handleMapTouchEnd = useCallback(() => {
+    scheduleClusterInteractionRelease();
+  }, [scheduleClusterInteractionRelease]);
+
+  const handleMapTouchCancel = useCallback(() => {
+    scheduleClusterInteractionRelease();
+  }, [scheduleClusterInteractionRelease]);
+
   const handleMapLayout = useCallback(
     (event: LayoutChangeEvent) => {
       const width = Math.round(event.nativeEvent.layout.width);
@@ -826,6 +892,9 @@ function DiscoverMap({
           recomputeInlineLabels(cameraCenter, zoom, "map-ready");
         }}
         onPanDrag={handlePanDrag}
+        onTouchStart={handleMapTouchStart}
+        onTouchEnd={handleMapTouchEnd}
+        onTouchCancel={handleMapTouchCancel}
         onPress={handleMapPress}
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={handleRegionChangeComplete}
@@ -841,6 +910,7 @@ function DiscoverMap({
           renderMarkers={renderMarkers}
           inlineLabelIdSet={inlineLabelIdSet}
           effectiveFullSpriteOpacityById={effectiveFullSpriteOpacityById}
+          clusterTracksViewChangesEnabled={clusterTracksViewChangesEnabled}
           hasActiveFilter={Boolean(hasActiveFilter)}
           handleMarkerPress={handleMarkerPress}
           mapMarkerPipelineOptV1={mapMarkerPipelineOptV1}

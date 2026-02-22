@@ -117,7 +117,7 @@ export const useClusteredFeatures = ({
         return [];
       }
       const rawClusters = clusterIndex.getClusters(worldBbox, stableClusterZoom);
-      return buildClusteredFeaturesFromRaw({
+      const culledFeatures = buildClusteredFeaturesFromRaw({
         rawClusters,
         worldSize,
         clusterRadiusPx,
@@ -125,6 +125,21 @@ export const useClusteredFeatures = ({
         shouldCullClustersByViewport,
         paddedViewport,
       });
+      if (
+        shouldCullClustersByViewport &&
+        culledFeatures.length === 0 &&
+        rawClusters.length > 0
+      ) {
+        return buildClusteredFeaturesFromRaw({
+          rawClusters,
+          worldSize,
+          clusterRadiusPx,
+          isIOS,
+          shouldCullClustersByViewport: false,
+          paddedViewport: null,
+        });
+      }
+      return culledFeatures;
     }
 
     const pointFeatures = buildClusterPointFeatures(filteredMarkers);
@@ -153,7 +168,7 @@ export const useClusteredFeatures = ({
     legacyIndex.load(pointFeatures);
 
     const rawClusters = legacyIndex.getClusters(worldBbox, stableClusterZoom);
-    return buildClusteredFeaturesFromRaw({
+    const culledFeatures = buildClusteredFeaturesFromRaw({
       rawClusters,
       worldSize,
       clusterRadiusPx,
@@ -161,6 +176,21 @@ export const useClusteredFeatures = ({
       shouldCullClustersByViewport,
       paddedViewport,
     });
+    if (
+      shouldCullClustersByViewport &&
+      culledFeatures.length === 0 &&
+      rawClusters.length > 0
+    ) {
+      return buildClusteredFeaturesFromRaw({
+        rawClusters,
+        worldSize,
+        clusterRadiusPx,
+        isIOS,
+        shouldCullClustersByViewport: false,
+        paddedViewport: null,
+      });
+    }
+    return culledFeatures;
   }, [
     clusterIndex,
     clusterRadiusPx,

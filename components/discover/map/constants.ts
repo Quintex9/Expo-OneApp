@@ -11,6 +11,8 @@ export const TOOLTIP_WIDTH = 183;
 export const TOOLTIP_ROW_HEIGHT = 33;
 export const STACKED_CENTER_DURATION_MS = 280;
 export const STACKED_OPEN_FALLBACK_MS = 360;
+export const CLUSTER_CULL_RELEASE_DELAY_MS = 150;
+export const CLUSTER_REDRAW_INTERACTION_ENABLED = true;
 
 export const PIN_CANVAS_WIDTH = 165;
 export const PIN_CANVAS_HEIGHT = 186;
