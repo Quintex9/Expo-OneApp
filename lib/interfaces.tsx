@@ -127,6 +127,8 @@ export interface DiscoverMapProps {
   ) => void;
 
   onMarkerPress?: (id: string) => void;
+  onMarkerLongPress?: (id: string, coord: [number, number], point: [number, number]) => void;
+  onUserGestureStart?: () => void;
 
   mapCenter?: [number, number];
   mapZoom?: number;
@@ -172,6 +174,15 @@ export interface DiscoverFavoritePlace {
   label: string;
   coord: [number, number];
   isSaved?: boolean;
+}
+
+export interface DiscoverAddressSuggestion {
+  id: string;
+  label: string;
+  subtitle: string;
+  branchCount?: number;
+  coord: [number, number];
+  isSaved: boolean;
 }
 
 export interface DiscoverPendingLocationSelection {
@@ -249,7 +260,9 @@ export interface DiscoverSearchSheetProps {
   text: string;
   setText: Dispatch<SetStateAction<string>>;
   filtered: BranchCardProps[];
+  addressSuggestions?: DiscoverAddressSuggestion[];
   onSelectBranch: (branch: BranchData) => void;
+  onSelectAddressSuggestion?: (item: DiscoverAddressSuggestion) => void;
   favoritePlaces: DiscoverFavoritePlace[];
   onSelectFavorite: (place: DiscoverFavoritePlace) => void;
   autoFocus?: boolean;

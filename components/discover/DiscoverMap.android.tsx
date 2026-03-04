@@ -1,1 +1,1 @@
-export { default } from "./DiscoverMapLegacy.native";
+export { default } from "./DiscoverMap.native";

@@ -48,7 +48,9 @@ export interface UseDiscoverCameraReturn {
   // === POMOCNÉ FUNKCIE PRE NAVIGÁCIU ===
   setPreserveCamera: (value: boolean) => void;
   getLastCameraState: () => { center: [number, number]; zoom: number } | null;
-  syncCameraFromNative: () => Promise<{ center: [number, number]; zoom: number } | null>;
+  syncCameraFromNative: (options?: {
+    applyToState?: boolean;
+  }) => Promise<{ center: [number, number]; zoom: number } | null>;
   restoreCameraIfNeeded: () => void;
 }
 
@@ -341,9 +343,17 @@ export const useDiscoverCamera = ({
    * Synchronizes camera state from native map immediately.
    * This prevents stale zoom restore when navigating away right after gestures.
    */
-  const syncCameraFromNative = useCallback(async () => {
+  const syncCameraFromNative = useCallback(async (options?: { applyToState?: boolean }) => {
+    const applyToState = options?.applyToState ?? true;
+    console.log("[DiscoverMapDebug:camera] syncCameraFromNative:start", {
+      applyToState,
+      hasMapView: Boolean(cameraRef.current),
+    });
     const mapView = cameraRef.current;
     if (!mapView) {
+      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:noMapView", {
+        lastDiscoverCameraState,
+      });
       return lastDiscoverCameraState;
     }
 
@@ -444,11 +454,22 @@ export const useDiscoverCamera = ({
             longitudeDelta: regionFromBounds.longitudeDelta,
           }
         : null;
-      latestAppliedRef.current = nextState;
-      applyCameraState(nextState.center, nextState.zoom);
+      if (applyToState) {
+        latestAppliedRef.current = nextState;
+        applyCameraState(nextState.center, nextState.zoom);
+      }
+
+      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:success", {
+        applyToState,
+        nextState,
+      });
 
       return nextState;
     } catch {
+      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:error", {
+        applyToState,
+        lastDiscoverCameraState,
+      });
       return lastDiscoverCameraState;
     }
   }, [applyCameraState]);

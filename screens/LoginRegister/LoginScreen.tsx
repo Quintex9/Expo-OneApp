@@ -23,7 +23,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../lib/AuthContext";
 
 export default function LoginScreen() {
@@ -36,7 +35,7 @@ export default function LoginScreen() {
 
     const navigation = useNavigation<any>();
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, signInWithEmail } = useAuth();
 
     // Presmerovanie ak je používateľ už prihlásený
     useEffect(() => {
@@ -63,30 +62,9 @@ export default function LoginScreen() {
         setLoading(true);
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email.trim(),
-                password: password,
-            });
-
-            if (error) {
-                console.error("Login error:", error);
-                throw error;
-            }
-
-            if (data.user) {
-                // Kontrola onboarding statusu a presmerovanie
-                const onboardingCompleted = await AsyncStorage.getItem("onboarding_completed");
-                if (onboardingCompleted === "false") { // VYMENIT NA "true" PRE ZOBRAZENIE PRI PRVOM LOGINE
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: "Tabs" }],
-                    });
-                } else {
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: "Onboarding" }],
-                    });
-                }
+            const errorMessage = await signInWithEmail(email, password);
+            if (errorMessage) {
+                throw new Error(errorMessage);
             }
         } catch (error: any) {
             console.error("Login catch error:", error);
@@ -100,37 +78,11 @@ export default function LoginScreen() {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        try {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-            });
-            if (error) throw error;
-        } catch (error: any) {
-            Alert.alert(t("error") || "Error", error.message);
-        }
-    };
-
-    const handleAppleLogin = async () => {
-        try {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'apple',
-            });
-            if (error) throw error;
-        } catch (error: any) {
-            Alert.alert(t("error") || "Error", error.message);
-        }
-    };
-
-    const handleFacebookLogin = async () => {
-        try {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'facebook',
-            });
-            if (error) throw error;
-        } catch (error: any) {
-            Alert.alert(t("error") || "Error", error.message);
-        }
+    const handleUnsupportedSocialLogin = () => {
+        Alert.alert(
+            t("error") || "Error",
+            t("socialAuthUnavailable", "This sign-in method is not available right now.")
+        );
     };
 
     return (
@@ -248,21 +200,21 @@ export default function LoginScreen() {
 
                         {/* Social login */}
                         <View style={styles.socialRow}>
-                            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={loading}>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleUnsupportedSocialLogin} disabled={loading}>
                                 <Image
                                     source={{ uri: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png" }}
                                     style={styles.socialIcon}
                                 />
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin} disabled={loading}>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleUnsupportedSocialLogin} disabled={loading}>
                                 <Image
                                     source={{ uri: "https://cdn-icons-png.flaticon.com/512/0/747.png" }}
                                     style={styles.socialIcon}
                                 />
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.socialButton} onPress={handleFacebookLogin} disabled={loading}>
+                            <TouchableOpacity style={styles.socialButton} onPress={handleUnsupportedSocialLogin} disabled={loading}>
                                 <Image
                                     source={{ uri: "https://cdn-icons-png.flaticon.com/512/5968/5968764.png" }}
                                     style={styles.socialIcon}

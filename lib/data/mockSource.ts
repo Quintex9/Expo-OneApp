@@ -9,6 +9,7 @@ import type { BranchDto, MarkerDto } from "./models";
 import { branchDtosFixture } from "../fixtures/branchDtos";
 import { coords } from "./coords";
 import { formatTitleFromId, getRatingForId } from "./utils/marker";
+import { buildMockBranchAddress } from "./utils/mockAddress";
 import { normalizeId } from "./utils/id";
 
 const DEFAULT_HOURS = "9:00 - 21:00";
@@ -99,6 +100,7 @@ const buildBranchFromMarker = (id: string, marker: MarkerDto): BranchDto => {
     distance: DEFAULT_DISTANCE,
     hours: DEFAULT_HOURS,
     coordinates: [marker.coord.lng, marker.coord.lat],
+    address: buildMockBranchAddress(markerId),
     imageKey: normalizeId(marker.category === "Multi" ? "fitness" : marker.category),
     labelPriority: marker.labelPriority,
   };

@@ -5,13 +5,23 @@
  * consistent behavior across Discover surfaces.
  */
 
-import type { BranchData, DiscoverFavoritePlace, Location } from "../interfaces";
+import type {
+  BranchData,
+  DiscoverAddressSuggestion,
+  DiscoverFavoritePlace,
+  Location,
+} from "../interfaces";
 import { NITRA_CENTER } from "../constants/discoverUi";
 
 interface BuildDiscoverFavoritePlacesOptions {
   locations: Location[];
   userCoord: [number, number] | null;
   t: (key: string) => string;
+}
+
+interface BuildDiscoverAddressSuggestionsOptions {
+  branches: BranchData[];
+  locations: Location[];
 }
 
 export interface DiscoverBranchSearchIndexEntry {
@@ -57,6 +67,37 @@ const dedupeFavorites = (items: DiscoverFavoritePlace[]): DiscoverFavoritePlace[
   });
 
   return deduped;
+};
+
+const dedupeAddressSuggestions = (
+  items: DiscoverAddressSuggestion[]
+): DiscoverAddressSuggestion[] => {
+  const grouped = new Map<
+    string,
+    DiscoverAddressSuggestion & { branchCount: number; firstSubtitle: string }
+  >();
+
+  items.forEach((item) => {
+    const key = normalizeDiscoverSearchText(item.label);
+    const current = grouped.get(key);
+    if (!current) {
+      grouped.set(key, {
+        ...item,
+        branchCount: 1,
+        firstSubtitle: item.subtitle,
+      });
+      return;
+    }
+
+    current.branchCount += 1;
+    current.isSaved = current.isSaved || item.isSaved;
+  });
+
+  return Array.from(grouped.values()).map(({ branchCount, firstSubtitle, ...item }) => ({
+    ...item,
+    subtitle: firstSubtitle,
+    branchCount,
+  }));
 };
 
 export const normalizeDiscoverSearchText = (value?: string | null): string => {
@@ -173,6 +214,95 @@ export const buildDiscoverFavoritePlaces = ({
   });
 
   return dedupeFavorites(fallback);
+};
+
+const isSavedAddressSuggestion = (
+  locations: Location[],
+  label: string,
+  coord: [number, number]
+): boolean => {
+  const normalizedLabel = normalizeDiscoverSearchText(label);
+
+  return locations.some((item) => {
+    if (!item.isSaved || !isValidCoord(item.coord)) {
+      return false;
+    }
+
+    const sameCoord =
+      Math.abs((item.coord as [number, number])[0] - coord[0]) < 1e-6 &&
+      Math.abs((item.coord as [number, number])[1] - coord[1]) < 1e-6;
+    const sameLabel = normalizeDiscoverSearchText(item.label) === normalizedLabel;
+    return sameCoord || sameLabel;
+  });
+};
+
+export const buildDiscoverAddressSuggestions = ({
+  branches,
+  locations,
+}: BuildDiscoverAddressSuggestionsOptions): DiscoverAddressSuggestion[] => {
+  const items: DiscoverAddressSuggestion[] = [];
+
+  branches.forEach((branch, index) => {
+    const address = typeof branch.address === "string" ? branch.address.trim() : "";
+    const coord = branch.coordinates;
+    if (!address || !isValidCoord(coord)) {
+      return;
+    }
+
+    items.push({
+      id: `discover-address-${branch.id ?? index}`,
+      label: address,
+      subtitle: branch.title,
+      coord,
+      isSaved: isSavedAddressSuggestion(locations, address, coord),
+    });
+  });
+
+  return dedupeAddressSuggestions(items);
+};
+
+const addressSuggestionMatchesQuery = (
+  item: DiscoverAddressSuggestion,
+  queryTokens: readonly string[]
+): boolean => {
+  if (queryTokens.length === 0) {
+    return false;
+  }
+
+  const searchableText = normalizeDiscoverSearchText(item.label);
+
+  return queryTokens.every((token) => searchableText.includes(token));
+};
+
+export const filterDiscoverAddressSuggestions = (
+  items: DiscoverAddressSuggestion[],
+  query: string
+): DiscoverAddressSuggestion[] => {
+  const queryTokens = tokenizeDiscoverSearchQuery(query);
+  if (queryTokens.length === 0) {
+    return [];
+  }
+
+  const normalizedQuery = normalizeDiscoverSearchText(query);
+
+  return items
+    .filter((item) => addressSuggestionMatchesQuery(item, queryTokens))
+    .sort((a, b) => {
+      const aLabel = normalizeDiscoverSearchText(a.label);
+      const bLabel = normalizeDiscoverSearchText(b.label);
+      const aStarts = aLabel.startsWith(normalizedQuery);
+      const bStarts = bLabel.startsWith(normalizedQuery);
+
+      if (aStarts !== bStarts) {
+        return aStarts ? -1 : 1;
+      }
+
+      if (a.isSaved !== b.isSaved) {
+        return a.isSaved ? -1 : 1;
+      }
+
+      return a.label.localeCompare(b.label);
+    });
 };
 
 const compareBranchesForSearchOrder = (a: BranchData, b: BranchData): number => {

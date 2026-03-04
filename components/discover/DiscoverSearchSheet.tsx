@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type {
+  DiscoverAddressSuggestion,
   DiscoverSearchSheetProps,
   BranchCardProps,
   DiscoverFavoritePlace,
@@ -40,7 +41,9 @@ function DiscoverSearchSheet({
   text,
   setText,
   filtered,
+  addressSuggestions = [],
   onSelectBranch,
+  onSelectAddressSuggestion,
   favoritePlaces,
   onSelectFavorite,
   autoFocus = false,
@@ -283,17 +286,59 @@ function DiscoverSearchSheet({
     [onSelectFavorite, t]
   );
 
+  const renderAddressSuggestion = useCallback(
+    (item: DiscoverAddressSuggestion) => {
+      const subtitle =
+        typeof item.branchCount === "number" && item.branchCount > 1
+          ? t("discoverSearchAddressBusinessesCount", { value: item.branchCount })
+          : item.subtitle;
+
+      return (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.9}
+          style={localStyles.addressCard}
+          onPress={() => onSelectAddressSuggestion?.(item)}
+          accessibilityRole="button"
+          accessibilityLabel={t("discoverSearchAddressShowA11y", { address: item.label })}
+        >
+          <View style={localStyles.addressIconWrap}>
+            <Ionicons name="location-outline" size={18} color="#EB8100" />
+          </View>
+
+          <View style={localStyles.addressTextWrap}>
+            <Text style={localStyles.addressTitle} numberOfLines={1}>
+              {item.label}
+            </Text>
+            <Text style={localStyles.addressSubtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          </View>
+
+          <View style={localStyles.addressMapCta}>
+            <Ionicons name="navigate-outline" size={14} color="#111111" />
+            <Text style={localStyles.addressMapCtaText}>{t("discoverSearchAddressShow")}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [onSelectAddressSuggestion, t]
+  );
+
   const listHeader = useMemo(() => {
+    const hasActiveQuery = text.trim().length > 0;
     const hasResults = filtered.length > 0;
     const hasResultTabs = Array.isArray(resultTabs) && resultTabs.length > 0;
+    const hasAddressSuggestions = text.trim().length > 0 && addressSuggestions.length > 0;
+    const shouldShowFavoritesSection = showFavorites && !hasActiveQuery;
 
-    if (!showFavorites && !hasResults && !hasResultTabs) {
+    if (!shouldShowFavoritesSection && !hasResults && !hasResultTabs && !hasAddressSuggestions) {
       return null;
     }
 
     return (
       <View style={localStyles.listHeaderWrap} onLayout={handleHeaderLayout}>
-        {showFavorites ? (
+        {shouldShowFavoritesSection ? (
           <View style={localStyles.favoritesSection}>
             <View style={localStyles.favoritesHeading}>
               <Text style={localStyles.favoritesTitle}>{t("discoverSearchFavoritesTitle")}</Text>
@@ -310,6 +355,22 @@ function DiscoverSearchSheet({
             ) : (
               <Text style={localStyles.favoritesEmpty}>{t("discoverSearchFavoritesEmpty")}</Text>
             )}
+          </View>
+        ) : null}
+
+          {hasAddressSuggestions ? (
+            <View style={localStyles.addressSection}>
+              <View style={localStyles.addressSectionHeading}>
+                <Text style={localStyles.addressSectionTitle}>
+                  {t("discoverSearchAddressSuggestionsTitle")}
+                </Text>
+                <Text style={localStyles.addressSectionCount}>
+                  {addressSuggestions.length}
+                </Text>
+            </View>
+            <View style={localStyles.addressCardsWrap}>
+              {addressSuggestions.map((item) => renderAddressSuggestion(item))}
+            </View>
           </View>
         ) : null}
 
@@ -352,18 +413,25 @@ function DiscoverSearchSheet({
     );
   }, [
     activeResultTabKey,
+    addressSuggestions,
     favoritePlaces,
     filtered.length,
     handleHeaderLayout,
     onChangeResultTab,
+    renderAddressSuggestion,
     renderFavoriteChip,
     resultTabs,
     showFavorites,
     t,
+    text,
   ]);
 
   const listEmptyComponent = useMemo(() => {
     if (!text.trim()) {
+      return null;
+    }
+
+    if (addressSuggestions.length > 0) {
       return null;
     }
 
@@ -372,7 +440,7 @@ function DiscoverSearchSheet({
         <Text style={localStyles.emptyResultsText}>{t("noPlacesFound")}</Text>
       </View>
     );
-  }, [text, t]);
+  }, [addressSuggestions.length, text, t]);
 
   if (sheetIndex === -1) {
     return null;
@@ -600,6 +668,98 @@ const localStyles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: "500",
     color: "#71717A",
+  },
+  addressSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F5D8B1",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  addressSectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  addressSectionTitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: "#111111",
+  },
+  addressSectionCount: {
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: "#FFF4E8",
+    color: "#B45309",
+    fontSize: 12,
+    lineHeight: 24,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  addressCardsWrap: {
+    marginTop: 10,
+    gap: 10,
+  },
+  addressCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#EAEAEA",
+    backgroundColor: "#FAFAFA",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  addressIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF4E8",
+  },
+  addressTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addressTitle: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "700",
+    color: "#111111",
+  },
+  addressSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+    color: "#71717A",
+  },
+  addressMapCta: {
+    minHeight: 32,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
+  },
+  addressMapCtaText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: "#111111",
   },
   resultsSectionTitle: {
     fontSize: 13,

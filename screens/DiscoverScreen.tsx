@@ -5,13 +5,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ImageSourcePropType, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { Animated, ImageSourcePropType, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
+import { Ionicons } from "@expo/vector-icons";
 import type {
   BranchData,
+  DiscoverAddressSuggestion,
   DiscoverCategory,
   DiscoverFavoritePlace,
   DiscoverMapMarker,
@@ -38,14 +40,18 @@ import { filterMarkersByViewport } from "../lib/maps/viewportFilter";
 import { AppConfig } from "../lib/config/AppConfig";
 import { appendDerivedBranchesFromMarkers } from "../lib/data/mappers";
 import { normalizeId } from "../lib/data/utils/id";
+import { useFavorites } from "../lib/FavoritesContext";
 import {
   DISCOVER_FILTER_OPTIONS,
   DISCOVER_SUBCATEGORIES,
   NITRA_CENTER,
 } from "../lib/constants/discoverUi";
+
 import {
+  buildDiscoverAddressSuggestions,
   buildDiscoverFavoritePlaces,
   buildDiscoverBranchSearchIndex,
+  filterDiscoverAddressSuggestions,
   filterDiscoverBranchSearchIndex,
 } from "../lib/discover/discoverSearchUtils";
 
@@ -55,6 +61,11 @@ const FILTER_ICONS: Record<DiscoverCategory, ImageSourcePropType> = {
   Relax: require("../images/icons/relax/Relax.png"),
   Beauty: require("../images/icons/beauty/Beauty.png"),
 };
+
+type QuickFavoritePrompt = {
+  branch: BranchData;
+  point: { x: number; y: number };
+};
 // Camera state is preserved via useDiscoverCamera hook (module-level state).
 
 export default function DiscoverScreen() {
@@ -62,6 +73,7 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
+  const { isFavorite: isFavoriteBranch, toggleFavorite } = useFavorites();
   const [sideFilterOpen, setSideFilterOpen] = useState(false);
 
   // Refs
@@ -71,6 +83,7 @@ export default function DiscoverScreen() {
   const groupSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["25%", "85%"], []);
   const groupSnapPoints = useMemo(() => ["45%"], []);
+  const quickFavoriteAnim = useRef(new Animated.Value(0)).current;
 
   // Custom hooks
   const filters = useDiscoverFilters("Gastro");
@@ -107,7 +120,7 @@ export default function DiscoverScreen() {
     shouldResetOptionOnUserGesture: option !== "yourLocation",
     onOptionReset: () => setOption("yourLocation"),
   });
-  const [cameraSnapshot, setCameraSnapshot] = useState(() => camera.getLastCameraState());
+  const cameraSnapshotRef = useRef(camera.getLastCameraState());
 
   // UI state
   const [open, setOpen] = useState(false);
@@ -115,6 +128,20 @@ export default function DiscoverScreen() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchSheetIndex, setSearchSheetIndex] = useState(-1);
+  const [quickFavoritePrompt, setQuickFavoritePrompt] = useState<QuickFavoritePrompt | null>(null);
+  const quickFavoriteRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (quickFavoritePrompt) {
+      quickFavoriteAnim.setValue(0);
+      Animated.spring(quickFavoriteAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 120,
+        friction: 9,
+      }).start();
+    }
+  }, [quickFavoritePrompt, quickFavoriteAnim]);
 
   // Selected group for multi-pin popup
   const [selectedGroup, setSelectedGroup] = useState<{
@@ -148,9 +175,9 @@ export default function DiscoverScreen() {
 
       return () => {
         camera.setPreserveCamera(true);
-        void camera.syncCameraFromNative().then((latest) => {
+        void camera.syncCameraFromNative({ applyToState: false }).then((latest) => {
           if (latest) {
-            setCameraSnapshot(latest);
+            cameraSnapshotRef.current = latest;
           }
         });
       };
@@ -187,6 +214,14 @@ export default function DiscoverScreen() {
   const searchBranches = useMemo(() => {
     return filterDiscoverBranchSearchIndex(searchBranchIndex, text);
   }, [searchBranchIndex, text]);
+  const addressSuggestionIndex = useMemo(
+    () => buildDiscoverAddressSuggestions({ branches: searchBranchCandidates, locations: location }),
+    [location, searchBranchCandidates]
+  );
+  const addressSuggestions = useMemo(
+    () => filterDiscoverAddressSuggestions(addressSuggestionIndex, text).slice(0, 5),
+    [addressSuggestionIndex, text]
+  );
   const markerLookup = useMemo(() => {
     const lookup = new Map<string, DiscoverMapMarker>();
     markers.forEach((marker) => {
@@ -258,10 +293,12 @@ export default function DiscoverScreen() {
     setSearchSheetIndex(-1);
     setIsSheetOpen(false);
     setOpen(false);
+    setQuickFavoritePrompt(null);
   }, []);
 
   const handleSelectFavorite = useCallback(
     (place: DiscoverFavoritePlace) => {
+      setQuickFavoritePrompt(null);
       const matchingLocation = location.find((item) => item.label === place.label);
       if (matchingLocation) {
         setOption(matchingLocation.label);
@@ -277,9 +314,77 @@ export default function DiscoverScreen() {
 
   const handleOpenSearch = useCallback(() => {
     setOpen(false);
+    setQuickFavoritePrompt(null);
     setSearchSheetIndex(0);
     setIsSheetOpen(true);
   }, []);
+
+  const handleSelectAddressSuggestion = useCallback(
+    (item: DiscoverAddressSuggestion) => {
+      setQuickFavoritePrompt(null);
+      setMapCamera(camera.cameraRef, { center: item.coord, zoom: 15, durationMs: 800 });
+      handleCloseSearch();
+    },
+    [camera.cameraRef, handleCloseSearch]
+  );
+
+  const handleMarkerLongPress = useCallback(
+    (id: string, _coord: [number, number], point: [number, number]) => {
+      const markerKey = normalizeId(id);
+      const marker = markerKey ? markerLookup.get(markerKey) : undefined;
+      if (!marker) {
+        setQuickFavoritePrompt(null);
+        return;
+      }
+
+      setOpen(false);
+      setSelectedGroup(null);
+      handleCloseSearch();
+      const nextPoint = {
+        x: Number(point[0]),
+        y: Number(point[1]),
+      };
+      if (!Number.isFinite(nextPoint.x) || !Number.isFinite(nextPoint.y)) {
+        return;
+      }
+
+      const fallbackBranch = buildBranchFromMarker(marker);
+      setQuickFavoritePrompt({
+        branch: fallbackBranch,
+        point: nextPoint,
+      });
+
+      const requestId = quickFavoriteRequestRef.current + 1;
+      quickFavoriteRequestRef.current = requestId;
+      void fetchBranchForMarker(marker)
+        .then((branch) => {
+          if (!mountedRef.current || quickFavoriteRequestRef.current !== requestId) {
+            return;
+          }
+
+          setQuickFavoritePrompt((current) => {
+            if (!current || current.branch.id !== fallbackBranch.id) {
+              return current;
+            }
+
+            return {
+              branch,
+              point: current.point,
+            };
+          });
+        })
+        .catch(() => undefined);
+    },
+    [buildBranchFromMarker, fetchBranchForMarker, handleCloseSearch, markerLookup]
+  );
+
+  const handleQuickFavoritePress = useCallback(() => {
+    if (!quickFavoritePrompt) {
+      return;
+    }
+
+    toggleFavorite(quickFavoritePrompt.branch);
+  }, [quickFavoritePrompt, toggleFavorite]);
 
   const handleFilterSheetChange = useCallback(
     (index: number) => {
@@ -295,9 +400,16 @@ export default function DiscoverScreen() {
     [searchSheetIndex]
   );
 
+  const handleUserGestureStart = useCallback(() => {
+    setQuickFavoritePrompt(null);
+  }, []);
+
   // Camera change handler
   const handleCameraChanged = useCallback(
     (center: [number, number], zoom: number, isUserGesture?: boolean) => {
+      if (isUserGesture) {
+        setQuickFavoritePrompt(null);
+      }
       camera.handleCameraChanged(center, zoom, isUserGesture);
     },
     [camera.handleCameraChanged]
@@ -305,11 +417,20 @@ export default function DiscoverScreen() {
 
   const navigateToBranchDetail = useCallback(
     async (branch: BranchData) => {
+      setQuickFavoritePrompt(null);
+      console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:start", {
+        branchId: branch.id,
+        branchTitle: branch.title,
+      });
       camera.setPreserveCamera(true);
-      const latest = await camera.syncCameraFromNative();
+      const latest = await camera.syncCameraFromNative({ applyToState: false });
       if (latest) {
-        setCameraSnapshot(latest);
+        cameraSnapshotRef.current = latest;
+        console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:cameraSnapshot", latest);
       }
+      console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:navigate", {
+        branchId: branch.id,
+      });
       navigation.navigate("BusinessDetailScreen", { branch });
     },
     [camera.syncCameraFromNative, camera.setPreserveCamera, navigation]
@@ -343,8 +464,15 @@ export default function DiscoverScreen() {
   // Marker press handler
   const handleMarkerPress = useCallback(
     (id: string) => {
+      setQuickFavoritePrompt(null);
+      console.log("[DiscoverMapDebug:screen] handleMarkerPress:start", {
+        id,
+        loading,
+        hasError: Boolean(error),
+      });
       if (loading || error) return;
       if (!id || id === "") {
+        console.log("[DiscoverMapDebug:screen] handleMarkerPress:clearSelection");
         setSelectedGroup(null);
         return;
       }
@@ -353,15 +481,27 @@ export default function DiscoverScreen() {
       if (!group) {
         const marker = markers.find((item) => item.id === id);
         if (!marker) return;
+        console.log("[DiscoverMapDebug:screen] handleMarkerPress:directMarker", {
+          markerId: marker.id,
+        });
         setSelectedGroup(null);
         void fetchBranchForMarker(marker)
-          .then((branch) => { if (mountedRef.current) navigateToBranchDetail(branch); })
+          .then((branch) => {
+            console.log("[DiscoverMapDebug:screen] handleMarkerPress:directMarkerResolved", {
+              branchId: branch.id,
+            });
+            if (mountedRef.current) navigateToBranchDetail(branch);
+          })
           .catch(() => undefined);
         return;
       }
 
       // Multi-pin - show popup
       if (group.items.length > 1) {
+        console.log("[DiscoverMapDebug:screen] handleMarkerPress:grouped", {
+          groupId: group.id,
+          count: group.items.length,
+        });
         setSelectedGroup({
           coord: { lng: group.lng, lat: group.lat },
           items: group.items,
@@ -370,10 +510,18 @@ export default function DiscoverScreen() {
       }
 
       // Single pin - navigate to detail
+      console.log("[DiscoverMapDebug:screen] handleMarkerPress:singleFromGroup", {
+        groupId: group.id,
+      });
       setSelectedGroup(null);
       const marker = group.items[0];
       void fetchBranchForMarker(marker)
-        .then((branch) => { if (mountedRef.current) navigateToBranchDetail(branch); })
+        .then((branch) => {
+          console.log("[DiscoverMapDebug:screen] handleMarkerPress:singleResolved", {
+            branchId: branch.id,
+          });
+          if (mountedRef.current) navigateToBranchDetail(branch);
+        })
         .catch(() => undefined);
     },
     [loading, error, groupedMarkers, markers, fetchBranchForMarker, navigateToBranchDetail]
@@ -394,6 +542,17 @@ export default function DiscoverScreen() {
     );
   }
 
+  const quickFavoritePosition = quickFavoritePrompt
+    ? {
+        left: Math.max(8, Math.min(screenWidth - 35, quickFavoritePrompt.point.x-10)),
+        top: Math.max(insets.top + 8, quickFavoritePrompt.point.y - 75),
+      }
+    : null;
+
+  const isQuickFavoriteActive = quickFavoritePrompt
+    ? isFavoriteBranch(quickFavoritePrompt.branch.id)
+    : false;
+
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <MapErrorBoundary>
@@ -403,11 +562,60 @@ export default function DiscoverScreen() {
           userCoord={camera.userCoord}
           hasActiveFilter={filters.hasActiveFilter}
           onMarkerPress={handleMarkerPress}
+          onMarkerLongPress={handleMarkerLongPress}
+          onUserGestureStart={handleUserGestureStart}
           onCameraChanged={handleCameraChanged}
           cityCenter={NITRA_CENTER}
-          initialCamera={cameraSnapshot}
+          initialCamera={cameraSnapshotRef.current}
         />
       </MapErrorBoundary>
+
+      {quickFavoritePrompt && quickFavoritePosition ? (
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            screenStyles.quickFavoriteWrap,
+            {
+              left: quickFavoritePosition.left,
+              top: quickFavoritePosition.top,
+              opacity: quickFavoriteAnim,
+              transform: [
+                {
+                  scale: quickFavoriteAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.75, 1],
+                  }),
+                },
+                {
+                  translateY: quickFavoriteAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [6, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleQuickFavoritePress}
+            accessibilityRole="button"
+            accessibilityLabel={t("discoverMapQuickFavoriteA11y", {
+              place: quickFavoritePrompt.branch.title,
+            })}
+            style={[
+              screenStyles.quickFavoriteButton,
+              isQuickFavoriteActive && screenStyles.quickFavoriteButtonActive,
+            ]}
+          >
+            <Ionicons
+              name={isQuickFavoriteActive ? "heart" : "heart-outline"}
+              size={13}
+              color={isQuickFavoriteActive ? "#FFFFFF" : "#EB8100"}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+      ) : null}
 
 
 
@@ -442,7 +650,9 @@ export default function DiscoverScreen() {
         text={text}
         setText={setText}
         filtered={searchBranches}
+        addressSuggestions={addressSuggestions}
         onSelectBranch={handleSelectSearchBranch}
+        onSelectAddressSuggestion={handleSelectAddressSuggestion}
         favoritePlaces={favoritePlaces}
         onSelectFavorite={handleSelectFavorite}
         autoFocus={AppConfig.discoverSearchV2Enabled}
@@ -517,6 +727,30 @@ export default function DiscoverScreen() {
     </SafeAreaView>
   );
 }
+
+const screenStyles = StyleSheet.create({
+  quickFavoriteWrap: {
+    position: "absolute",
+    zIndex: 26,
+    elevation: 26,
+  },
+  quickFavoriteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  quickFavoriteButtonActive: {
+    backgroundColor: "#EB8100",
+  },
+});
 
 const errorStyles = StyleSheet.create({
   container: {

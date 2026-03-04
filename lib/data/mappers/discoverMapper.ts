@@ -7,6 +7,7 @@
 import type { BranchViewModel, MarkerViewModel } from "../models";
 import { formatTitleFromId } from "../normalizers";
 import { canonicalOrFallbackId, normalizeId } from "../utils/id";
+import { buildMockBranchAddress } from "../utils/mockAddress";
 import { getMockBranchSearchMetadata } from "../search/mockBranchSearchMetadata";
 import {
   getMockBranchMenuItems,
@@ -160,6 +161,7 @@ export const buildBranchFromMarkerViewModel = (
     rating: override.rating ?? normalizedRating,
     distance: override.distance ?? getDerivedDistance(markerId),
     hours: override.hours ?? context.defaultBranch.hours,
+    address: override.address ?? buildMockBranchAddress(markerId),
     menuItems: override.menuItems ?? (menuItems.length > 0 ? menuItems : undefined),
     menuLabelMode: override.menuLabelMode ?? resolveBranchMenuLabelMode(category),
     searchTags:
