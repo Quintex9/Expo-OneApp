@@ -20,7 +20,8 @@ import {
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useAppStateActive } from "../lib/hooks/useAppStateActive";
 import { colors } from "../lib/theme";
 
 export default function BenefitsScreen() {
@@ -32,7 +33,12 @@ export default function BenefitsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const isBenefitsFocused = useIsFocused();
+  const isAppActive = useAppStateActive();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
+  const isScreenActive = isBenefitsFocused && isAppActive;
+  const isActivated = actualTab === "Activated";
 
   const horizontalPadding = Math.min(24, Math.max(16, Math.round(screenWidth * 0.06)));
   const contentMaxWidth = 560;
@@ -41,23 +47,49 @@ export default function BenefitsScreen() {
 
   // QR Timer countdown
   useEffect(() => {
-    if (qrVisible && qrTimer > 0) {
-      const interval = setInterval(() => {
-        setQrTimer((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(interval);
+    if (!qrVisible || qrExpiresAt == null || !isScreenActive) {
+      return;
     }
-  }, [qrVisible, qrTimer]);
+
+    const updateTimer = () => {
+      const remainingSeconds = Math.max(0, Math.ceil((qrExpiresAt - Date.now()) / 1000));
+      setQrTimer((prev) => (prev === remainingSeconds ? prev : remainingSeconds));
+      return remainingSeconds;
+    };
+
+    if (updateTimer() === 0) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (updateTimer() === 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isScreenActive, qrExpiresAt, qrVisible]);
 
   // Reset timer when modal opens
   useEffect(() => {
     if (qrVisible) {
       setQrTimer(600);
+      setQrExpiresAt(Date.now() + 600 * 1000);
+      return;
     }
+
+    setQrExpiresAt(null);
   }, [qrVisible]);
 
   // Pulse animation for active benefit
   useEffect(() => {
+    pulseAnim.stopAnimation();
+    pulseAnim.setValue(1);
+
+    if (!isScreenActive || !isActivated || !lastClickedBenefitId) {
+      return;
+    }
+
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -74,7 +106,7 @@ export default function BenefitsScreen() {
     );
     pulse.start();
     return () => pulse.stop();
-  }, [pulseAnim]);
+  }, [isActivated, isScreenActive, lastClickedBenefitId, pulseAnim]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -101,8 +133,6 @@ export default function BenefitsScreen() {
     ],
     [t]
   );
-
-  const isActivated = actualTab === "Activated";
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>

@@ -146,7 +146,7 @@ function HomeSearchOverlay({
                 ) : null}
                 {resolvedMoreCount > 0 ? (
                   <Text style={styles.resultMoreText} numberOfLines={1}>
-                    + {resolvedMoreCount} {t("more")}
+                    + {resolvedMoreCount}
                   </Text>
                 ) : null}
               </View>

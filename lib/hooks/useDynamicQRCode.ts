@@ -12,6 +12,7 @@ type UseDynamicQRCodeOptions = {
   issuer?: string;
   audience?: string;
   signingSalt?: string;
+  enabled?: boolean;
 };
 
 type UseDynamicQRCodeResult = {
@@ -133,6 +134,7 @@ export const useDynamicQRCode = ({
   issuer = DEFAULT_ISSUER,
   audience = DEFAULT_AUDIENCE,
   signingSalt = DEFAULT_SIGNING_SALT,
+  enabled = true,
 }: UseDynamicQRCodeOptions): UseDynamicQRCodeResult => {
   const resolvedUserId = userId ?? "anonymous";
   const resolvedWindowSeconds = Math.max(1, Math.floor(windowSeconds));
@@ -151,11 +153,19 @@ export const useDynamicQRCode = ({
   const [state, setState] = useState<TokenState>(() => buildTokenState(baseOptions));
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     setState(buildTokenState(baseOptions));
-  }, [baseOptions]);
+  }, [baseOptions, enabled]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const updateState = () => {
       const nowSeconds = Math.floor(Date.now() / 1000);
       const windowStart = getWindowStart(nowSeconds, resolvedWindowSeconds);
       const expiresAt = windowStart + resolvedWindowSeconds;
@@ -174,10 +184,16 @@ export const useDynamicQRCode = ({
         }
         return buildTokenState({ ...baseOptions, nowSeconds });
       });
+    };
+
+    updateState();
+
+    const interval = setInterval(() => {
+      updateState();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [baseOptions, resolvedUserId, resolvedWindowSeconds]);
+  }, [baseOptions, enabled, resolvedUserId, resolvedWindowSeconds]);
 
   return {
     token: state.token,

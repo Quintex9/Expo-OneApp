@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { useSharedValue } from "react-native-reanimated";
 import { Asset } from "expo-asset";
+import { EncodingType, readAsStringAsync } from "expo-file-system/legacy";
 
 export type SkiaImageMap = Record<number, SkImage | null>;
 
@@ -26,9 +27,14 @@ export function useSkiaMarkerImages() {
               cacheRef.current[id] = null;
               return;
             }
-            const response = await fetch(localUri);
-            const buffer = await response.arrayBuffer();
-            const data = Skia.Data.fromBytes(new Uint8Array(buffer));
+            const base64 = await readAsStringAsync(localUri, {
+              encoding: EncodingType.Base64,
+            });
+            if (!base64) {
+              cacheRef.current[id] = null;
+              return;
+            }
+            const data = Skia.Data.fromBase64(base64);
             cacheRef.current[id] = Skia.Image.MakeImageFromEncoded(data);
           } catch {
             cacheRef.current[id] = null;

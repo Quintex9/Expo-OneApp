@@ -9,6 +9,7 @@ import * as Location from "expo-location";
 import { InteractionManager } from "react-native";
 import type { MapViewRef } from "../interfaces";
 import type MapView from "react-native-maps";
+import { discoverDebugLog } from "../debug/discoverDebug";
 import { normalizeCenter, regionToZoom, setMapCamera } from "../maps/camera";
 
 // === GLOBÁLNY STAV ===
@@ -58,6 +59,7 @@ export interface UseDiscoverCameraReturn {
  * Možnosti pre hook
  */
 interface UseDiscoverCameraOptions {
+  active?: boolean;
   cityCenter: [number, number];                 // stred mesta (fallback pozícia)
   selectedOptionCoord?: [number, number] | null; // vybraná lokácia z dropdownu
   shouldResetOptionOnUserGesture?: boolean;     // ci sa ma pri manualnom pohybe zrusit vyber
@@ -79,6 +81,7 @@ export const useDiscoverCamera = ({
   selectedOptionCoord = null,
   shouldResetOptionOnUserGesture = false,
   onOptionReset,
+  active = true,
 }: UseDiscoverCameraOptions): UseDiscoverCameraReturn => {
   
   // Ref na map view - používame na programatické ovládanie
@@ -95,6 +98,7 @@ export const useDiscoverCamera = ({
   const panTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserPanningRef = useRef(false);
   const restoreInteractionRef = useRef<{ cancel?: () => void } | null>(null);
+  const locationPermissionGrantedRef = useRef<boolean | null>(null);
 
   // === STAVOVÉ PREMENNÉ ===
   const initialCameraState = lastDiscoverCameraState
@@ -153,8 +157,16 @@ export const useDiscoverCamera = ({
     let isMounted = true;
 
     const start = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (!isMounted || status !== "granted") return;
+      if (!active) {
+        return;
+      }
+
+      if (locationPermissionGrantedRef.current == null) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        locationPermissionGrantedRef.current = status === "granted";
+      }
+
+      if (!isMounted || !locationPermissionGrantedRef.current) return;
 
       subscription = await Location.watchPositionAsync(
         {
@@ -174,7 +186,7 @@ export const useDiscoverCamera = ({
       isMounted = false;
       subscription?.remove();
     };
-  }, []);
+  }, [active]);
 
   /**
    * Úvodné centrovanie na polohu používateľa
@@ -185,7 +197,7 @@ export const useDiscoverCamera = ({
     // - ešte nemáme polohu
     // - už sme centrovali
     // - máme zachovať predchádzajúcu pozíciu (napr. po návrate z iného tabu)
-    if (!userCoord || didInitialCenter || preserveDiscoverCamera) {
+    if (!active || !userCoord || didInitialCenter || preserveDiscoverCamera) {
       return;
     }
     
@@ -193,7 +205,27 @@ export const useDiscoverCamera = ({
     setMapCamera(cameraRef, { center: userCoord, zoom: 14, durationMs: 800 });
     
     setDidInitialCenter(true);
-  }, [userCoord, didInitialCenter]);
+  }, [active, userCoord, didInitialCenter]);
+
+  useEffect(() => {
+    if (active) {
+      return;
+    }
+
+    if (throttleTimeoutRef.current) {
+      clearTimeout(throttleTimeoutRef.current);
+      throttleTimeoutRef.current = null;
+    }
+
+    if (panTimeoutRef.current) {
+      clearTimeout(panTimeoutRef.current);
+      panTimeoutRef.current = null;
+    }
+
+    pendingUpdateRef.current = null;
+    isUserPanningRef.current = false;
+    setIsUserPanning(false);
+  }, [active]);
 
   /**
    * Handler pre zmenu pozície kamery (keď user scrolluje/zoomuje mapu)
@@ -209,6 +241,9 @@ export const useDiscoverCamera = ({
    */
   const handleCameraChanged = useCallback(
     (center: [number, number], zoom: number, isUserGesture?: boolean) => {
+      if (!active) {
+        return;
+      }
       if (
         !Number.isFinite(center?.[0]) ||
         !Number.isFinite(center?.[1]) ||
@@ -280,6 +315,7 @@ export const useDiscoverCamera = ({
       selectedOptionCoord,
       shouldResetOptionOnUserGesture,
       onOptionReset,
+      active,
       applyCameraState,
       markUserPanning,
     ]
@@ -345,13 +381,13 @@ export const useDiscoverCamera = ({
    */
   const syncCameraFromNative = useCallback(async (options?: { applyToState?: boolean }) => {
     const applyToState = options?.applyToState ?? true;
-    console.log("[DiscoverMapDebug:camera] syncCameraFromNative:start", {
+    discoverDebugLog("[DiscoverMapDebug:camera] syncCameraFromNative:start", {
       applyToState,
       hasMapView: Boolean(cameraRef.current),
     });
     const mapView = cameraRef.current;
     if (!mapView) {
-      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:noMapView", {
+      discoverDebugLog("[DiscoverMapDebug:camera] syncCameraFromNative:noMapView", {
         lastDiscoverCameraState,
       });
       return lastDiscoverCameraState;
@@ -459,14 +495,14 @@ export const useDiscoverCamera = ({
         applyCameraState(nextState.center, nextState.zoom);
       }
 
-      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:success", {
+      discoverDebugLog("[DiscoverMapDebug:camera] syncCameraFromNative:success", {
         applyToState,
         nextState,
       });
 
       return nextState;
     } catch {
-      console.log("[DiscoverMapDebug:camera] syncCameraFromNative:error", {
+      discoverDebugLog("[DiscoverMapDebug:camera] syncCameraFromNative:error", {
         applyToState,
         lastDiscoverCameraState,
       });

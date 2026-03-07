@@ -23,7 +23,11 @@ export default function Tabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        freezeOnBlur: true,
+        lazy: true,
+      }}
     >
       
       <Tab.Screen name="Cards" options={{ tabBarLabel: t("Cards") }}>

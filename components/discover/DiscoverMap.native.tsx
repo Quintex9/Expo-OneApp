@@ -11,9 +11,12 @@ import { StyleSheet, View } from "react-native";
 import type { Region } from "react-native-maps";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import { Asset } from "expo-asset";
+import { EncodingType, readAsStringAsync } from "expo-file-system/legacy";
 import type { DiscoverMapMarker, DiscoverMapProps } from "../../lib/interfaces";
+import { discoverDebugLog, isDiscoverDebugEnabled } from "../../lib/debug/discoverDebug";
 import { styles } from "./discoverStyles";
 import { normalizeCenter, regionToZoom, zoomToRegion } from "../../lib/maps/camera";
+import { DISCOVER_WEBVIEW_STYLE_JSON } from "../../lib/maps/discoverWebViewStyle";
 import {
   getIOSScaledMarkerSize,
   isValidMapCoordinate,
@@ -80,6 +83,8 @@ type CameraState = {
   zoom: number;
 };
 
+const WEBVIEW_ICON_URI_CACHE: Record<number, string | null> = {};
+
 const CLUSTER_PRESS_DURATION_MS = 500;
 const CLUSTER_PRESS_MIN_TARGET_ZOOM = IOS_FORCE_CLUSTER_ZOOM + 1;
 const IOS_MULTI_COMPACT_FALLBACK = require("../../images/icons/ios-scaled/compact-pins/multi.png");
@@ -99,15 +104,6 @@ const resolveStackedImage = (count: number) => {
   const clampedCount = Math.max(2, Math.min(6, Math.floor(count)));
   return IOS_SCALED_STACKED_BY_COUNT[clampedCount] ?? IOS_MULTI_COMPACT_FALLBACK;
 };
-
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...Array.from(bytes.subarray(i, Math.min(i + chunk, bytes.length))));
-  }
-  return btoa(binary);
-}
 
 const LEAFLET_HTML = String.raw`<!doctype html>
 <html>
@@ -193,49 +189,20 @@ const LEAFLET_HTML = String.raw`<!doctype html>
         });
       }
 
-      // Raster basemap without labels/POIs (clean background for custom markers + text).
-      var style = {
-        version: 8,
-        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-        sources: {
-          carto: {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-              'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-              'https://c.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-              'https://d.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-            ],
-            tileSize: 256,
-            maxzoom: 20
-          },
-          cartoLabels: {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
-              'https://b.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
-              'https://c.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
-              'https://d.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
-            ],
-            tileSize: 256,
-            maxzoom: 20
-          }
-        },
-        layers: [
-          { id: 'carto-raster', type: 'raster', source: 'carto' },
-          // Labels overlay to approximate Android look (street names visible).
-          { id: 'carto-labels', type: 'raster', source: 'cartoLabels' }
-        ]
-      };
+      var style = ${DISCOVER_WEBVIEW_STYLE_JSON};
 
       var map = new maplibregl.Map({
         container: 'map',
         style: style,
         center: [17.1077, 48.1486],
         zoom: 12,
+        antialias: true,
         attributionControl: false,
+        renderWorldCopies: false,
         dragRotate: true,
         touchZoomRotate: true,
+        touchPitch: false,
+        maxPitch: 0,
         pitchWithRotate: false,
         bearingSnap: 0,
       });
@@ -1298,6 +1265,15 @@ const LEAFLET_HTML = String.raw`<!doctype html>
         debug('markerPressDispatched', { id: payload.id, kind: payload.kind });
       });
 
+      map.on('style.load', function () {
+        ensureSingleMarkerLayers();
+        debug('styleLoad', {
+          center: [map.getCenter().lng, map.getCenter().lat],
+          zoom: map.getZoom(),
+          style: 'discover-light-vector'
+        });
+      });
+
       map.on('load', function () {
         ensureSingleMarkerLayers();
         debug('mapLoad', {
@@ -1399,18 +1375,20 @@ function DiscoverMapNative({
     center: normalizeCenter([initialRegion.longitude, initialRegion.latitude]),
     zoom: fallbackZoom,
   });
-  const iconUriCacheRef = useRef<Record<number, string | null>>({});
+  const iconUriCacheRef = useRef<Record<number, string | null>>(WEBVIEW_ICON_URI_CACHE);
   const onCameraChangedRef = useRef(onCameraChanged);
   const onMarkerPressRef = useRef(onMarkerPress);
   const onMarkerLongPressRef = useRef(onMarkerLongPress);
   const onUserGestureStartRef = useRef(onUserGestureStart);
 
-  console.log("[DiscoverMapDebug:native] render", {
-    renderCount: renderCountRef.current,
-    filteredMarkers: filteredMarkers.length,
-    webReady,
-    webMarkers: webMarkers.length,
-  });
+  if (isDiscoverDebugEnabled()) {
+    discoverDebugLog("[DiscoverMapDebug:native] render", {
+      renderCount: renderCountRef.current,
+      filteredMarkers: filteredMarkers.length,
+      webReady,
+      webMarkers: webMarkers.length,
+    });
+  }
 
   useEffect(() => {
     onCameraChangedRef.current = onCameraChanged;
@@ -1429,19 +1407,21 @@ function DiscoverMapNative({
   }, [onUserGestureStart]);
 
   useEffect(() => {
-    console.log("[DiscoverMapDebug:native] mounted");
+    discoverDebugLog("[DiscoverMapDebug:native] mounted");
     return () => {
-      console.log("[DiscoverMapDebug:native] unmounted");
+      discoverDebugLog("[DiscoverMapDebug:native] unmounted");
     };
   }, []);
 
   const postToWeb = useCallback((payload: unknown) => {
     const json = JSON.stringify(payload);
-    const payloadType =
-      payload && typeof payload === "object" && "type" in (payload as Record<string, unknown>)
-        ? String((payload as Record<string, unknown>).type)
-        : "unknown";
-    console.log("[DiscoverMapDebug:native] postToWeb", { type: payloadType });
+    if (isDiscoverDebugEnabled()) {
+      const payloadType =
+        payload && typeof payload === "object" && "type" in (payload as Record<string, unknown>)
+          ? String((payload as Record<string, unknown>).type)
+          : "unknown";
+      discoverDebugLog("[DiscoverMapDebug:native] postToWeb", { type: payloadType });
+    }
     webViewRef.current?.postMessage(json);
   }, []);
 
@@ -1580,14 +1560,18 @@ function DiscoverMapNative({
       try {
         const asset = Asset.fromModule(assetId);
         await asset.downloadAsync();
-        const localUri = asset.localUri ?? asset.uri;
+        const localUri = asset.localUri;
         if (!localUri) {
           iconUriCacheRef.current[assetId] = null;
           return null;
         }
-        const response = await fetch(localUri);
-        const buffer = await response.arrayBuffer();
-        const base64 = uint8ToBase64(new Uint8Array(buffer));
+        const base64 = await readAsStringAsync(localUri, {
+          encoding: EncodingType.Base64,
+        });
+        if (!base64) {
+          iconUriCacheRef.current[assetId] = null;
+          return null;
+        }
         const dataUri = `data:image/png;base64,${base64}`;
         iconUriCacheRef.current[assetId] = dataUri;
         return dataUri;
@@ -1672,7 +1656,7 @@ function DiscoverMapNative({
   );
 
   useEffect(() => {
-    console.log("[DiscoverMapDebug:native] markerPayloadChanged", {
+    discoverDebugLog("[DiscoverMapDebug:native] markerPayloadChanged", {
       total: webMarkers.length,
       singles: singleLayerMarkers.length,
     });
@@ -1713,16 +1697,16 @@ function DiscoverMapNative({
       try {
         const payload = JSON.parse(event.nativeEvent.data ?? "{}") as Record<string, unknown>;
         if (payload.type === "debug") {
-          console.log("[DiscoverMapDebug:web]", payload);
+          discoverDebugLog("[DiscoverMapDebug:web]", payload);
           return;
         }
         if (payload.type === "ready") {
-          console.log("[DiscoverMapDebug:native] webReady");
+          discoverDebugLog("[DiscoverMapDebug:native] webReady");
           setWebReady(true);
           return;
         }
         if (payload.type === "cameraIdle") {
-          console.log("[DiscoverMapDebug:native] cameraIdle", payload);
+          discoverDebugLog("[DiscoverMapDebug:native] cameraIdle", payload);
           const center = Array.isArray(payload.center) ? payload.center : null;
           const zoom = Number(payload.zoom);
           if (
@@ -1759,7 +1743,7 @@ function DiscoverMapNative({
           return;
         }
         if (payload.type === "markerPress") {
-          console.log("[DiscoverMapDebug:native] markerPress", payload);
+          discoverDebugLog("[DiscoverMapDebug:native] markerPress", payload);
           const id = typeof payload.id === "string" ? payload.id : "";
           const kind = payload.kind;
           const focus = Array.isArray(payload.focus) ? payload.focus : null;
@@ -1790,7 +1774,7 @@ function DiscoverMapNative({
           return;
         }
         if (payload.type === "markerLongPress") {
-          console.log("[DiscoverMapDebug:native] markerLongPress", payload);
+          discoverDebugLog("[DiscoverMapDebug:native] markerLongPress", payload);
           const id = typeof payload.id === "string" ? payload.id : "";
           const coord = Array.isArray(payload.coord) ? payload.coord : null;
           const point = Array.isArray(payload.point) ? payload.point : null;
@@ -1828,10 +1812,10 @@ function DiscoverMapNative({
         javaScriptEnabled
         domStorageEnabled
         onLoadStart={() => {
-          console.log("[DiscoverMapDebug:native] webViewLoadStart");
+          discoverDebugLog("[DiscoverMapDebug:native] webViewLoadStart");
         }}
         onLoadEnd={() => {
-          console.log("[DiscoverMapDebug:native] webViewLoadEnd");
+          discoverDebugLog("[DiscoverMapDebug:native] webViewLoadEnd");
         }}
         onMessage={handleWebMessage}
         scrollEnabled={false}

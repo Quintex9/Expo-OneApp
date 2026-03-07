@@ -62,11 +62,15 @@ export default function OnboardingScreen() {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { branches: discoverBranches } = useDiscoverData({ t });
-
   const [stepIndex, setStepIndex] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<Set<DiscoverCategory>>(new Set());
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
+  const { branches: discoverBranches } = useDiscoverData({
+    t,
+    enabled: STEPS[stepIndex] === "branches",
+    includeMarkers: false,
+    includeGroupedMarkers: false,
+  });
 
   const step = STEPS[stepIndex];
   const progress = ((stepIndex + 1) / TOTAL_STEPS) * 100;

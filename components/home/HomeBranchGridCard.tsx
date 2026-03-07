@@ -2,7 +2,6 @@ import React, { memo, useCallback } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useTranslation } from "react-i18next";
 import type { BranchData } from "../../lib/interfaces";
 
 interface HomeBranchGridCardProps {
@@ -19,7 +18,6 @@ interface HomeBranchGridCardProps {
  */
 function HomeBranchGridCard({ branch, cardWidth, onPress, compact = false }: HomeBranchGridCardProps) {
   const navigation = useNavigation<any>();
-  const { t } = useTranslation();
 
   const handlePress = useCallback(() => {
     if (onPress) {
@@ -32,9 +30,7 @@ function HomeBranchGridCard({ branch, cardWidth, onPress, compact = false }: Hom
 
   const moreLabel =
     typeof branch.moreCount === "number" && branch.moreCount > 0
-      ? compact
-        ? `+${branch.moreCount}`
-        : `+${branch.moreCount} ${t("more")}`
+      ? `+${branch.moreCount}`
       : "";
   const metaIconSize = compact ? 12 : 13;
 

@@ -8,12 +8,17 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { BranchData, DiscoverCategory } from "../interfaces";
 import { HOME_SEARCH_SCORE_THRESHOLD, buildHomeSearchIndex, searchHomeBranches } from "../search/homeSearch";
-import type { HomeSearchResult, HomeSearchScope } from "../search/homeSearchTypes";
+import type {
+  HomeSearchIndex,
+  HomeSearchResult,
+  HomeSearchScope,
+} from "../search/homeSearchTypes";
 import { HOME_SEARCH_POPULAR_QUERIES } from "../data/search/mockBranchSearchMetadata";
 
 const HOME_SEARCH_HISTORY_STORAGE_KEY = "home_search_history_v1";
 const HOME_SEARCH_HISTORY_LIMIT = 8;
 const HOME_SEARCH_DEBOUNCE_MS = 80;
+const EMPTY_HOME_SEARCH_INDEX: HomeSearchIndex = { entries: [] };
 
 const normalizeQuery = (value: string) => value.trim();
 
@@ -129,7 +134,13 @@ export const useHomeSearch = ({
     void AsyncStorage.setItem(HOME_SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(history));
   }, [history, historyHydrated]);
 
-  const index = useMemo(() => buildHomeSearchIndex(branches), [branches, localeKey]);
+  const index = useMemo(() => {
+    if (!enabled || !isVisible) {
+      return EMPTY_HOME_SEARCH_INDEX;
+    }
+
+    return buildHomeSearchIndex(branches);
+  }, [branches, enabled, isVisible, localeKey]);
 
   const results = useMemo(() => {
     if (!enabled || !isVisible) {

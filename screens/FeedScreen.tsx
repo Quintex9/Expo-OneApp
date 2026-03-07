@@ -18,8 +18,6 @@ import {
     StatusBar,
     Share,
     Alert,
-    AppState,
-    type AppStateStatus,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -43,6 +41,7 @@ import {
     type FeedOfferKey,
     type FeedReelItem,
 } from "../lib/fixtures/feedReels";
+import { useAppStateActive } from "../lib/hooks/useAppStateActive";
 const OVERLAY_CARD_GAP = 12;
 const PINCH_SCALE_ACTIVATION_THRESHOLD = 0.015;
 const TAP_MAX_DISTANCE = 12;
@@ -771,7 +770,7 @@ export default function FeedScreen() {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const isFeedFocused = useIsFocused();
-    const [isAppActive, setIsAppActive] = React.useState(true);
+    const isAppActive = useAppStateActive();
     const insets = useSafeAreaInsets();
     const { height: screenHeight, width: screenWidth } = useWindowDimensions();
     const [feedViewportHeight, setFeedViewportHeight] = React.useState(() => Math.max(1, screenHeight));
@@ -822,7 +821,8 @@ export default function FeedScreen() {
         () => Math.max(insets.bottom, TAB_BAR_MIN_INSET) + 16,
         [insets.bottom]
     );
-    const isPlaybackAllowed = isFeedFocused && isAppActive;
+    const isFeedRuntimeActive = isFeedFocused && isAppActive;
+    const isPlaybackAllowed = isFeedRuntimeActive;
 
     // Position card just above the tab bar
     const branchCardOffset = useMemo(
@@ -870,17 +870,6 @@ export default function FeedScreen() {
         }, [])
     );
     useEffect(() => {
-        const handleAppStateChange = (nextState: AppStateStatus) => {
-            setIsAppActive(nextState === "active");
-        };
-
-        const subscription = AppState.addEventListener("change", handleAppStateChange);
-        return () => {
-            subscription.remove();
-        };
-    }, []);
-
-    useEffect(() => {
         navigation.setOptions({
             tabBarStyle: isZooming || isSpeedBoosting ? { display: "none" } : undefined,
         });
@@ -898,6 +887,16 @@ export default function FeedScreen() {
         },
         [clearScrollReleaseTimeout]
     );
+    useEffect(() => {
+        if (isFeedRuntimeActive) {
+            return;
+        }
+
+        setScrollingState(false);
+        setIsZooming(false);
+        setIsPinchTouchActive(false);
+        setIsSpeedBoosting(false);
+    }, [isFeedRuntimeActive, setScrollingState]);
     const clampIndex = useCallback(
         (index: number) => Math.max(0, Math.min(REELS_LOOP_DATA.length - 1, index)),
         []
@@ -938,14 +937,14 @@ export default function FeedScreen() {
         [clampIndex, reelHeight]
     );
     useEffect(() => {
-        if (reelHeight <= 0) {
+        if (!isFeedRuntimeActive || reelHeight <= 0) {
             return;
         }
         const stableIndex = clampIndex(currentIndexRef.current);
         requestAnimationFrame(() => {
             safeScrollToIndex(stableIndex, false);
         });
-    }, [clampIndex, reelHeight, safeScrollToIndex]);
+    }, [clampIndex, isFeedRuntimeActive, reelHeight, safeScrollToIndex]);
     const recenterAroundLoopMiddle = useCallback(
         (index: number) => {
             const clampedIndex = clampIndex(index);
@@ -1048,125 +1047,129 @@ export default function FeedScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.feedListContainer} onLayout={handleFeedLayout}>
-                <GHFlatList<ReelLoopItem>
-                    ref={(node) => {
-                        listRef.current = node;
-                        feedScrollRef.current = (node ?? undefined) as unknown as React.ComponentType | undefined;
-                    }}
-                    data={REELS_LOOP_DATA}
-                    keyExtractor={(item) => item.key}
-                    renderItem={({ item, index }) => (
-                        <ReelItemComponent
-                            item={item.reel}
-                            height={reelHeight}
-                            actionsBottom={actionsBottom}
-                            branchCardWidth={branchCardWidth}
-                            overlayViewportWidth={screenWidth}
-                            branchCardOffset={branchCardOffset}
-                            isScrolling={isScrolling}
-                            isVisible={index === visibleIndex}
-                            isAudioVisible={index === audioVisibleIndex}
-                            isSourceAnchor={index === sourceAnchorIndex}
-                            isSourceCandidate={Math.abs(index - sourceCandidateCenterIndex) <= 1}
-                            isPlaybackAllowed={isPlaybackAllowed}
-                            isZooming={isZooming}
-                            isPinchTouchActive={isPinchTouchActive}
-                            onZoomStateChange={handleZoomStateChange}
-                            onPinchTouchStateChange={handlePinchTouchStateChange}
-                            onSpeedBoostStateChange={handleSpeedBoostStateChange}
-                            externalScrollRef={feedScrollRef}
-                        />
-                    )}
-                    showsVerticalScrollIndicator={false}
-                    pinchGestureEnabled={false}
-                    pagingEnabled
-                    snapToInterval={useAndroidNativePaging ? undefined : reelHeight}
-                    snapToAlignment={useAndroidNativePaging ? undefined : "start"}
-                    decelerationRate={feedDecelerationRate}
-                    disableIntervalMomentum={false}
-                    scrollEventThrottle={16}
-                    initialNumToRender={2}
-                    maxToRenderPerBatch={feedMaxToRenderPerBatch}
-                    windowSize={feedWindowSize}
-                    updateCellsBatchingPeriod={8}
-                    removeClippedSubviews={false}
-                    initialScrollIndex={initialLoopIndex}
-                    getItemLayout={(_, index) => ({
-                        length: reelHeight,
-                        offset: reelHeight * index,
-                        index,
-                    })}
-                    style={styles.feedList}
-                    onViewableItemsChanged={onViewableItemsChanged}
-                    viewabilityConfig={viewabilityConfig}
-                    onScrollBeginDrag={() => {
-                        momentumInProgressRef.current = false;
-                        clearScrollReleaseTimeout();
-                        setScrollingState(true);
-                        updateAudioVisibleIndex(currentIndexRef.current);
-                        updateSourceAnchorIndex(currentIndexRef.current);
-                    }}
-                    onScroll={(e) => {
-                        if (!isScrollingRef.current || reelHeight <= 0) {
-                            return;
-                        }
-                        const offsetY = e.nativeEvent.contentOffset.y;
-                        lastScrollOffsetYRef.current = offsetY;
-                        if (!Number.isFinite(offsetY)) {
-                            return;
-                        }
-                        const pageOffset = offsetY / reelHeight;
-                        const anchorIndex = sourceAnchorIndexRef.current;
-                        let nextSourceIndex = anchorIndex;
-
-                        if (pageOffset >= anchorIndex + SOURCE_ANCHOR_SWITCH_THRESHOLD) {
-                            nextSourceIndex = clampIndex(anchorIndex + 1);
-                        } else if (pageOffset <= anchorIndex - SOURCE_ANCHOR_SWITCH_THRESHOLD) {
-                            nextSourceIndex = clampIndex(anchorIndex - 1);
-                        }
-
-                        if (nextSourceIndex !== anchorIndex) {
-                            updateSourceAnchorIndex(nextSourceIndex);
-                            updateAudioVisibleIndex(nextSourceIndex);
-                        }
-                    }}
-                    onScrollEndDrag={() => {
-                        clearScrollReleaseTimeout();
-                        scrollReleaseTimeoutRef.current = setTimeout(() => {
-                            if (!momentumInProgressRef.current) {
-                                const fallbackOffsetY = lastScrollOffsetYRef.current;
-                                if (!Number.isFinite(fallbackOffsetY) || reelHeight <= 0) {
-                                    setScrollingState(false);
-                                    return;
-                                }
-                                const fallbackRawIndex = Math.round(fallbackOffsetY / reelHeight);
-                                const fallbackIndex = recenterAroundLoopMiddle(clampIndex(fallbackRawIndex));
-                                currentIndexRef.current = fallbackIndex;
-                                setVisibleIndex(fallbackIndex);
-                                updateAudioVisibleIndex(fallbackIndex);
-                                updateSourceAnchorIndex(fallbackIndex);
-                                const fallbackTargetOffset = fallbackIndex * reelHeight;
-                                if (useAndroidNativePaging && Math.abs(fallbackOffsetY - fallbackTargetOffset) > 2) {
-                                    safeScrollToIndex(fallbackIndex, false);
-                                }
-                                setScrollingState(false);
+                {isFeedRuntimeActive ? (
+                    <GHFlatList<ReelLoopItem>
+                        ref={(node) => {
+                            listRef.current = node;
+                            feedScrollRef.current = (node ?? undefined) as unknown as React.ComponentType | undefined;
+                        }}
+                        data={REELS_LOOP_DATA}
+                        keyExtractor={(item) => item.key}
+                        renderItem={({ item, index }) => (
+                            <ReelItemComponent
+                                item={item.reel}
+                                height={reelHeight}
+                                actionsBottom={actionsBottom}
+                                branchCardWidth={branchCardWidth}
+                                overlayViewportWidth={screenWidth}
+                                branchCardOffset={branchCardOffset}
+                                isScrolling={isScrolling}
+                                isVisible={index === visibleIndex}
+                                isAudioVisible={index === audioVisibleIndex}
+                                isSourceAnchor={index === sourceAnchorIndex}
+                                isSourceCandidate={Math.abs(index - sourceCandidateCenterIndex) <= 1}
+                                isPlaybackAllowed={isPlaybackAllowed}
+                                isZooming={isZooming}
+                                isPinchTouchActive={isPinchTouchActive}
+                                onZoomStateChange={handleZoomStateChange}
+                                onPinchTouchStateChange={handlePinchTouchStateChange}
+                                onSpeedBoostStateChange={handleSpeedBoostStateChange}
+                                externalScrollRef={feedScrollRef}
+                            />
+                        )}
+                        showsVerticalScrollIndicator={false}
+                        pinchGestureEnabled={false}
+                        pagingEnabled
+                        snapToInterval={useAndroidNativePaging ? undefined : reelHeight}
+                        snapToAlignment={useAndroidNativePaging ? undefined : "start"}
+                        decelerationRate={feedDecelerationRate}
+                        disableIntervalMomentum={false}
+                        scrollEventThrottle={16}
+                        initialNumToRender={2}
+                        maxToRenderPerBatch={feedMaxToRenderPerBatch}
+                        windowSize={feedWindowSize}
+                        updateCellsBatchingPeriod={8}
+                        removeClippedSubviews={Platform.OS === "android"}
+                        initialScrollIndex={initialLoopIndex}
+                        getItemLayout={(_, index) => ({
+                            length: reelHeight,
+                            offset: reelHeight * index,
+                            index,
+                        })}
+                        style={styles.feedList}
+                        onViewableItemsChanged={onViewableItemsChanged}
+                        viewabilityConfig={viewabilityConfig}
+                        onScrollBeginDrag={() => {
+                            momentumInProgressRef.current = false;
+                            clearScrollReleaseTimeout();
+                            setScrollingState(true);
+                            updateAudioVisibleIndex(currentIndexRef.current);
+                            updateSourceAnchorIndex(currentIndexRef.current);
+                        }}
+                        onScroll={(e) => {
+                            if (!isScrollingRef.current || reelHeight <= 0) {
+                                return;
                             }
-                        }, 120);
-                    }}
-                    onScrollToIndexFailed={(info) => {
-                        const fallbackOffset = Math.max(0, info.index * reelHeight);
-                        listRef.current?.scrollToOffset({ offset: fallbackOffset, animated: false });
-                        requestAnimationFrame(() => {
-                            safeScrollToIndex(info.index, false);
-                        });
-                    }}
-                    onMomentumScrollBegin={handleMomentumStart}
-                    onMomentumScrollEnd={handleMomentumEnd}
-                    scrollEnabled={!isZooming && !isPinchTouchActive && !isSpeedBoosting}
-                />
+                            const offsetY = e.nativeEvent.contentOffset.y;
+                            lastScrollOffsetYRef.current = offsetY;
+                            if (!Number.isFinite(offsetY)) {
+                                return;
+                            }
+                            const pageOffset = offsetY / reelHeight;
+                            const anchorIndex = sourceAnchorIndexRef.current;
+                            let nextSourceIndex = anchorIndex;
+
+                            if (pageOffset >= anchorIndex + SOURCE_ANCHOR_SWITCH_THRESHOLD) {
+                                nextSourceIndex = clampIndex(anchorIndex + 1);
+                            } else if (pageOffset <= anchorIndex - SOURCE_ANCHOR_SWITCH_THRESHOLD) {
+                                nextSourceIndex = clampIndex(anchorIndex - 1);
+                            }
+
+                            if (nextSourceIndex !== anchorIndex) {
+                                updateSourceAnchorIndex(nextSourceIndex);
+                                updateAudioVisibleIndex(nextSourceIndex);
+                            }
+                        }}
+                        onScrollEndDrag={() => {
+                            clearScrollReleaseTimeout();
+                            scrollReleaseTimeoutRef.current = setTimeout(() => {
+                                if (!momentumInProgressRef.current) {
+                                    const fallbackOffsetY = lastScrollOffsetYRef.current;
+                                    if (!Number.isFinite(fallbackOffsetY) || reelHeight <= 0) {
+                                        setScrollingState(false);
+                                        return;
+                                    }
+                                    const fallbackRawIndex = Math.round(fallbackOffsetY / reelHeight);
+                                    const fallbackIndex = recenterAroundLoopMiddle(clampIndex(fallbackRawIndex));
+                                    currentIndexRef.current = fallbackIndex;
+                                    setVisibleIndex(fallbackIndex);
+                                    updateAudioVisibleIndex(fallbackIndex);
+                                    updateSourceAnchorIndex(fallbackIndex);
+                                    const fallbackTargetOffset = fallbackIndex * reelHeight;
+                                    if (useAndroidNativePaging && Math.abs(fallbackOffsetY - fallbackTargetOffset) > 2) {
+                                        safeScrollToIndex(fallbackIndex, false);
+                                    }
+                                    setScrollingState(false);
+                                }
+                            }, 120);
+                        }}
+                        onScrollToIndexFailed={(info) => {
+                            const fallbackOffset = Math.max(0, info.index * reelHeight);
+                            listRef.current?.scrollToOffset({ offset: fallbackOffset, animated: false });
+                            requestAnimationFrame(() => {
+                                safeScrollToIndex(info.index, false);
+                            });
+                        }}
+                        onMomentumScrollBegin={handleMomentumStart}
+                        onMomentumScrollEnd={handleMomentumEnd}
+                        scrollEnabled={!isZooming && !isPinchTouchActive && !isSpeedBoosting}
+                    />
+                ) : (
+                    <View style={styles.feedList} />
+                )}
             </View>
 
-            {!isZooming && !isSpeedBoosting ? (
+            {isFeedRuntimeActive && !isZooming && !isSpeedBoosting ? (
                 <View
                     pointerEvents="box-none"
                     style={[styles.staticTopBarContainer, { top: insets.top + 16 }]}
@@ -1189,7 +1192,7 @@ export default function FeedScreen() {
                     </View>
                 </View>
             ) : null}
-            {!isZooming && isSpeedBoosting ? (
+            {isFeedRuntimeActive && !isZooming && isSpeedBoosting ? (
                 <View
                     pointerEvents="none"
                     style={[styles.speedBottomContainer, { bottom: speedBadgeBottomOffset }]}

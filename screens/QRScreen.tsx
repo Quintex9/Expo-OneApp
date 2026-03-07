@@ -17,11 +17,12 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import { useAuth } from "../lib/AuthContext";
+import { useAppStateActive } from "../lib/hooks/useAppStateActive";
 import { extractNameFromEmail } from "../lib/utils/userUtils";
 import { useDynamicQRCode } from "../lib/hooks/useDynamicQRCode";
 import { TAB_BAR_BASE_HEIGHT, TAB_BAR_MIN_INSET } from "../lib/constants/layout";
@@ -30,10 +31,15 @@ const USER_AVATAR = require("../images/photo.png");
 
 export default function QRScreen() {
   const navigation = useNavigation<any>();
+  const isQrFocused = useIsFocused();
+  const isAppActive = useAppStateActive();
   const { width: screenWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { token } = useDynamicQRCode({ userId: user?.id });
+  const { token } = useDynamicQRCode({
+    userId: user?.id,
+    enabled: isQrFocused && isAppActive,
+  });
   const [isQrZoomOpen, setIsQrZoomOpen] = useState(false);
   const horizontalPadding = 16;
 

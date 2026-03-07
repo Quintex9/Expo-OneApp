@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Animated, StyleSheet, ViewStyle, DimensionValue } from "react-native";
+import { useAppStateActive } from "../lib/hooks/useAppStateActive";
 
 type Props = {
     width: DimensionValue;
@@ -15,8 +16,16 @@ type Props = {
  */
 export function Skeleton({ width, height, borderRadius = 4, style }: Props) {
     const shimmerAnim = useRef(new Animated.Value(0)).current;
+    const isAppActive = useAppStateActive();
 
     useEffect(() => {
+        shimmerAnim.stopAnimation();
+
+        if (!isAppActive) {
+            shimmerAnim.setValue(0.5);
+            return;
+        }
+
         const animation = Animated.loop(
             Animated.sequence([
                 Animated.timing(shimmerAnim, {
@@ -34,7 +43,7 @@ export function Skeleton({ width, height, borderRadius = 4, style }: Props) {
 
         animation.start();
         return () => animation.stop();
-    }, [shimmerAnim]);
+    }, [isAppActive, shimmerAnim]);
 
     const opacity = shimmerAnim.interpolate({
         inputRange: [0, 1],

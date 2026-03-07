@@ -56,7 +56,11 @@ export default function ShowMoreScreen() {
   );
   const [selectedCategory, setSelectedCategory] = useState<HomeCategoryFilter>(initialCategory);
 
-  const { branches } = useDiscoverData({ t });
+  const { branches } = useDiscoverData({
+    t,
+    includeMarkers: false,
+    includeGroupedMarkers: false,
+  });
 
   useEffect(() => {
     setSelectedCategory(initialCategory);

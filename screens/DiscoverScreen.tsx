@@ -7,7 +7,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, ImageSourcePropType, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useIsFocused,
+  useNavigation,
+  useNavigationState,
+} from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import type BottomSheet from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,6 +35,7 @@ import {
   useDiscoverFilters,
   useDiscoverCamera,
   useDiscoverData,
+  useAppStateActive,
   useSavedLocationMarkers,
 } from "../lib/hooks";
 import DiscoverSideFilterPanel from "../components/discover/DiscoverSideFilterPanel";
@@ -41,6 +47,7 @@ import { AppConfig } from "../lib/config/AppConfig";
 import { appendDerivedBranchesFromMarkers } from "../lib/data/mappers";
 import { normalizeId } from "../lib/data/utils/id";
 import { useFavorites } from "../lib/FavoritesContext";
+import { discoverDebugLog } from "../lib/debug/discoverDebug";
 import {
   DISCOVER_FILTER_OPTIONS,
   DISCOVER_SUBCATEGORIES,
@@ -70,11 +77,19 @@ type QuickFavoritePrompt = {
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
+  const isDiscoverFocused = useIsFocused();
+  const isAppActive = useAppStateActive();
+  const isDiscoverTabSelected = useNavigationState((state) => {
+    const activeRoute = state.routes[state.index];
+    return activeRoute?.name === "Discover";
+  });
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
   const { isFavorite: isFavoriteBranch, toggleFavorite } = useFavorites();
   const [sideFilterOpen, setSideFilterOpen] = useState(false);
+  const isDiscoverRuntimeActive = isDiscoverFocused && isAppActive;
+  const shouldRenderDiscoverMap = isAppActive && (isDiscoverFocused || isDiscoverTabSelected);
 
   // Refs
   const mountedRef = useRef(true);
@@ -119,8 +134,35 @@ export default function DiscoverScreen() {
     selectedOptionCoord,
     shouldResetOptionOnUserGesture: option !== "yourLocation",
     onOptionReset: () => setOption("yourLocation"),
+    active: isDiscoverRuntimeActive,
   });
   const cameraSnapshotRef = useRef(camera.getLastCameraState());
+
+  useEffect(() => {
+    if (
+      Array.isArray(camera.mapCenter) &&
+      camera.mapCenter.length === 2 &&
+      Number.isFinite(camera.mapCenter[0]) &&
+      Number.isFinite(camera.mapCenter[1]) &&
+      Number.isFinite(camera.mapZoom)
+    ) {
+      cameraSnapshotRef.current = {
+        center: camera.mapCenter,
+        zoom: camera.mapZoom,
+      };
+    }
+  }, [camera.mapCenter, camera.mapZoom]);
+
+  useEffect(() => {
+    if (isDiscoverRuntimeActive) {
+      return;
+    }
+
+    const latestCamera = camera.getLastCameraState();
+    if (latestCamera) {
+      cameraSnapshotRef.current = latestCamera;
+    }
+  }, [camera.getLastCameraState, isDiscoverRuntimeActive]);
 
   // UI state
   const [open, setOpen] = useState(false);
@@ -418,7 +460,7 @@ export default function DiscoverScreen() {
   const navigateToBranchDetail = useCallback(
     async (branch: BranchData) => {
       setQuickFavoritePrompt(null);
-      console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:start", {
+      discoverDebugLog("[DiscoverMapDebug:screen] navigateToBranchDetail:start", {
         branchId: branch.id,
         branchTitle: branch.title,
       });
@@ -426,9 +468,9 @@ export default function DiscoverScreen() {
       const latest = await camera.syncCameraFromNative({ applyToState: false });
       if (latest) {
         cameraSnapshotRef.current = latest;
-        console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:cameraSnapshot", latest);
+        discoverDebugLog("[DiscoverMapDebug:screen] navigateToBranchDetail:cameraSnapshot", latest);
       }
-      console.log("[DiscoverMapDebug:screen] navigateToBranchDetail:navigate", {
+      discoverDebugLog("[DiscoverMapDebug:screen] navigateToBranchDetail:navigate", {
         branchId: branch.id,
       });
       navigation.navigate("BusinessDetailScreen", { branch });
@@ -465,14 +507,14 @@ export default function DiscoverScreen() {
   const handleMarkerPress = useCallback(
     (id: string) => {
       setQuickFavoritePrompt(null);
-      console.log("[DiscoverMapDebug:screen] handleMarkerPress:start", {
+      discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:start", {
         id,
         loading,
         hasError: Boolean(error),
       });
       if (loading || error) return;
       if (!id || id === "") {
-        console.log("[DiscoverMapDebug:screen] handleMarkerPress:clearSelection");
+        discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:clearSelection");
         setSelectedGroup(null);
         return;
       }
@@ -481,13 +523,13 @@ export default function DiscoverScreen() {
       if (!group) {
         const marker = markers.find((item) => item.id === id);
         if (!marker) return;
-        console.log("[DiscoverMapDebug:screen] handleMarkerPress:directMarker", {
+        discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:directMarker", {
           markerId: marker.id,
         });
         setSelectedGroup(null);
         void fetchBranchForMarker(marker)
           .then((branch) => {
-            console.log("[DiscoverMapDebug:screen] handleMarkerPress:directMarkerResolved", {
+            discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:directMarkerResolved", {
               branchId: branch.id,
             });
             if (mountedRef.current) navigateToBranchDetail(branch);
@@ -498,7 +540,7 @@ export default function DiscoverScreen() {
 
       // Multi-pin - show popup
       if (group.items.length > 1) {
-        console.log("[DiscoverMapDebug:screen] handleMarkerPress:grouped", {
+        discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:grouped", {
           groupId: group.id,
           count: group.items.length,
         });
@@ -510,14 +552,14 @@ export default function DiscoverScreen() {
       }
 
       // Single pin - navigate to detail
-      console.log("[DiscoverMapDebug:screen] handleMarkerPress:singleFromGroup", {
+      discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:singleFromGroup", {
         groupId: group.id,
       });
       setSelectedGroup(null);
       const marker = group.items[0];
       void fetchBranchForMarker(marker)
         .then((branch) => {
-          console.log("[DiscoverMapDebug:screen] handleMarkerPress:singleResolved", {
+          discoverDebugLog("[DiscoverMapDebug:screen] handleMarkerPress:singleResolved", {
             branchId: branch.id,
           });
           if (mountedRef.current) navigateToBranchDetail(branch);
@@ -556,18 +598,22 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <MapErrorBoundary>
-        <DiscoverMap
-          cameraRef={camera.cameraRef}
-          filteredMarkers={stableMapMarkers}
-          userCoord={camera.userCoord}
-          hasActiveFilter={filters.hasActiveFilter}
-          onMarkerPress={handleMarkerPress}
-          onMarkerLongPress={handleMarkerLongPress}
-          onUserGestureStart={handleUserGestureStart}
-          onCameraChanged={handleCameraChanged}
-          cityCenter={NITRA_CENTER}
-          initialCamera={cameraSnapshotRef.current}
-        />
+        {shouldRenderDiscoverMap ? (
+          <DiscoverMap
+            cameraRef={camera.cameraRef}
+            filteredMarkers={stableMapMarkers}
+            userCoord={camera.userCoord}
+            hasActiveFilter={filters.hasActiveFilter}
+            onMarkerPress={handleMarkerPress}
+            onMarkerLongPress={handleMarkerLongPress}
+            onUserGestureStart={handleUserGestureStart}
+            onCameraChanged={handleCameraChanged}
+            cityCenter={NITRA_CENTER}
+            initialCamera={cameraSnapshotRef.current}
+          />
+        ) : (
+          <View style={styles.map} />
+        )}
       </MapErrorBoundary>
 
       {quickFavoritePrompt && quickFavoritePosition ? (

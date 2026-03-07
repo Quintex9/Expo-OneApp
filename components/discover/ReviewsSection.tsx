@@ -9,8 +9,10 @@ import {
   type ImageSourcePropType,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppStateActive } from "../../lib/hooks/useAppStateActive";
 import { AddReviewModal } from "./AddReviewModal";
 import { BusinessGalleryModal } from "./BusinessGalleryModal";
 import type { ReviewPhotoDraft } from "../../lib/reviews/types";
@@ -214,6 +216,8 @@ export function ReviewsSection({
   photosEnabled = false,
 }: Props) {
   const { t } = useTranslation();
+  const isFocused = useIsFocused();
+  const isAppActive = useAppStateActive();
   const insets = useSafeAreaInsets();
   const [showAddModal, setShowAddModal] = useState(false);
   const [displayCount, setDisplayCount] = useState(3);
@@ -225,8 +229,13 @@ export function ReviewsSection({
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [galleryImages, setGalleryImages] = useState<Array<{ id: string; image: ImageSourcePropType }>>([]);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
+  const shouldUpdateRelativeTimes = isFocused && isAppActive;
 
   useEffect(() => {
+    if (!shouldUpdateRelativeTimes) {
+      return;
+    }
+
     const intervalId = setInterval(() => {
       setNowTimestamp(Date.now());
     }, MINUTE_MS);
@@ -234,7 +243,7 @@ export function ReviewsSection({
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [shouldUpdateRelativeTimes]);
 
   const formatRelativeTime = useCallback(
     (createdAt?: number, daysAgo?: number) => {

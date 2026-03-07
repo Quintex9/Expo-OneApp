@@ -14,11 +14,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type {
-  DiscoverAddressSuggestion,
-  DiscoverSearchSheetProps,
   BranchCardProps,
+  DiscoverAddressSuggestion,
   DiscoverFavoritePlace,
+  DiscoverSearchSheetProps,
 } from "../../lib/interfaces";
+import { useFavorites } from "../../lib/FavoritesContext";
 import {
   DISCOVER_TOP_CONTROL_GAP,
   DISCOVER_TOP_CONTROL_HEIGHT,
@@ -27,12 +28,23 @@ import {
 } from "../../lib/constants/discoverUi";
 
 const SEARCH_TOP_ROW_Y = DISCOVER_TOP_OFFSET;
-const RESULT_ROW_FALLBACK_HEIGHT = 96;
+const RESULT_ROW_FALLBACK_HEIGHT = 108;
+const CARD_SHADOW =
+  Platform.OS === "web"
+    ? { boxShadow: "0px 6px 16px rgba(0, 0, 0, 0.07)" }
+    : {
+        shadowColor: "#000",
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+      };
 
 /**
- * DiscoverSearchSheet: Google-like search overlay v Discover s favorites headerom a zoznamom nájdených podnikov.
+ * DiscoverSearchSheet: full-screen search overlay pre Discover mapu aj list.
  *
- * Prečo: Spojenie vstupu, klávesnice a výsledkov na jednej vrstve zrýchľuje vyhľadávanie na mape.
+ * Preco: drzi search flow, favorite miesta, branch vysledky a adresy v jednej vrstve
+ * a vizualne kopiruje aktualny mobile search navrh.
  */
 function DiscoverSearchSheet({
   onSheetChange,
@@ -56,18 +68,34 @@ function DiscoverSearchSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const inputRef = useRef<TextInput>(null);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [listHeight, setListHeight] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [rowHeight, setRowHeight] = useState(0);
-  const rowScale = useMemo(() => Math.min(1, Math.max(0.84, windowWidth / 393)), [windowWidth]);
-  const rowImageSize = useMemo(() => Math.round(72 * rowScale), [rowScale]);
-  const rowImageRadius = useMemo(() => Math.round(10 * rowScale), [rowScale]);
-  const rowGap = useMemo(() => Math.round(12 * rowScale), [rowScale]);
-  const rowPaddingH = useMemo(() => Math.round(12 * rowScale), [rowScale]);
-  const rowPaddingV = useMemo(() => Math.round(10 * rowScale), [rowScale]);
-  const rowTitleSize = useMemo(() => Math.max(15, Math.round(16 * rowScale)), [rowScale]);
-  const rowMetaSize = useMemo(() => Math.max(12, Math.round(13 * rowScale)), [rowScale]);
-  const rowMoreSize = useMemo(() => Math.max(13, Math.round(14 * rowScale)), [rowScale]);
+  const [showAllResults, setShowAllResults] = useState(false);
+
+  const layoutScale = useMemo(() => Math.min(1, Math.max(0.84, windowWidth / 393)), [windowWidth]);
+  const rowImageSize = useMemo(() => Math.round(56 * layoutScale), [layoutScale]);
+  const rowImageRadius = useMemo(() => Math.round(8 * layoutScale), [layoutScale]);
+  const rowGap = useMemo(() => Math.round(12 * layoutScale), [layoutScale]);
+  const rowPaddingH = useMemo(() => Math.round(14 * layoutScale), [layoutScale]);
+  const rowPaddingV = useMemo(() => Math.round(12 * layoutScale), [layoutScale]);
+  const rowTitleSize = useMemo(() => Math.max(15, Math.round(16 * layoutScale)), [layoutScale]);
+  const rowMetaSize = useMemo(() => Math.max(11, Math.round(12 * layoutScale)), [layoutScale]);
+  const rowOfferTextSize = useMemo(() => Math.max(10, Math.round(11 * layoutScale)), [layoutScale]);
+  const rowMoreSize = useMemo(() => Math.max(13, Math.round(14 * layoutScale)), [layoutScale]);
+  const resolvedRowImageSize = useMemo(() => {
+    if (rowHeight <= 0) {
+      return rowImageSize;
+    }
+
+    return Math.max(rowImageSize, rowHeight - rowPaddingV * 2);
+  }, [rowHeight, rowImageSize, rowPaddingV]);
+
+  const trimmedText = text.trim();
+  const hasActiveQuery = trimmedText.length > 0;
+  const hasAddressSuggestions = hasActiveQuery && addressSuggestions.length > 0;
+  const hasResultTabs = !showFavorites && Array.isArray(resultTabs) && resultTabs.length > 0;
 
   useEffect(() => {
     if (sheetIndex === -1 || !autoFocus) {
@@ -81,6 +109,10 @@ function DiscoverSearchSheet({
     return () => cancelAnimationFrame(frame);
   }, [sheetIndex, autoFocus]);
 
+  useEffect(() => {
+    setShowAllResults(false);
+  }, [filtered.length, sheetIndex, trimmedText]);
+
   const keyExtractor = useCallback((item: BranchCardProps) => item.id ?? item.title, []);
 
   const visibleResultsLimit = useMemo(() => {
@@ -88,17 +120,28 @@ function DiscoverSearchSheet({
     const availableHeight = listHeight > 0 ? Math.max(0, listHeight - headerHeight) : 0;
     const itemHeight = rowHeight > 0 ? rowHeight : RESULT_ROW_FALLBACK_HEIGHT;
 
+    if (showAllResults) {
+      return filtered.length;
+    }
+
     if (availableHeight <= 0) {
       return Math.min(filtered.length, fallbackLimit);
     }
 
     return Math.max(1, Math.min(filtered.length, Math.floor(availableHeight / itemHeight)));
-  }, [filtered.length, headerHeight, listHeight, rowHeight, windowHeight]);
+  }, [filtered.length, headerHeight, listHeight, rowHeight, showAllResults, windowHeight]);
 
   const displayedResults = useMemo(
     () => filtered.slice(0, visibleResultsLimit),
     [filtered, visibleResultsLimit]
   );
+
+  const shouldShowFavoritesSection = showFavorites && !hasActiveQuery;
+  const shouldShowRecentSection = !hasActiveQuery && displayedResults.length > 0;
+  const shouldShowBranchesSection = hasActiveQuery && displayedResults.length > 0;
+  const shouldShowInlineAddresses = hasAddressSuggestions && displayedResults.length === 0;
+  const shouldShowFooterAddresses = hasAddressSuggestions && displayedResults.length > 0;
+  const shouldShowShowMore = !hasActiveQuery && !showAllResults && filtered.length > displayedResults.length;
 
   const handleListLayout = useCallback((event: LayoutChangeEvent) => {
     const nextHeight = Math.round(event.nativeEvent.layout.height);
@@ -124,6 +167,17 @@ function DiscoverSearchSheet({
     setRowHeight(nextHeight);
   }, [rowHeight]);
 
+  const handleClose = useCallback(() => {
+    onSheetChange?.(-1);
+    onClose();
+  }, [onClose, onSheetChange]);
+
+  const handleToggleFavorite = useCallback((branch: BranchCardProps) => {
+    toggleFavorite(branch);
+  }, [toggleFavorite]);
+
+  const renderMetaDivider = useCallback(() => <View style={localStyles.resultMetaDivider} />, []);
+
   const renderItem = useCallback(
     ({ item, index }: { item: BranchCardProps; index: number }) => {
       const ratingText = Number.isFinite(item.rating) ? item.rating.toFixed(1) : "-";
@@ -137,14 +191,15 @@ function DiscoverSearchSheet({
         typeof item.moreCount === "number"
           ? item.moreCount
           : Math.max(0, resolvedOffers.length - (resolvedOffers.length > 0 ? 1 : 0));
+      const cardIsFavorite = isFavorite(item.id);
       const isLast = index === displayedResults.length - 1;
 
       return (
         <TouchableOpacity
-          activeOpacity={0.88}
+          activeOpacity={0.9}
           style={[
-            localStyles.resultRow,
-            isLast && localStyles.resultRowLast,
+            localStyles.resultCard,
+            !isLast && localStyles.resultCardSpaced,
             { paddingHorizontal: rowPaddingH, paddingVertical: rowPaddingV },
           ]}
           onPress={() => onSelectBranch(item)}
@@ -157,8 +212,8 @@ function DiscoverSearchSheet({
             style={[
               localStyles.resultImage,
               {
-                width: rowImageSize,
-                height: rowImageSize,
+                width: resolvedRowImageSize,
+                height: resolvedRowImageSize,
                 borderRadius: rowImageRadius,
                 marginRight: rowGap,
               },
@@ -171,44 +226,66 @@ function DiscoverSearchSheet({
               <Text
                 style={[
                   localStyles.resultTitle,
-                  { fontSize: rowTitleSize, lineHeight: Math.round(rowTitleSize * 1.25) },
+                  { fontSize: rowTitleSize, lineHeight: Math.round(rowTitleSize * 1.2) },
                 ]}
                 numberOfLines={1}
               >
                 {item.title}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color="#A1A1AA" />
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                style={localStyles.favoriteButton}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  handleToggleFavorite(item);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("discoverMapQuickFavoriteA11y", { place: item.title })}
+              >
+                <Ionicons
+                  name={cardIsFavorite ? "heart" : "heart-outline"}
+                  size={22}
+                  color={cardIsFavorite ? "#FF3B30" : "#8A8A8E"}
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={localStyles.resultMetaRow}>
               <View style={localStyles.resultMetaItem}>
-                <Ionicons name="star" size={12} color="#FFD000" />
+                <Ionicons name="star" size={13} color="#FFD000" />
                 <Text
                   style={[
                     localStyles.resultMetaText,
-                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.3) },
+                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.35) },
                   ]}
                 >
                   {ratingText}
                 </Text>
               </View>
+
+              {renderMetaDivider()}
+
               <View style={localStyles.resultMetaItem}>
-                <Ionicons name="location-outline" size={12} color="#7C7C7C" />
+                <Ionicons name="location-outline" size={13} color="#8A8A8E" />
                 <Text
                   style={[
                     localStyles.resultMetaText,
-                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.3) },
+                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.35) },
                   ]}
                 >
                   {item.distance}
                 </Text>
               </View>
+
+              {renderMetaDivider()}
+
               <View style={localStyles.resultMetaItem}>
-                <Ionicons name="time-outline" size={12} color="#7C7C7C" />
+                <Ionicons name="time-outline" size={13} color="#8A8A8E" />
                 <Text
                   style={[
                     localStyles.resultMetaText,
-                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.3) },
+                    { fontSize: rowMetaSize, lineHeight: Math.round(rowMetaSize * 1.35) },
                   ]}
                 >
                   {item.hours}
@@ -220,20 +297,30 @@ function DiscoverSearchSheet({
               <View style={localStyles.resultOfferRow}>
                 {resolvedOffers[0] ? (
                   <View style={localStyles.resultOfferBadge}>
-                    <Text style={localStyles.resultOfferText} numberOfLines={1}>
+                    <Text
+                      style={[
+                        localStyles.resultOfferText,
+                        {
+                          fontSize: rowOfferTextSize,
+                          lineHeight: Math.round(rowOfferTextSize * 1.25),
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
                       {t(resolvedOffers[0])}
                     </Text>
                   </View>
                 ) : null}
+
                 {resolvedMoreCount > 0 ? (
                   <Text
                     style={[
                       localStyles.resultMoreText,
-                      { fontSize: rowMoreSize, lineHeight: Math.round(rowMoreSize * 1.25) },
+                      { fontSize: rowMoreSize, lineHeight: Math.round(rowMoreSize * 1.2) },
                     ]}
                     numberOfLines={1}
                   >
-                    + {resolvedMoreCount} {t("more")}
+                    + {resolvedMoreCount}
                   </Text>
                 ) : null}
               </View>
@@ -245,12 +332,16 @@ function DiscoverSearchSheet({
     [
       displayedResults.length,
       handleRowLayout,
+      handleToggleFavorite,
+      isFavorite,
       onSelectBranch,
+      renderMetaDivider,
       rowGap,
+      resolvedRowImageSize,
       rowImageRadius,
-      rowImageSize,
       rowMetaSize,
       rowMoreSize,
+      rowOfferTextSize,
       rowPaddingH,
       rowPaddingV,
       rowTitleSize,
@@ -258,26 +349,17 @@ function DiscoverSearchSheet({
     ]
   );
 
-  const handleClose = useCallback(() => {
-    onSheetChange?.(-1);
-    onClose();
-  }, [onClose, onSheetChange]);
-
   const renderFavoriteChip = useCallback(
     (place: DiscoverFavoritePlace) => (
       <TouchableOpacity
         key={place.id}
         style={localStyles.favoriteChip}
-        activeOpacity={0.9}
+        activeOpacity={0.88}
         onPress={() => onSelectFavorite(place)}
         accessibilityRole="button"
         accessibilityLabel={t("discoverSearchFavoriteA11y", { place: place.label })}
       >
-        <Ionicons
-          name={place.isSaved ? "bookmark-outline" : "location-outline"}
-          size={14}
-          color="#111111"
-        />
+        <Ionicons name="location-outline" size={20} color="#111111" />
         <Text style={localStyles.favoriteChipText} numberOfLines={1}>
           {place.label}
         </Text>
@@ -303,7 +385,7 @@ function DiscoverSearchSheet({
           accessibilityLabel={t("discoverSearchAddressShowA11y", { address: item.label })}
         >
           <View style={localStyles.addressIconWrap}>
-            <Ionicons name="location-outline" size={18} color="#EB8100" />
+            <Ionicons name="location-outline" size={28} color="#111111" />
           </View>
 
           <View style={localStyles.addressTextWrap}>
@@ -315,123 +397,140 @@ function DiscoverSearchSheet({
             </Text>
           </View>
 
-          <View style={localStyles.addressMapCta}>
-            <Ionicons name="navigate-outline" size={14} color="#111111" />
-            <Text style={localStyles.addressMapCtaText}>{t("discoverSearchAddressShow")}</Text>
-          </View>
+          <Ionicons name="chevron-forward" size={28} color="#111111" />
         </TouchableOpacity>
       );
     },
     [onSelectAddressSuggestion, t]
   );
 
-  const listHeader = useMemo(() => {
-    const hasActiveQuery = text.trim().length > 0;
-    const hasResults = filtered.length > 0;
-    const hasResultTabs = Array.isArray(resultTabs) && resultTabs.length > 0;
-    const hasAddressSuggestions = text.trim().length > 0 && addressSuggestions.length > 0;
-    const shouldShowFavoritesSection = showFavorites && !hasActiveQuery;
+  const resultTabsRow = useMemo(() => {
+    if (!hasResultTabs) {
+      return null;
+    }
 
-    if (!shouldShowFavoritesSection && !hasResults && !hasResultTabs && !hasAddressSuggestions) {
+    return (
+      <View style={localStyles.resultTabsRow}>
+        {resultTabs.map((tab) => {
+          const isActive = tab.key === activeResultTabKey;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                localStyles.resultTabButton,
+                isActive && localStyles.resultTabButtonActive,
+              ]}
+              activeOpacity={0.85}
+              onPress={() => onChangeResultTab?.(tab.key)}
+            >
+              <Text style={[localStyles.resultTabText, isActive && localStyles.resultTabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  }, [activeResultTabKey, hasResultTabs, onChangeResultTab, resultTabs]);
+
+  const listHeader = useMemo(() => {
+    if (
+      !shouldShowFavoritesSection &&
+      !shouldShowRecentSection &&
+      !shouldShowBranchesSection &&
+      !shouldShowInlineAddresses &&
+      !hasResultTabs
+    ) {
       return null;
     }
 
     return (
       <View style={localStyles.listHeaderWrap} onLayout={handleHeaderLayout}>
         {shouldShowFavoritesSection ? (
-          <View style={localStyles.favoritesSection}>
-            <View style={localStyles.favoritesHeading}>
-              <Text style={localStyles.favoritesTitle}>{t("discoverSearchFavoritesTitle")}</Text>
-              {favoritePlaces.length > 0 ? (
-                <Text style={localStyles.favoritesCountText}>
-                  {t("discoverSearchFavoritesCount", { count: favoritePlaces.length })}
-                </Text>
-              ) : null}
-            </View>
+          <View style={localStyles.sectionBlock}>
+            <Text style={localStyles.sectionTitle}>{t("discoverSearchFavoritesTitle")}</Text>
             {favoritePlaces.length > 0 ? (
               <View style={localStyles.favoritesWrap}>
                 {favoritePlaces.map((place) => renderFavoriteChip(place))}
               </View>
-            ) : (
-              <Text style={localStyles.favoritesEmpty}>{t("discoverSearchFavoritesEmpty")}</Text>
-            )}
+            ) : null}
           </View>
         ) : null}
 
-          {hasAddressSuggestions ? (
-            <View style={localStyles.addressSection}>
-              <View style={localStyles.addressSectionHeading}>
-                <Text style={localStyles.addressSectionTitle}>
-                  {t("discoverSearchAddressSuggestionsTitle")}
-                </Text>
-                <Text style={localStyles.addressSectionCount}>
-                  {addressSuggestions.length}
-                </Text>
+        {resultTabsRow}
+
+        {shouldShowRecentSection ? (
+          <Text style={localStyles.sectionTitle}>{t("discoverSearchRecentTitle")}</Text>
+        ) : null}
+
+        {shouldShowBranchesSection ? (
+          <Text style={localStyles.sectionTitle}>{t("discoverSearchBranchesTitle")}</Text>
+        ) : null}
+
+        {shouldShowInlineAddresses ? (
+          <View style={localStyles.sectionBlock}>
+            <Text style={localStyles.sectionTitle}>{t("discoverSearchAddressesTitle")}</Text>
+            <View style={localStyles.addressCardsWrap}>
+              {addressSuggestions.map((item) => renderAddressSuggestion(item))}
             </View>
+          </View>
+        ) : null}
+      </View>
+    );
+  }, [
+    addressSuggestions,
+    favoritePlaces,
+    handleHeaderLayout,
+    hasResultTabs,
+    renderAddressSuggestion,
+    renderFavoriteChip,
+    resultTabsRow,
+    shouldShowBranchesSection,
+    shouldShowFavoritesSection,
+    shouldShowInlineAddresses,
+    shouldShowRecentSection,
+    t,
+  ]);
+
+  const listFooter = useMemo(() => {
+    if (!shouldShowFooterAddresses && !shouldShowShowMore) {
+      return <View style={localStyles.listFooterSpacer} />;
+    }
+
+    return (
+      <View style={localStyles.listFooterWrap}>
+        {shouldShowFooterAddresses ? (
+          <View style={[localStyles.sectionBlock, localStyles.footerAddressesSection]}>
+            <Text style={localStyles.sectionTitle}>{t("discoverSearchAddressesTitle")}</Text>
             <View style={localStyles.addressCardsWrap}>
               {addressSuggestions.map((item) => renderAddressSuggestion(item))}
             </View>
           </View>
         ) : null}
 
-        {hasResultTabs ? (
-          <View style={localStyles.resultsBlockHeader}>
-            <View style={localStyles.resultsTabsRow}>
-              {resultTabs.map((tab) => {
-                const isActive = tab.key === activeResultTabKey;
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={[
-                      localStyles.resultTabButton,
-                      isActive && localStyles.resultTabButtonActive,
-                    ]}
-                    activeOpacity={0.75}
-                    onPress={() => onChangeResultTab?.(tab.key)}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={[
-                        localStyles.resultTabText,
-                        isActive && localStyles.resultTabTextActive,
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ) : hasResults ? (
-          <View style={[localStyles.resultsBlockHeader, localStyles.resultsBlockHeaderWithTitle]}>
-            <Text style={localStyles.resultsSectionTitle}>{t("discoverSearchNearestTitle")}</Text>
-          </View>
+        {shouldShowShowMore ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={localStyles.showMoreButton}
+            onPress={() => setShowAllResults(true)}
+          >
+            <Text style={localStyles.showMoreText}>{t("showMore")}</Text>
+          </TouchableOpacity>
         ) : null}
+
+        <View style={localStyles.listFooterSpacer} />
       </View>
     );
   }, [
-    activeResultTabKey,
     addressSuggestions,
-    favoritePlaces,
-    filtered.length,
-    handleHeaderLayout,
-    onChangeResultTab,
     renderAddressSuggestion,
-    renderFavoriteChip,
-    resultTabs,
-    showFavorites,
+    shouldShowFooterAddresses,
+    shouldShowShowMore,
     t,
-    text,
   ]);
 
   const listEmptyComponent = useMemo(() => {
-    if (!text.trim()) {
-      return null;
-    }
-
-    if (addressSuggestions.length > 0) {
+    if (!hasActiveQuery || hasAddressSuggestions) {
       return null;
     }
 
@@ -440,31 +539,17 @@ function DiscoverSearchSheet({
         <Text style={localStyles.emptyResultsText}>{t("noPlacesFound")}</Text>
       </View>
     );
-  }, [addressSuggestions.length, text, t]);
+  }, [hasActiveQuery, hasAddressSuggestions, t]);
 
   if (sheetIndex === -1) {
     return null;
   }
 
-  const isLegacy = !showFavorites;
-
   return (
     <View style={[localStyles.container, { paddingTop: insets.top + SEARCH_TOP_ROW_Y }]}>
       <View style={localStyles.searchTopRow}>
-        <TouchableOpacity
-          style={isLegacy ? localStyles.legacyBackButton : localStyles.backButton}
-          onPress={handleClose}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel={t("discoverSearchBackA11y")}
-        >
-          <Ionicons name="chevron-back" size={18} color="#111111" />
-        </TouchableOpacity>
-
         <View style={localStyles.searchInputWrapper}>
-          {isLegacy ? (
-            <Ionicons name="search-outline" size={16} color="#111111" style={localStyles.searchIcon} />
-          ) : null}
+          <Ionicons name="search-outline" size={26} color="#000000" />
           <TextInput
             ref={inputRef}
             value={text}
@@ -478,6 +563,7 @@ function DiscoverSearchSheet({
             autoCorrect={false}
             autoCapitalize="none"
           />
+
           {text.length > 0 ? (
             <TouchableOpacity
               onPress={() => setText("")}
@@ -486,10 +572,20 @@ function DiscoverSearchSheet({
               accessibilityRole="button"
               accessibilityLabel={t("homeSearchClearA11y")}
             >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
+              <Ionicons name="close" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           ) : null}
         </View>
+
+        <TouchableOpacity
+          style={localStyles.mapButton}
+          onPress={handleClose}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={t("discoverSearchBackA11y")}
+        >
+          <Ionicons name="map-outline" size={24} color="#111111" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -497,6 +593,7 @@ function DiscoverSearchSheet({
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
         ListEmptyComponent={listEmptyComponent}
         contentContainerStyle={localStyles.listContent}
         onLayout={handleListLayout}
@@ -505,7 +602,7 @@ function DiscoverSearchSheet({
         initialNumToRender={6}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews
+        removeClippedSubviews={false}
       />
     </View>
   );
@@ -523,339 +620,140 @@ const localStyles = StyleSheet.create({
   searchTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    height: DISCOVER_TOP_CONTROL_HEIGHT,
     gap: DISCOVER_TOP_CONTROL_GAP,
     paddingHorizontal: DISCOVER_TOP_HORIZONTAL_PADDING,
-    marginBottom: 14,
-  },
-  backButton: {
-    width: DISCOVER_TOP_CONTROL_HEIGHT,
-    height: DISCOVER_TOP_CONTROL_HEIGHT,
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
-      : {
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 4,
-        }),
-  },
-  legacyBackButton: {
-    width: DISCOVER_TOP_CONTROL_HEIGHT,
-    height: DISCOVER_TOP_CONTROL_HEIGHT,
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
-      : {
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 4,
-        }),
+    marginBottom: 16,
   },
   searchInputWrapper: {
     flex: 1,
     minWidth: 120,
     height: DISCOVER_TOP_CONTROL_HEIGHT,
-    borderRadius: 20,
-    paddingHorizontal: 12,
+    borderRadius: DISCOVER_TOP_CONTROL_HEIGHT / 2,
+    paddingLeft: 16,
+    paddingRight: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: "#FFFFFF",
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0px 3px 10px rgba(0, 0, 0, 0.1)" }
-      : {
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 4,
-        }),
-  },
-  searchIcon: {
-    marginRight: 0,
+    ...CARD_SHADOW,
   },
   searchInput: {
     flex: 1,
     paddingVertical: 0,
     color: "#111111",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     lineHeight: 20,
     includeFontPadding: false,
   },
   searchClearButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#000000",
     alignItems: "center",
     justifyContent: "center",
   },
+  mapButton: {
+    width: DISCOVER_TOP_CONTROL_HEIGHT,
+    height: DISCOVER_TOP_CONTROL_HEIGHT,
+    borderRadius: DISCOVER_TOP_CONTROL_HEIGHT / 2,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    ...CARD_SHADOW,
+  },
   listContent: {
     paddingHorizontal: DISCOVER_TOP_HORIZONTAL_PADDING,
-    paddingTop: 2,
     paddingBottom: 24,
   },
   listHeaderWrap: {
-    marginBottom: 0,
+    marginBottom: 4,
   },
-  favoritesSection: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
+  sectionBlock: {
+    marginBottom: 18,
   },
-  favoritesHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  footerAddressesSection: {
+    marginTop: 14,
   },
-  favoritesTitle: {
-    fontSize: 13,
-    lineHeight: 18,
+  sectionTitle: {
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: "700",
-    color: "#111111",
-  },
-  favoritesCountText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: "#71717A",
-    fontWeight: "500",
+    color: "#000000",
+    marginBottom: 14,
   },
   favoritesWrap: {
-    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  favoriteChip: {
+    minHeight: 44,
+    maxWidth: "100%",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#D4D4D8",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  favoriteChipText: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: "#111111",
+    flexShrink: 1,
+  },
+  resultTabsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  favoriteChip: {
-    minHeight: 36,
-    maxWidth: "100%",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
-    backgroundColor: "#FAFAFA",
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  favoriteChipText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "600",
-    color: "#111111",
-    flexShrink: 1,
-  },
-  favoritesEmpty: {
-    marginTop: 10,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "500",
-    color: "#71717A",
-  },
-  addressSection: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F5D8B1",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  addressSectionHeading: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  addressSectionTitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-    color: "#111111",
-  },
-  addressSectionCount: {
-    minWidth: 24,
-    height: 24,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    backgroundColor: "#FFF4E8",
-    color: "#B45309",
-    fontSize: 12,
-    lineHeight: 24,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  addressCardsWrap: {
-    marginTop: 10,
-    gap: 10,
-  },
-  addressCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EAEAEA",
-    backgroundColor: "#FAFAFA",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  addressIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF4E8",
-  },
-  addressTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  addressTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "700",
-    color: "#111111",
-  },
-  addressSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "500",
-    color: "#71717A",
-  },
-  addressMapCta: {
-    minHeight: 32,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
-    backgroundColor: "#FFFFFF",
-  },
-  addressMapCtaText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "700",
-    color: "#111111",
-  },
-  resultsSectionTitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-    color: "#111111",
-    flexShrink: 1,
-  },
-  resultsBlockHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E4E4E7",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    marginTop: 0,
-    marginBottom: 0,
-    width: "100%",
-    overflow: "hidden",
-  },
-  resultsBlockHeaderWithTitle: {
-    minHeight: 40,
-    paddingHorizontal: 12,
-  },
-  resultsTabsRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "stretch",
+    marginBottom: 18,
   },
   resultTabButton: {
-    flex: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    minHeight: 38,
+    borderRadius: 19,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#D4D4D8",
+    backgroundColor: "#FFFFFF",
   },
   resultTabButtonActive: {
-    borderBottomColor: "#EB8100",
+    backgroundColor: "#111111",
+    borderColor: "#111111",
   },
   resultTabText: {
     fontSize: 13,
-    lineHeight: 16,
-    fontWeight: "500",
-    color: "#A1A1AA",
-    textAlign: "center",
+    lineHeight: 18,
+    fontWeight: "600",
+    color: "#52525B",
   },
   resultTabTextActive: {
-    color: "#18181B",
-    fontWeight: "600",
+    color: "#FFFFFF",
   },
-  emptyResults: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  emptyResultsText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: "500",
-    color: "#71717A",
-  },
-  resultRow: {
+  resultCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: "#E4E4E7",
-    borderRadius: 0,
+    borderRadius: 18,
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 0,
     width: "100%",
+    ...CARD_SHADOW,
   },
-  resultRowLast: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    marginBottom: 10,
+  resultCardSpaced: {
+    marginBottom: 12,
   },
   resultImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    marginRight: 12,
     backgroundColor: "#E4E4E7",
   },
   resultContent: {
     flex: 1,
     minWidth: 0,
+    paddingRight: 2,
   },
   resultTopRow: {
     flexDirection: "row",
@@ -866,29 +764,42 @@ const localStyles = StyleSheet.create({
   resultTitle: {
     flex: 1,
     minWidth: 0,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: "700",
-    color: "#111111",
+    color: "#000000",
+  },
+  favoriteButton: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -1,
+    marginRight: -2,
   },
   resultMetaRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    columnGap: 8,
+    columnGap: 6,
     rowGap: 2,
     marginTop: 4,
-    minWidth: 0,
   },
   resultMetaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 5,
     minWidth: 0,
   },
+  resultMetaDivider: {
+    width: 1,
+    height: 13,
+    backgroundColor: "#A1A1AA",
+    opacity: 0.7,
+  },
   resultMetaText: {
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "500",
     color: "#7C7C7C",
     flexShrink: 1,
@@ -897,32 +808,95 @@ const localStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 9,
+    marginTop: 12,
     minWidth: 0,
-    flexWrap: "nowrap",
   },
   resultOfferBadge: {
     borderRadius: 999,
     backgroundColor: "#EB8100",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    maxWidth: "80%",
+    maxWidth: "72%",
     minWidth: 0,
     flexShrink: 1,
   },
   resultOfferText: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
     flexShrink: 1,
   },
   resultMoreText: {
     fontSize: 14,
     lineHeight: 18,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#111111",
     flexShrink: 1,
     minWidth: 0,
+  },
+  addressCardsWrap: {
+    gap: 14,
+  },
+  addressCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    ...CARD_SHADOW,
+  },
+  addressIconWrap: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addressTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addressTitle: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "600",
+    color: "#111111",
+  },
+  addressSubtitle: {
+    marginTop: 2,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "500",
+    color: "#8A8A8E",
+  },
+  showMoreButton: {
+    alignSelf: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  showMoreText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "600",
+    color: "#7C7C7C",
+    textAlign: "center",
+  },
+  listFooterWrap: {
+    paddingTop: 8,
+  },
+  listFooterSpacer: {
+    height: 24,
+  },
+  emptyResults: {
+    paddingVertical: 28,
+    alignItems: "center",
+  },
+  emptyResultsText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: "#71717A",
   },
 });

@@ -21,3 +21,6 @@ export { useDynamicQRCode } from "./useDynamicQRCode";
 // Home search v2.
 export { useHomeSearch } from "./useHomeSearch";
 export type { UseHomeSearchReturn } from "./useHomeSearch";
+
+// App activity state.
+export { useAppStateActive } from "./useAppStateActive";

@@ -196,7 +196,7 @@ function BranchCard(props: BranchCardProps) {
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                + {resolvedMoreCount} {t("more")}
+                + {resolvedMoreCount}
               </Text>
             ) : null}
           </View>

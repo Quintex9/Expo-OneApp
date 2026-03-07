@@ -45,3 +45,4 @@ yarn-error.*
 
 # local temp files
 tmp/
+.claude/
